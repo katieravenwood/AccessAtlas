@@ -25,24 +25,35 @@ st.set_page_config(page_title="AccessAtlas", layout="wide")
 
 @st.cache_data
 def load_data():
-    users = pd.read_csv(DATA_DIR / "users.csv", parse_dates=[
-        "annual_training_date", "biennial_training_date", "access_agreement_date",
-        "created_date", "updated_date"
-    ])
-    systems = pd.read_csv(DATA_DIR / "systems.csv")
-    access = pd.read_csv(DATA_DIR / "access_assignments.csv", parse_dates=["granted_date", "revoked_date"])
-    system_admins = pd.read_csv(DATA_DIR / "system_admin_assignments.csv", parse_dates=["granted_date", "revoked_date"])
-    return users, systems, access, system_admins
+    """Load all reference datasets used by the application."""
+    users = load_csv(
+        "users.csv",
+        [
+            "annual_training_date",
+            "biennial_training_date",
+            "access_agreement_date",
+            "created_date",
+            "updated_date",
+        ],
+    )
+    systems = load_csv("systems.csv")
+    access_assignments = load_csv(
+        "access_assignments.csv",
+        ["granted_date", "revoked_date"],
+    )
+    system_admin_assignments = load_csv(
+        "system_admin_assignments.csv",
+        ["granted_date", "revoked_date"],
+    )
 
-def compliance_status(row):
-    today_ts = pd.Timestamp(date.today())
-    annual_exp = row["annual_training_date"] + pd.DateOffset(years=1)
-    biennial_exp = row["biennial_training_date"] + pd.DateOffset(years=2)
-    if annual_exp < today_ts or biennial_exp < today_ts:
-        return "Expired"
-    if annual_exp <= today_ts + pd.Timedelta(days=30) or biennial_exp <= today_ts + pd.Timedelta(days=30):
-        return "Expiring Soon"
-    return "Current"
+    return {
+        "users": users,
+        "systems": systems,
+        "access_assignments": access_assignments,
+        "system_admin_assignments": system_admin_assignments,
+    }
+
+
 
 def add_expirations(users):
     users = users.copy()

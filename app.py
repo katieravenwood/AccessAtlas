@@ -203,16 +203,30 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
 
 with tab1:
     st.subheader("Access Governance Overview")
-    c1, c2, c3, c4 = st.columns(4)
+
+    c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Users", len(users))
     c2.metric("Tracked Systems", len(systems))
     c3.metric("Access Records", len(access))
-    c4.metric(
+    c4.metric("System Admin Assignments", len(system_admins))
+    c5.metric(
         "Expired / Expiring",
         len(users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]),
     )
 
     joined = access.merge(systems, on="system_id", how="left")
+
+    st.markdown("### User Record Status")
+    st.dataframe(
+        users.groupby("record_status").size().reset_index(name="users"),
+        use_container_width=True,
+    )
+
+    st.markdown("### Compliance Status")
+    st.dataframe(
+        users.groupby("compliance_status").size().reset_index(name="users"),
+        use_container_width=True,
+    )
 
     st.markdown("### Access Records by System Type")
     st.dataframe(
@@ -226,12 +240,24 @@ with tab1:
         use_container_width=True,
     )
 
-    st.markdown("### Use Cases Demonstrated")
+    st.markdown("### Access Records by Access Status")
+    st.dataframe(
+        access.groupby("access_status").size().reset_index(name="records"),
+        use_container_width=True,
+    )
+
+    st.markdown("### What This Reference Implementation Demonstrates")
     st.write(
         """
-        AccessAtlas shows a generic access governance pattern across several
-        kinds of systems: applications, data management systems, cloud data
-        platforms, databases, dashboards, and collaboration sites.
+        AccessAtlas demonstrates a generic access governance pattern for:
+
+        - Central user registry management
+        - Cross-system access cataloging
+        - Resource-level permission tracking
+        - System administrator assignment tracking
+        - Training and agreement compliance monitoring
+        - Upload-based access reconciliation
+        - Audit-friendly inactive record handling
         """
     )
 

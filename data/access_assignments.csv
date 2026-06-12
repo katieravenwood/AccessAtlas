@@ -1,0 +1,14 @@
+access_id,user_id,system_id,permission_name,access_status,granted_date,revoked_date,source
+A001,USR00001,SYS002,Standard User,Active,2026-03-23,,System export
+A002,USR00001,SYS006,Dashboard Viewer,Active,2026-04-02,,Dashboard owner
+A003,USR00002,SYS001,Manager,Active,2023-12-24,,Legacy export
+A004,USR00002,SYS005,Read: analytics_schema,Active,2025-08-15,,Database admin inventory
+A005,USR00003,SYS003,System Administrator,Active,2026-03-08,,System export
+A006,USR00003,SYS006,Dashboard Administrator,Active,2026-03-18,,Dashboard owner
+A007,USR00004,SYS001,Standard User,Inactive,2024-05-22,2026-05-22,Legacy export
+A008,USR00005,SYS004,ROLE_ACCESS_ADMIN,Active,2026-05-07,,Platform metadata
+A009,USR00005,SYS007,Site Owner,Active,2026-05-07,,Site owner inventory
+A010,USR00006,SYS004,ROLE_DATA_READER,Active,2026-04-27,,Platform metadata
+A011,USR00006,SYS005,Read: core_reporting_table,Active,2026-04-27,,Database admin inventory
+A012,USR00007,SYS007,Document Contributor,Active,2026-05-17,,Site owner inventory
+A013,USR00008,SYS006,Scheduled Report Runner,Active,2026-05-27,,Dashboard owner

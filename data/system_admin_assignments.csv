@@ -1,0 +1,6 @@
+admin_assignment_id,user_id,system_id,admin_role,assignment_status,granted_date,revoked_date
+ADM001,USR00003,SYS001,System Administrator,Active,2026-02-11,
+ADM002,USR00003,SYS003,System Administrator,Active,2026-03-08,
+ADM003,USR00005,SYS004,Platform Administrator,Active,2026-05-07,
+ADM004,USR00005,SYS006,Dashboard Administrator,Active,2026-05-07,
+ADM005,USR00002,SYS005,Database Access Manager,Active,2025-11-23,

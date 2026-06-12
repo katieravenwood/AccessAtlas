@@ -1,0 +1,4 @@
+user_id,permission_name,access_status
+USR00001,Standard User,Active
+USR00002,Manager,Active
+USR00006,Standard User,Active

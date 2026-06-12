@@ -1,10 +1,7 @@
-# SystemTrafficControl
+# AccessAtlas
 
-Lightweight implementation of a csv- or database-backed user access tracking and management application built to be run in Streamlit. 
+AccessAtlas is a Streamlit-based reference implementation for centralized access governance, compliance tracking, permissions cataloging, and access reconciliation.
 
-This version serves as a Proof of Concept repository that can be customized and expanded for various use cases across different kinds 
-of business needs, in particular for organizations needing to track access to multiple applications by a single user. 
+The project demonstrates how organizations can maintain a single inventory of users, systems, permissions, certifications, and access reviews across applications, databases, cloud platforms, dashboards, and collaboration environments.
 
-Scripts are included for csv-backed implementations as well as Postgres and Snowflake backed instances. 
-
-
+This demo version of AccessAtlas uses synthetic sample data and generic system examples so it can be adapted to virtually any industry, organization, or technology stack.

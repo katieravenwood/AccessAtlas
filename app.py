@@ -5,6 +5,13 @@ AccessAtlas
 A Streamlit reference implementation for access governance,
 compliance tracking, permission cataloging, and access reconciliation
 using synthetic CSV-backed data.
+
+This module provides:
+- User registry views
+- System catalog views
+- Compliance monitoring
+- System administrator management
+- Access reconciliation workflows
 """
 
 import streamlit as st

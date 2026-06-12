@@ -1,4 +1,12 @@
 
+"""
+AccessAtlas
+
+A Streamlit reference implementation for access governance,
+compliance tracking, permission cataloging, and access reconciliation
+using synthetic CSV-backed data.
+"""
+
 import streamlit as st
 import pandas as pd
 from datetime import date

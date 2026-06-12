@@ -21,7 +21,20 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).parent / "data"
 
+ANNUAL_TRAINING_VALID_YEARS = 1
+BIENNIAL_TRAINING_VALID_YEARS = 2
+EXPIRING_SOON_DAYS = 30
+
 st.set_page_config(page_title="AccessAtlas", layout="wide")
+
+@st.cache_data
+def load_csv(filename, date_columns=None):
+    """Load a CSV file from the data directory with optional date parsing."""
+    return pd.read_csv(
+        DATA_DIR / filename,
+        parse_dates=date_columns or []
+    )
+
 
 @st.cache_data
 def load_data():
@@ -53,12 +66,38 @@ def load_data():
         "system_admin_assignments": system_admin_assignments,
     }
 
+def compliance_status(row):
+    """Return compliance status based on training expiration rules."""
+    today_ts = pd.Timestamp(date.today())
+
+    annual_exp = row["annual_training_date"] + pd.DateOffset(
+        years=ANNUAL_TRAINING_VALID_YEARS
+    )
+    biennial_exp = row["biennial_training_date"] + pd.DateOffset(
+        years=BIENNIAL_TRAINING_VALID_YEARS
+    )
+
+    if annual_exp < today_ts or biennial_exp < today_ts:
+        return "Expired"
+
+    if (
+        annual_exp <= today_ts + pd.Timedelta(days=EXPIRING_SOON_DAYS)
+        or biennial_exp <= today_ts + pd.Timedelta(days=EXPIRING_SOON_DAYS)
+    ):
+        return "Expiring Soon"
+
+    return "Current"
 
 
 def add_expirations(users):
+    """Add expiration dates and compliance status fields to the user dataset."""
     users = users.copy()
-    users["annual_training_expiration"] = users["annual_training_date"] + pd.DateOffset(years=1)
-    users["biennial_training_expiration"] = users["biennial_training_date"] + pd.DateOffset(years=2)
+    users["annual_training_expiration"] = users["annual_training_date"] + pd.DateOffset(
+        years=ANNUAL_TRAINING_VALID_YEARS
+    )
+    users["biennial_training_expiration"] = users["biennial_training_date"] + pd.DateOffset(
+        years=BIENNIAL_TRAINING_VALID_YEARS
+    )
     users["compliance_status"] = users.apply(compliance_status, axis=1)
     return users
 

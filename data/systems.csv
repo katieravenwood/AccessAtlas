@@ -1,0 +1,8 @@
+system_id,system_name,system_type,access_model,tracking_method,notes
+SYS001,Legacy Business Application,Application,External application user list,Manual upload reconciliation,Legacy application
+SYS002,Data Management System,Data Management System,Externally managed user roles,Periodic access export,Operational platform
+SYS003,Workflow Management System,Application,Externally managed user roles,Periodic access export,Workflow platform
+SYS004,Enterprise Data Platform,Cloud Data Platform,User-to-role assignments,Role metadata,Cloud warehouse or lakehouse
+SYS005,Reporting Database,Database,"Database, schema, and table permissions",Administrator inventory,Structured data access
+SYS006,Management Dashboard,Dashboard,Dashboard permission + hosting site access,Dashboard and site inventory,Embedded reporting
+SYS007,Document Collaboration Site,Site / Folder,Site or group membership,Site permissions inventory,Document storage and collaboration

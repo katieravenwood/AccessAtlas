@@ -1,0 +1,9 @@
+user_id,display_name,first_name,last_name,email,application_role,manager_user_id,department,user_type,record_status,annual_training_date,biennial_training_date,access_agreement_date,created_date,updated_date
+USR00001,Alex Morgan,Alex,Morgan,alex.morgan@example.org,User,USR00002,Operations,Employee,Active,2026-02-11,2025-08-15,2025-11-23,2026-03-13,2026-06-06
+USR00002,Jamie Lee,Jamie,Lee,jamie.lee@example.org,Manager,USR00005,Operations,Employee,Active,2025-07-06,2024-09-29,2025-08-15,2026-03-13,2026-06-06
+USR00003,Taylor Nguyen,Taylor,Nguyen,taylor.nguyen@example.org,System Administrator,USR00005,Technology,Employee,Active,2025-06-06,2025-08-15,2025-06-11,2026-03-13,2026-06-06
+USR00004,Riley Patel,Riley,Patel,riley.patel@example.org,User,USR00002,Finance,Contractor,Inactive,2025-01-27,2024-05-12,2025-01-27,2026-03-13,2026-05-22
+USR00005,Casey Rivera,Casey,Rivera,casey.rivera@example.org,Super Administrator,,Technology,Employee,Active,2026-05-12,2025-05-07,2026-05-12,2026-03-13,2026-06-06
+USR00006,Jordan Kim,Jordan,Kim,jordan.kim@example.org,User,USR00002,Analytics,Consultant,Active,2026-05-22,2024-06-11,2026-05-22,2026-03-13,2026-06-06
+USR00007,Morgan Chen,Morgan,Chen,morgan.chen@example.org,User,USR00003,Technology,Vendor,Active,2026-04-12,2025-01-27,2026-04-12,2026-03-13,2026-06-06
+USR00008,Service Account - Reporting,Service Account,Reporting,svc.reporting@example.org,User,,Technology,Service Account,Active,2026-06-01,2026-06-01,2026-06-01,2026-03-13,2026-06-06

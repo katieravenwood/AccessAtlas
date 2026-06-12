@@ -1,14 +1,14 @@
-access_id,user_id,system_id,permission_name,access_status,granted_date,revoked_date,source
-A001,USR00001,SYS002,Standard User,Active,2026-03-23,,System export
-A002,USR00001,SYS006,Dashboard Viewer,Active,2026-04-02,,Dashboard owner
-A003,USR00002,SYS001,Manager,Active,2023-12-24,,Legacy export
-A004,USR00002,SYS005,Read: analytics_schema,Active,2025-08-15,,Database admin inventory
-A005,USR00003,SYS003,System Administrator,Active,2026-03-08,,System export
-A006,USR00003,SYS006,Dashboard Administrator,Active,2026-03-18,,Dashboard owner
-A007,USR00004,SYS001,Standard User,Inactive,2024-05-22,2026-05-22,Legacy export
-A008,USR00005,SYS004,ROLE_ACCESS_ADMIN,Active,2026-05-07,,Platform metadata
-A009,USR00005,SYS007,Site Owner,Active,2026-05-07,,Site owner inventory
-A010,USR00006,SYS004,ROLE_DATA_READER,Active,2026-04-27,,Platform metadata
-A011,USR00006,SYS005,Read: core_reporting_table,Active,2026-04-27,,Database admin inventory
-A012,USR00007,SYS007,Document Contributor,Active,2026-05-17,,Site owner inventory
-A013,USR00008,SYS006,Scheduled Report Runner,Active,2026-05-27,,Dashboard owner
+access_id,user_id,system_id,resource_type,resource_name,permission_name,access_status,granted_date,revoked_date,source
+A001,USR00001,SYS002,Role,Standard User Role,Standard User,Active,2026-03-01,,System Export
+A002,USR00001,SYS006,Dashboard,Management Dashboard,Viewer,Active,2026-03-10,,Dashboard Inventory
+A003,USR00002,SYS001,Application,Legacy Business Application,Manager,Active,2024-01-15,,Manual Upload
+A004,USR00002,SYS005,Schema,analytics_schema,Read,Active,2025-07-01,,Database Inventory
+A005,USR00003,SYS003,Application,Workflow Management System,System Administrator,Active,2026-01-05,,System Export
+A006,USR00003,SYS006,Dashboard,Management Dashboard,Administrator,Active,2026-02-01,,Dashboard Inventory
+A007,USR00004,SYS001,Application,Legacy Business Application,Standard User,Inactive,2024-01-15,2026-04-01,Manual Upload
+A008,USR00005,SYS004,Role,ROLE_ACCESS_ADMIN,Platform Administrator,Active,2026-05-01,,Platform Metadata
+A009,USR00005,SYS007,Site,Document Collaboration Site,Site Owner,Active,2026-05-01,,Site Inventory
+A010,USR00006,SYS004,Role,ROLE_DATA_READER,Data Reader,Active,2026-05-10,,Platform Metadata
+A011,USR00006,SYS005,Table,core_reporting_table,Read,Active,2026-05-15,,Database Inventory
+A012,USR00007,SYS007,Site,Document Collaboration Site,Contributor,Active,2026-05-20,,Site Inventory
+A013,USR00008,SYS006,Dashboard,Management Dashboard,Scheduled Report Runner,Active,2026-05-25,,Dashboard Inventory

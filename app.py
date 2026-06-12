@@ -26,6 +26,15 @@ ANNUAL_TRAINING_VALID_YEARS = 1
 BIENNIAL_TRAINING_VALID_YEARS = 2
 EXPIRING_SOON_DAYS = 30
 
+RECONCILIATION_KEY_COLUMNS = [
+    "user_id",
+    "system_id",
+    "resource_type",
+    "resource_name",
+    "permission_name",
+]
+RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
+
 st.set_page_config(page_title="AccessAtlas", layout="wide")
 
 
@@ -107,30 +116,35 @@ def add_expirations(users):
     return users
 
 
-def reconcile(existing_access, upload_df, selected_system_id=None):
-    """Compare current access assignments to an uploaded access export."""
-    compare_cols = [
-        "user_id",
-        "system_id",
-        "resource_type",
-        "resource_name",
-        "permission_name",
-    ]
+def validate_upload(upload_df, required_columns):
+    """Return a list of required columns missing from an uploaded file."""
+    return [column for column in required_columns if column not in upload_df.columns]
 
-    existing = existing_access.copy()
+
+def reconcile(current_access, upload_df, selected_system_id=None):
+    """Compare current access assignments to an uploaded access export."""
+    current = current_access.copy()
+    upload = upload_df.copy()
 
     if selected_system_id and selected_system_id != "All Systems":
-        existing = existing[existing["system_id"] == selected_system_id]
-        upload_df = upload_df[upload_df["system_id"] == selected_system_id]
+        current = current[current["system_id"] == selected_system_id]
+        upload = upload[upload["system_id"] == selected_system_id]
 
-    existing_key = existing.set_index(compare_cols)["access_status"].to_dict()
-    upload_key = upload_df.set_index(compare_cols)["access_status"].to_dict()
+    current_key = current.set_index(RECONCILIATION_KEY_COLUMNS)["access_status"].to_dict()
+    upload_key = upload.set_index(RECONCILIATION_KEY_COLUMNS)["access_status"].to_dict()
+
+    source_record_lookup = {}
+    if "source_system_record_id" in upload.columns:
+        source_record_lookup = (
+            upload.set_index(RECONCILIATION_KEY_COLUMNS)["source_system_record_id"]
+            .to_dict()
+        )
 
     rows = []
-    all_keys = sorted(set(existing_key.keys()) | set(upload_key.keys()))
+    all_keys = sorted(set(current_key.keys()) | set(upload_key.keys()))
 
     for key in all_keys:
-        current_status = existing_key.get(key)
+        current_status = current_key.get(key)
         uploaded_status = upload_key.get(key)
         user_id, system_id, resource_type, resource_name, permission_name = key
 
@@ -138,31 +152,31 @@ def reconcile(existing_access, upload_df, selected_system_id=None):
             change_type = "New Access in Upload"
             recommended_action = "Review and add access record"
         elif uploaded_status is None:
-            change_type = "Missing from Upload"
-            recommended_action = "Mark inactive after manager confirmation"
+            change_type = "Access Not Found in Upload"
+            recommended_action = "Review for inactive status"
         elif current_status != uploaded_status:
             change_type = "Status Changed"
-            recommended_action = "Update access status after manager confirmation"
+            recommended_action = "Review and update access status"
         else:
             change_type = "No Change"
             recommended_action = "No action"
 
         rows.append(
             {
+                "source_system_record_id": source_record_lookup.get(key),
                 "user_id": user_id,
                 "system_id": system_id,
                 "resource_type": resource_type,
                 "resource_name": resource_name,
                 "permission_name": permission_name,
-                "current_app_status": current_status,
-                "uploaded_status": uploaded_status,
+                "current_access_status": current_status,
+                "uploaded_access_status": uploaded_status,
                 "change_type": change_type,
                 "recommended_action": recommended_action,
             }
         )
 
     return pd.DataFrame(rows)
-
 
 data = load_data()
 users = add_expirations(data["users"])
@@ -350,6 +364,14 @@ with tab6:
     else:
         uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
         st.caption("Using bundled sample access export.")
+
+    missing_columns = validate_upload(uploaded_df, RECONCILIATION_REQUIRED_COLUMNS)
+    if missing_columns:
+        st.error(
+            "Uploaded file is missing required columns: "
+            + ", ".join(missing_columns)
+        )
+        st.stop()
 
     system_options = ["All Systems"] + systems["system_id"].tolist()
     selected_system = st.selectbox("Select reconciliation scope", system_options)

@@ -36,42 +36,56 @@ def add_expirations(users):
     users["compliance_status"] = users.apply(compliance_status, axis=1)
     return users
 
-def reconcile(existing_access, upload_df, system_id="SYS001"):
-    existing = existing_access[existing_access["system_id"] == system_id].copy()
-    existing_key = existing.set_index(["user_id", "permission_name"])["access_status"].to_dict()
-    upload_key = upload_df.set_index(["user_id", "permission_name"])["access_status"].to_dict()
+def reconcile(existing_access, upload_df, selected_system_id=None):
+    compare_cols = ["user_id", "system_id", "resource_type", "resource_name", "permission_name"]
+
+    existing = existing_access.copy()
+    if selected_system_id and selected_system_id != "All Systems":
+        existing = existing[existing["system_id"] == selected_system_id]
+        upload_df = upload_df[upload_df["system_id"] == selected_system_id]
+
+    existing_key = existing.set_index(compare_cols)["access_status"].to_dict()
+    upload_key = upload_df.set_index(compare_cols)["access_status"].to_dict()
 
     rows = []
     all_keys = sorted(set(existing_key.keys()) | set(upload_key.keys()))
-    for user_id, perm in all_keys:
-        old_status = existing_key.get((user_id, perm))
-        new_status = upload_key.get((user_id, perm))
-        if old_status is None:
+
+    for key in all_keys:
+        current_status = existing_key.get(key)
+        uploaded_status = upload_key.get(key)
+        user_id, system_id, resource_type, resource_name, permission_name = key
+
+        if current_status is None:
             change_type = "New Access in Upload"
             recommended_action = "Review and add access record"
-        elif new_status is None:
+        elif uploaded_status is None:
             change_type = "Missing from Upload"
             recommended_action = "Mark inactive after manager confirmation"
-        elif old_status != new_status:
+        elif current_status != uploaded_status:
             change_type = "Status Changed"
             recommended_action = "Update access status after manager confirmation"
         else:
             change_type = "No Change"
             recommended_action = "No action"
+
         rows.append({
             "user_id": user_id,
-            "permission_name": perm,
-            "current_app_status": old_status,
-            "uploaded_status": new_status,
+            "system_id": system_id,
+            "resource_type": resource_type,
+            "resource_name": resource_name,
+            "permission_name": permission_name,
+            "current_app_status": current_status,
+            "uploaded_status": uploaded_status,
             "change_type": change_type,
             "recommended_action": recommended_action
         })
+
     return pd.DataFrame(rows)
 
 users, systems, access, system_admins = load_data()
 users = add_expirations(users)
 
-st.title("AccessAtlas")
+st.title("AccessAtlas v0.2")
 st.caption("Reference implementation for centralized access governance across applications, databases, data platforms, dashboards, and collaboration sites.")
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -89,6 +103,9 @@ with tab1:
     joined = access.merge(systems, on="system_id", how="left")
     st.markdown("### Access Records by System Type")
     st.dataframe(joined.groupby("system_type").size().reset_index(name="records"), use_container_width=True)
+
+    st.markdown("### Access Records by Resource Type")
+    st.dataframe(joined.groupby("resource_type").size().reset_index(name="records"), use_container_width=True)
 
     st.markdown("### Use Cases Demonstrated")
     st.write("""
@@ -137,7 +154,7 @@ with tab4:
     admin_view = (
         system_admins
         .merge(users[["user_id", "display_name", "email", "department"]], on="user_id", how="left")
-        .merge(systems[["system_id", "system_name", "system_type"]], on="system_id", how="left")
+        .merge(systems[["system_id", "system_name", "system_type", "system_category"]], on="system_id", how="left")
     )
     st.dataframe(admin_view, use_container_width=True)
 
@@ -168,19 +185,28 @@ with tab5:
 with tab6:
     st.subheader("Access Reconciliation")
     st.write("Upload an access export or use the included sample file.")
-    upload = st.file_uploader("Upload CSV with user_id, permission_name, access_status", type=["csv"])
+    upload = st.file_uploader(
+        "Upload CSV with source_system_record_id, user_id, system_id, resource_type, resource_name, permission_name, access_status",
+        type=["csv"]
+    )
     if upload:
         uploaded_df = pd.read_csv(upload)
     else:
         uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
         st.caption("Using bundled sample access export.")
 
+    system_options = ["All Systems"] + systems["system_id"].tolist()
+    selected_system = st.selectbox("Select reconciliation scope", system_options)
+
     st.markdown("### Uploaded Access Export")
     st.dataframe(uploaded_df, use_container_width=True)
 
-    result = reconcile(access, uploaded_df, system_id="SYS001")
+    result = reconcile(access, uploaded_df, selected_system_id=selected_system)
     st.markdown("### Reconciliation Results")
     st.dataframe(result, use_container_width=True)
+
+    st.markdown("### Reconciliation Summary")
+    st.dataframe(result.groupby("change_type").size().reset_index(name="records"), use_container_width=True)
 
     st.markdown("### Governance Rule Demonstrated")
     st.warning("""

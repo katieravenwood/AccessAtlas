@@ -1,4 +1,4 @@
-user_id,permission_name,access_status
-USR00001,Standard User,Active
-USR00002,Manager,Active
-USR00006,Standard User,Active
+user_id,system_id,resource_type,resource_name,permission_name,access_status
+USR00001,SYS001,Application,Legacy Business Application,Standard User,Active
+USR00002,SYS001,Application,Legacy Business Application,Manager,Active
+USR00006,SYS001,Application,Legacy Business Application,Standard User,Active

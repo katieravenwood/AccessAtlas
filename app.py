@@ -219,31 +219,31 @@ with tab1:
     st.markdown("### User Record Status")
     st.dataframe(
         users.groupby("record_status").size().reset_index(name="users"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Compliance Status")
     st.dataframe(
         users.groupby("compliance_status").size().reset_index(name="users"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Access Records by System Type")
     st.dataframe(
         joined.groupby("system_type").size().reset_index(name="records"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Access Records by Resource Type")
     st.dataframe(
         joined.groupby("resource_type").size().reset_index(name="records"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Access Records by Access Status")
     st.dataframe(
         access.groupby("access_status").size().reset_index(name="records"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### What This Reference Implementation Demonstrates")
@@ -288,7 +288,7 @@ with tab2:
     if status_filter:
         view = view[view["record_status"].isin(status_filter)]
 
-    st.dataframe(view, use_container_width=True)
+    st.dataframe(view, width="stretch")
 
     st.markdown("### Selected User Governance Profile")
     selected = st.selectbox(
@@ -355,11 +355,11 @@ with tab2:
                 {
                     "requirement": "Access Agreement",
                     "completion_date": selected_user["access_agreement_date"],
-                    "expiration_date": "",
+                    "expiration_date": pd.NaT,
                 },
             ]
         ),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Access by System")
@@ -370,17 +370,17 @@ with tab2:
             selected_access.groupby(["system_id", "system_name", "system_type"])
             .size()
             .reset_index(name="access_records"),
-            use_container_width=True,
+            width="stretch",
         )
 
     st.markdown("### Detailed Access Assignments")
-    st.dataframe(selected_access, use_container_width=True)
+    st.dataframe(selected_access, width="stretch")
 
     st.markdown("### Administrative Assignments")
     if selected_admin_assignments.empty:
         st.info("This user is not assigned as an administrator for any tracked systems.")
     else:
-        st.dataframe(selected_admin_assignments, use_container_width=True)
+        st.dataframe(selected_admin_assignments, width="stretch")
 
 with tab3:
     st.subheader("System Catalog")
@@ -411,7 +411,7 @@ with tab3:
     if system_status_filter:
         system_view = system_view[system_view["record_status"].isin(system_status_filter)]
 
-    st.dataframe(system_view, use_container_width=True)
+    st.dataframe(system_view, width="stretch")
 
     st.markdown("### Selected System Governance Profile")
     selected_system = st.selectbox(
@@ -479,14 +479,14 @@ with tab3:
                     "source",
                 ]
             ],
-            use_container_width=True,
+            width="stretch",
         )
 
     st.markdown("### System Administrators")
     if selected_system_admins.empty:
         st.info("No system administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(selected_system_admins, use_container_width=True)
+        st.dataframe(selected_system_admins, width="stretch")
 
     st.markdown("### Resources and Permissions")
     if selected_system_access.empty:
@@ -498,7 +498,7 @@ with tab3:
             )
             .size()
             .reset_index(name="assigned_users"),
-            use_container_width=True,
+            width="stretch",
         )
 
     st.markdown("### Generic Access Model Examples")
@@ -587,7 +587,7 @@ with tab4:
         ]
 
     st.markdown("### All System Administrator Assignments")
-    st.dataframe(filtered_admin_view, use_container_width=True)
+    st.dataframe(filtered_admin_view, width="stretch")
 
     st.markdown("### Administrator-Centered View")
     selected_admin = st.selectbox(
@@ -597,7 +597,7 @@ with tab4:
     )
     st.dataframe(
         admin_view[admin_view["display_name"] == selected_admin],
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### System-Centered View")
@@ -617,7 +617,7 @@ with tab4:
     if system_admin_detail.empty:
         st.info("No administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(system_admin_detail, use_container_width=True)
+        st.dataframe(system_admin_detail, width="stretch")
 
     st.markdown("### Admin Coverage by System")
     coverage = systems[
@@ -636,7 +636,7 @@ with tab4:
         lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
     )
 
-    st.dataframe(coverage, use_container_width=True)
+    st.dataframe(coverage, width="stretch")
 
 with tab5:
     st.subheader("Compliance Monitoring")
@@ -698,7 +698,7 @@ with tab5:
     ]
 
     st.markdown("### Compliance Detail")
-    st.dataframe(comp[compliance_columns], use_container_width=True)
+    st.dataframe(comp[compliance_columns], width="stretch")
 
     st.markdown("### Follow-Up Queue")
     follow_up = users[
@@ -708,14 +708,14 @@ with tab5:
     if follow_up.empty:
         st.success("No active user records currently require compliance follow-up.")
     else:
-        st.dataframe(follow_up[compliance_columns], use_container_width=True)
+        st.dataframe(follow_up[compliance_columns], width="stretch")
 
     st.markdown("### Compliance by Department")
     st.dataframe(
         users.groupby(["department", "compliance_status"])
         .size()
         .reset_index(name="users"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Compliance by User Type")
@@ -723,7 +723,7 @@ with tab5:
         users.groupby(["user_type", "compliance_status"])
         .size()
         .reset_index(name="users"),
-        use_container_width=True,
+        width="stretch",
     )
 
     st.markdown("### Reminder Schedule")
@@ -738,7 +738,42 @@ with tab5:
 
 with tab6:
     st.subheader("Access Reconciliation")
-    st.write("Upload an example access export or use the included sample file.")
+    st.write(
+        """
+        Upload an authoritative access export and compare it against the current
+        AccessAtlas access assignment records.
+        """
+    )
+
+    with st.expander("Expected upload schema"):
+        st.write(
+            """
+            Uploaded reconciliation files should include the following required columns:
+            """
+        )
+        st.dataframe(
+            pd.DataFrame(
+                {
+                    "column_name": RECONCILIATION_REQUIRED_COLUMNS,
+                    "description": [
+                        "Unique user identifier",
+                        "Tracked system identifier",
+                        "Type of resource being governed",
+                        "Specific resource name",
+                        "Permission or role name",
+                        "Current access status in the uploaded source",
+                    ],
+                }
+            ),
+            width="stretch",
+        )
+        st.write(
+            """
+            The optional `source_system_record_id` column can be included to preserve
+            traceability back to the source export.
+            """
+        )
+
     upload = st.file_uploader(
         "Upload CSV with source_system_record_id, user_id, system_id, "
         "resource_type, resource_name, permission_name, access_status",
@@ -760,6 +795,8 @@ with tab6:
         )
         st.stop()
 
+    st.success("Uploaded file contains all required reconciliation columns.")
+
     system_options = ["All Systems"] + systems["system_id"].tolist()
     selected_system = st.selectbox(
         "Select reconciliation scope",
@@ -768,18 +805,54 @@ with tab6:
     )
 
     st.markdown("### Uploaded Access Export")
-    st.dataframe(uploaded_df, use_container_width=True)
+    st.dataframe(uploaded_df, width="stretch")
 
     result = reconcile(access, uploaded_df, selected_system_id=selected_system)
+    result_with_system = result.merge(
+        systems[["system_id", "system_name"]],
+        on="system_id",
+        how="left",
+    )
+
+    st.markdown("### Reconciliation Summary by Change Type")
+    st.dataframe(
+        result_with_system.groupby("change_type")
+        .size()
+        .reset_index(name="records"),
+        width="stretch",
+    )
+
+    st.markdown("### Reconciliation Summary by Resource Type")
+    st.dataframe(
+        result_with_system.groupby("resource_type")
+        .size()
+        .reset_index(name="records"),
+        width="stretch",
+    )
+
+    st.markdown("### Action Queue")
+    action_queue = result_with_system[
+        result_with_system["recommended_action"] != "No action"
+    ]
+    if action_queue.empty:
+        st.success("No reconciliation results currently require follow-up.")
+    else:
+        st.dataframe(action_queue, width="stretch")
 
     st.markdown("### Reconciliation Results")
-    st.dataframe(result, use_container_width=True)
-
-    st.markdown("### Reconciliation Summary")
-    st.dataframe(
-        result.groupby("change_type").size().reset_index(name="records"),
-        use_container_width=True,
+    change_type_filter = st.multiselect(
+        "Filter by change type",
+        sorted(result_with_system["change_type"].dropna().unique()),
+        key="change_type_filter",
     )
+
+    filtered_results = result_with_system.copy()
+    if change_type_filter:
+        filtered_results = filtered_results[
+            filtered_results["change_type"].isin(change_type_filter)
+        ]
+
+    st.dataframe(filtered_results, width="stretch")
 
     st.markdown("### Governance Rule Demonstrated")
     st.warning(

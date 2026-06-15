@@ -130,8 +130,25 @@ def reconcile(current_access, upload_df, selected_system_id=None):
         current = current[current["system_id"] == selected_system_id]
         upload = upload[upload["system_id"] == selected_system_id]
 
-    current_key = current.set_index(RECONCILIATION_KEY_COLUMNS)["access_status"].to_dict()
-    upload_key = upload.set_index(RECONCILIATION_KEY_COLUMNS)["access_status"].to_dict()
+    # Determine which key columns are available in both dataframes.
+    # Some exports include `first_name`/`last_name`, but the canonical
+    # access assignments data may not. Use the intersection to avoid
+    # KeyError from set_index when columns are missing.
+    key_cols = [c for c in RECONCILIATION_KEY_COLUMNS if c in current.columns and c in upload.columns]
+
+    # If no intersection, fall back to the canonical identifier set
+    # that the reference data uses (user_id + system + resource + permission).
+    if not key_cols:
+        fallback = ["user_id", "system_id", "resource_type", "resource_name", "permission_name"]
+        key_cols = [c for c in fallback if c in current.columns and c in upload.columns]
+
+    if not key_cols:
+        raise KeyError(
+            "Reconciliation cannot proceed: no matching key columns found in current and uploaded data. "
+            f"Expected one of {RECONCILIATION_KEY_COLUMNS} or fallback {fallback}.")
+
+    current_key = current.set_index(key_cols)["access_status"].to_dict()
+    upload_key = upload.set_index(key_cols)["access_status"].to_dict()
 
     source_record_lookup = {}
     if "source_system_record_id" in upload.columns:
@@ -740,7 +757,7 @@ with tab6:
     st.subheader("Access Reconciliation")
     st.write(
         """
-        Upload an authoritative access export and compare it against the current
+        Upload an access export from a tracked systemand compare it against the current
         AccessAtlas access assignment records.
         """
     )
@@ -770,7 +787,10 @@ with tab6:
         st.write(
             """
             The optional `source_system_record_id` column can be included to preserve
-            traceability back to the source export.
+            traceability back to the source export. First (`first_name`) and last 
+            (`last_name`) names may be included in uploads for validation and alignment 
+            but are not required for reconciliation, as they may not be identical in 
+            the currently present access assignment records. 
             """
         )
 
@@ -797,13 +817,6 @@ with tab6:
 
     st.success("Uploaded file contains all required reconciliation columns.")
 
-    system_options = ["All Systems"] + systems["system_id"].tolist()
-    selected_system = st.selectbox(
-        "Select reconciliation scope",
-        system_options,
-        key="reconciliation_scope",
-    )
-
     st.markdown("### Uploaded Access Export")
     st.dataframe(uploaded_df, width="stretch")
 
@@ -812,6 +825,13 @@ with tab6:
         systems[["system_id", "system_name"]],
         on="system_id",
         how="left",
+    )
+
+    system_options = ["All Systems"] + systems["system_id"].tolist()
+    selected_system = st.selectbox(
+        "Select reconciliation scope",
+        system_options,
+        key="reconciliation_scope",
     )
 
     st.markdown("### Reconciliation Summary by Change Type")

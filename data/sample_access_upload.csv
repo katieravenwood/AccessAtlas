@@ -1,4 +1,4 @@
-user_id,system_id,resource_type,resource_name,permission_name,access_status
-USR00001,SYS001,Application,Legacy Business Application,Standard User,Active
-USR00002,SYS001,Application,Legacy Business Application,Manager,Active
-USR00006,SYS001,Application,Legacy Business Application,Standard User,Active
+user_id,last_name,first_name,system_id,resource_type,resource_name,permission_name,access_status
+USR00001,Morgan,Alex,SYS001,Application,Legacy Business Application,Standard User,Active
+USR00002,Lee,Jamie,SYS001,Application,Legacy Business Application,Manager,Active
+USR00006,Kim,Jordan,SYS001,Application,Legacy Business Application,Standard User,Active

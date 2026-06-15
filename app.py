@@ -538,14 +538,7 @@ with tab4:
 
     admin_view = (
         system_admins.merge(
-            users[
-                [
-                    "user_id", 
-                    "display_name", 
-                    "email", 
-                    "department"
-                ]
-            ],
+            users[["user_id", "display_name", "email", "department"]],
             on="user_id",
             how="left",
         )

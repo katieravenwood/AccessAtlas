@@ -263,17 +263,21 @@ with tab1:
 
 with tab2:
     st.subheader("Central User Registry")
+
     role_filter = st.multiselect(
         "Filter by application role",
         sorted(users["application_role"].unique()),
+        key="role_filter",
     )
     type_filter = st.multiselect(
         "Filter by user type",
         sorted(users["user_type"].unique()),
+        key="type_filter",
     )
     status_filter = st.multiselect(
         "Filter by record status",
         sorted(users["record_status"].unique()),
+        key="status_filter",
     )
 
     view = users.copy()
@@ -287,7 +291,11 @@ with tab2:
     st.dataframe(view, use_container_width=True)
 
     st.markdown("### Selected User Governance Profile")
-    selected = st.selectbox("Select user ID", users["user_id"])
+    selected = st.selectbox(
+        "Select user ID",
+        users["user_id"],
+        key="selected_user_id",
+    )
     selected_user = users[users["user_id"] == selected].iloc[0]
 
     manager_name = "Not assigned"
@@ -376,18 +384,21 @@ with tab2:
 
 with tab3:
     st.subheader("System Catalog")
-    
+
     system_type_filter = st.multiselect(
         "Filter by system type",
         sorted(systems["system_type"].unique()),
+        key="system_type_filter",
     )
     system_category_filter = st.multiselect(
         "Filter by system category",
         sorted(systems["system_category"].unique()),
+        key="system_category_filter",
     )
     system_status_filter = st.multiselect(
         "Filter by system record status",
         sorted(systems["record_status"].unique()),
+        key="system_status_filter",
     )
 
     system_view = systems.copy()
@@ -403,7 +414,11 @@ with tab3:
     st.dataframe(system_view, use_container_width=True)
 
     st.markdown("### Selected System Governance Profile")
-    selected_system = st.selectbox("Select system ID", systems["system_id"])
+    selected_system = st.selectbox(
+        "Select system ID",
+        systems["system_id"],
+        key="selected_system_id",
+    )
     selected_system_record = systems[systems["system_id"] == selected_system].iloc[0]
 
     selected_system_access = access[access["system_id"] == selected_system].merge(
@@ -500,25 +515,19 @@ with tab3:
 
 with tab4:
     st.subheader("System Administrator Assignments")
+
     admin_view = (
         system_admins.merge(
-            users[
-                [
-                    "user_id", 
-                    "display_name", 
-                    "email", 
-                    "department"
-                ]
-            ],
+            users[["user_id", "display_name", "email", "department"]],
             on="user_id",
             how="left",
         )
         .merge(
             systems[
                 [
-                    "system_id", 
-                    "system_name", 
-                    "system_type", 
+                    "system_id",
+                    "system_name",
+                    "system_type",
                     "system_category",
                     "record_status",
                 ]
@@ -541,18 +550,22 @@ with tab4:
     admin_role_filter = st.multiselect(
         "Filter by admin role",
         sorted(admin_view["admin_role"].dropna().unique()),
+        key="admin_role_filter",
     )
     assignment_status_filter = st.multiselect(
         "Filter by assignment status",
         sorted(admin_view["assignment_status"].dropna().unique()),
+        key="assignment_status_filter",
     )
     admin_system_type_filter = st.multiselect(
         "Filter by system type",
         sorted(admin_view["system_type"].dropna().unique()),
+        key="admin_system_type_filter",
     )
     admin_system_category_filter = st.multiselect(
         "Filter by system category",
         sorted(admin_view["system_category"].dropna().unique()),
+        key="admin_system_category_filter",
     )
 
     filtered_admin_view = admin_view.copy()
@@ -580,7 +593,7 @@ with tab4:
     selected_admin = st.selectbox(
         "Select administrator",
         sorted(admin_view["display_name"].dropna().unique()),
-        key="admin_centered_select",
+        key="selected_administrator",
     )
     st.dataframe(
         admin_view[admin_view["display_name"] == selected_admin],
@@ -591,7 +604,7 @@ with tab4:
     selected_admin_system = st.selectbox(
         "Select system",
         sorted(systems["system_name"].dropna().unique()),
-        key="system_centered_select",
+        key="selected_admin_system",
     )
     selected_admin_system_id = systems[
         systems["system_name"] == selected_admin_system
@@ -626,32 +639,90 @@ with tab4:
     st.dataframe(coverage, use_container_width=True)
 
 with tab5:
-    st.subheader("Training & Agreement Compliance")
+    st.subheader("Compliance Monitoring")
+
+    current_count = len(users[users["compliance_status"] == "Current"])
+    expiring_count = len(users[users["compliance_status"] == "Expiring Soon"])
+    expired_count = len(users[users["compliance_status"] == "Expired"])
+    follow_up_count = len(
+        users[
+            (users["compliance_status"] != "Current")
+            & (users["record_status"] == "Active")
+        ]
+    )
+
+    cm1, cm2, cm3, cm4 = st.columns(4)
+    cm1.metric("Current", current_count)
+    cm2.metric("Expiring Soon", expiring_count)
+    cm3.metric("Expired", expired_count)
+    cm4.metric("Active Records Requiring Follow-Up", follow_up_count)
+
+    st.markdown("### Filters")
     compliance_filter = st.multiselect(
         "Filter by compliance status",
         sorted(users["compliance_status"].unique()),
+        key="compliance_filter",
+    )
+    department_filter = st.multiselect(
+        "Filter by department",
+        sorted(users["department"].dropna().unique()),
+        key="department_filter",
+    )
+    user_type_filter = st.multiselect(
+        "Filter by user type",
+        sorted(users["user_type"].dropna().unique()),
+        key="compliance_user_type_filter",
     )
 
     comp = users.copy()
     if compliance_filter:
         comp = comp[comp["compliance_status"].isin(compliance_filter)]
+    if department_filter:
+        comp = comp[comp["department"].isin(department_filter)]
+    if user_type_filter:
+        comp = comp[comp["user_type"].isin(user_type_filter)]
 
+    compliance_columns = [
+        "user_id",
+        "display_name",
+        "email",
+        "department",
+        "user_type",
+        "record_status",
+        "annual_training_date",
+        "annual_training_expiration",
+        "biennial_training_date",
+        "biennial_training_expiration",
+        "access_agreement_date",
+        "compliance_status",
+    ]
+
+    st.markdown("### Compliance Detail")
+    st.dataframe(comp[compliance_columns], use_container_width=True)
+
+    st.markdown("### Follow-Up Queue")
+    follow_up = users[
+        (users["compliance_status"] != "Current")
+        & (users["record_status"] == "Active")
+    ]
+    if follow_up.empty:
+        st.success("No active user records currently require compliance follow-up.")
+    else:
+        st.dataframe(follow_up[compliance_columns], use_container_width=True)
+
+    st.markdown("### Compliance by Department")
     st.dataframe(
-        comp[
-            [
-                "user_id",
-                "display_name",
-                "email",
-                "user_type",
-                "record_status",
-                "annual_training_date",
-                "annual_training_expiration",
-                "biennial_training_date",
-                "biennial_training_expiration",
-                "access_agreement_date",
-                "compliance_status",
-            ]
-        ],
+        users.groupby(["department", "compliance_status"])
+        .size()
+        .reset_index(name="users"),
+        use_container_width=True,
+    )
+
+    st.markdown("### Compliance by User Type")
+    st.dataframe(
+        users.groupby(["user_type", "compliance_status"])
+        .size()
+        .reset_index(name="users"),
         use_container_width=True,
     )
 
@@ -667,11 +738,12 @@ with tab5:
 
 with tab6:
     st.subheader("Access Reconciliation")
-    st.write("Upload an access export from a tracked system (this example uses the included sample file).")
+    st.write("Upload an example access export or use the included sample file.")
     upload = st.file_uploader(
         "Upload CSV with source_system_record_id, user_id, system_id, "
         "resource_type, resource_name, permission_name, access_status",
         type=["csv"],
+        key="reconciliation_upload",
     )
 
     if upload:
@@ -689,7 +761,11 @@ with tab6:
         st.stop()
 
     system_options = ["All Systems"] + systems["system_id"].tolist()
-    selected_system = st.selectbox("Select reconciliation scope", system_options)
+    selected_system = st.selectbox(
+        "Select reconciliation scope",
+        system_options,
+        key="reconciliation_scope",
+    )
 
     st.markdown("### Uploaded Access Export")
     st.dataframe(uploaded_df, use_container_width=True)

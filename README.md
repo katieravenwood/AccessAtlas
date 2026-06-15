@@ -43,7 +43,7 @@ Track applications, databases, cloud data platforms, dashboards, collaboration s
 
 ### Access Governance
 
-Maintain relationships between users and systems including permission assignments, resource-level permissions, role assignments, access status, access history, and administrative ownership.
+Maintain relationships between users and systems including permission assignments, role assignments, access status, access history, and administrative ownership.
 
 ### System Administrator Assignments
 
@@ -56,14 +56,6 @@ Monitor recurring training, certifications, acknowledgements, and governance obl
 ### Access Reconciliation
 
 Compare authoritative access exports against existing records to identify new users, removed users, permission changes, and status changes.
-
-AccessAtlas supports reconciliation of multiple access models including:
-
-- Application user lists
-- Role-based platforms
-- Database permissions
-- Dashboard access inventories
-- Site and collaboration access records
 
 ### Audit Support
 
@@ -81,9 +73,6 @@ AccessAtlas can be adapted to support:
 - Periodic access audits
 - Role-based access reviews
 - System administrator assignment tracking
-- Cloud platform role governance
-- Database permission governance
-- Dashboard access reconciliation
 - Access reconciliation workflows
 - Internal compliance programs
 - Data governance initiatives
@@ -118,39 +107,36 @@ Common production backends include Snowflake, PostgreSQL, SQL Server, Oracle, Da
 
 ## Core Data Model
 
-The AccessAtlas reference implementation is built around five primary entities.
-
 ### Users
 
-Individuals, contractors, vendors, consultants, service accounts, or other identities requiring access to managed resources.
+Individuals or service identities requiring access to systems and resources.
 
-Key attributes include user ID, display name, contact information, user type, application role, manager relationship, compliance records, and record status.
+Key fields include:
+
+- `user_id`
+- `display_name`
+- `email`
+- `application_role`
+- `manager_user_id`
+- `department`
+- `user_type`
+- `record_status`
+
+`user_type` describes the user's relationship to the organization, such as Employee, Contractor, Vendor, Consultant, or Service Account.
+
+`record_status` describes whether the user record is active for governance purposes.
 
 ### Systems
 
-Applications, databases, cloud platforms, dashboards, collaboration sites, and other governed resources.
-
-Key attributes include system name, system type, governance category, resource scope, access model, administrative ownership, and lifecycle status.
+Applications, databases, cloud platforms, dashboards, and collaboration environments.
 
 ### Access Assignments
 
-Relationships between users and systems that define access permissions to specific resources.
-
-Key attributes include user, system, resource type, resource name, permission, access status, grant date, and revocation date.
+Relationships between users and systems that define permissions and access levels.
 
 ### System Administrator Assignments
 
-Relationships between users and systems that define administrative responsibility for governance and access management activities.
-
-Key attributes include user, system, administrative role, assignment status, assignment source, and assignment history.
-
-### Access Reconciliation Uploads
-
-Authoritative access exports used to compare current access records against external systems.
-
-Uploads may represent application access, platform roles, database permissions, dashboard access, site membership, or other governed resources.
-
-These uploads support new user identification, removed user identification, permission change detection, access review workflows, and audit support.
+Relationships between users and systems that define which users administer which systems.
 
 ## Repository Structure
 

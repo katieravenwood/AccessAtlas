@@ -502,28 +502,128 @@ with tab4:
     st.subheader("System Administrator Assignments")
     admin_view = (
         system_admins.merge(
-            users[["user_id", "display_name", "email", "department"]],
+            users[
+                [
+                    "user_id", 
+                    "display_name", 
+                    "email", 
+                    "department"
+                ]
+            ],
             on="user_id",
             how="left",
         )
         .merge(
-            systems[["system_id", "system_name", "system_type", "system_category"]],
+            systems[
+                [
+                    "system_id", 
+                    "system_name", 
+                    "system_type", 
+                    "system_category",
+                    "record_status",
+                ]
+            ],
             on="system_id",
             how="left",
         )
     )
 
-    st.dataframe(admin_view, use_container_width=True)
+    a1, a2, a3, a4 = st.columns(4)
+    a1.metric("Admin Assignments", len(admin_view))
+    a2.metric("Unique Administrators", admin_view["user_id"].nunique())
+    a3.metric("Systems with Admins", admin_view["system_id"].nunique())
+    a4.metric(
+        "Active Assignments",
+        len(admin_view[admin_view["assignment_status"] == "Active"]),
+    )
 
+    st.markdown("### Filters")
+    admin_role_filter = st.multiselect(
+        "Filter by admin role",
+        sorted(admin_view["admin_role"].dropna().unique()),
+    )
+    assignment_status_filter = st.multiselect(
+        "Filter by assignment status",
+        sorted(admin_view["assignment_status"].dropna().unique()),
+    )
+    admin_system_type_filter = st.multiselect(
+        "Filter by system type",
+        sorted(admin_view["system_type"].dropna().unique()),
+    )
+    admin_system_category_filter = st.multiselect(
+        "Filter by system category",
+        sorted(admin_view["system_category"].dropna().unique()),
+    )
+
+    filtered_admin_view = admin_view.copy()
+    if admin_role_filter:
+        filtered_admin_view = filtered_admin_view[
+            filtered_admin_view["admin_role"].isin(admin_role_filter)
+        ]
+    if assignment_status_filter:
+        filtered_admin_view = filtered_admin_view[
+            filtered_admin_view["assignment_status"].isin(assignment_status_filter)
+        ]
+    if admin_system_type_filter:
+        filtered_admin_view = filtered_admin_view[
+            filtered_admin_view["system_type"].isin(admin_system_type_filter)
+        ]
+    if admin_system_category_filter:
+        filtered_admin_view = filtered_admin_view[
+            filtered_admin_view["system_category"].isin(admin_system_category_filter)
+        ]
+
+    st.markdown("### All System Administrator Assignments")
+    st.dataframe(filtered_admin_view, use_container_width=True)
+
+    st.markdown("### Administrator-Centered View")
     selected_admin = st.selectbox(
         "Select administrator",
         sorted(admin_view["display_name"].dropna().unique()),
+        key="admin_centered_select",
     )
-    st.markdown("### Systems Administered")
     st.dataframe(
         admin_view[admin_view["display_name"] == selected_admin],
         use_container_width=True,
     )
+
+    st.markdown("### System-Centered View")
+    selected_admin_system = st.selectbox(
+        "Select system",
+        sorted(systems["system_name"].dropna().unique()),
+        key="system_centered_select",
+    )
+    selected_admin_system_id = systems[
+        systems["system_name"] == selected_admin_system
+    ].iloc[0]["system_id"]
+
+    system_admin_detail = admin_view[
+        admin_view["system_id"] == selected_admin_system_id
+    ]
+
+    if system_admin_detail.empty:
+        st.info("No administrator assignments are currently recorded for this system.")
+    else:
+        st.dataframe(system_admin_detail, use_container_width=True)
+
+    st.markdown("### Admin Coverage by System")
+    coverage = systems[
+        ["system_id", "system_name", "system_type", "system_category", "record_status"]
+    ].merge(
+        admin_view.groupby("system_id").size().reset_index(
+            name="admin_assignment_count"
+        ),
+        on="system_id",
+        how="left",
+    )
+    coverage["admin_assignment_count"] = (
+        coverage["admin_assignment_count"].fillna(0).astype(int)
+    )
+    coverage["coverage_status"] = coverage["admin_assignment_count"].apply(
+        lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
+    )
+
+    st.dataframe(coverage, use_container_width=True)
 
 with tab5:
     st.subheader("Training & Agreement Compliance")

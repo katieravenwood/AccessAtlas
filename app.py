@@ -286,16 +286,205 @@ with tab2:
 
     st.dataframe(view, use_container_width=True)
 
-    st.markdown("### User Access Detail")
+    st.markdown("### Selected User Governance Profile")
     selected = st.selectbox("Select user ID", users["user_id"])
+    selected_user = users[users["user_id"] == selected].iloc[0]
+
+    manager_name = "Not assigned"
+    if pd.notna(selected_user["manager_user_id"]) and selected_user["manager_user_id"]:
+        manager_match = users[users["user_id"] == selected_user["manager_user_id"]]
+        if not manager_match.empty:
+            manager_name = manager_match.iloc[0]["display_name"]
+
+    selected_access = access[access["user_id"] == selected].merge(
+        systems,
+        on="system_id",
+        how="left",
+    )
+    selected_admin_assignments = (
+        system_admins[system_admins["user_id"] == selected]
+        .merge(
+            systems[["system_id", "system_name", "system_type", "system_category"]],
+            on="system_id",
+            how="left",
+        )
+    )
+
+    st.markdown(f"#### {selected_user['display_name']}")
+    st.write(
+        f"""
+        **User ID:** {selected_user['user_id']}  
+        **Email:** {selected_user['email']}  
+        **Department:** {selected_user['department']}  
+        **User Type:** {selected_user['user_type']}  
+        **Application Role:** {selected_user['application_role']}  
+        **Manager:** {manager_name}  
+        **Record Status:** {selected_user['record_status']}  
+        **Compliance Status:** {selected_user['compliance_status']}
+        """
+    )
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Systems Accessed", selected_access["system_id"].nunique())
+    m2.metric("Access Assignments", len(selected_access))
+    m3.metric("Admin Assignments", len(selected_admin_assignments))
+    m4.metric("Compliance", selected_user["compliance_status"])
+
+    st.markdown("### Training & Agreement Snapshot")
     st.dataframe(
-        access[access["user_id"] == selected].merge(systems, on="system_id", how="left"),
+        pd.DataFrame(
+            [
+                {
+                    "requirement": "Annual Training",
+                    "completion_date": selected_user["annual_training_date"],
+                    "expiration_date": selected_user["annual_training_expiration"],
+                },
+                {
+                    "requirement": "Biennial Training",
+                    "completion_date": selected_user["biennial_training_date"],
+                    "expiration_date": selected_user["biennial_training_expiration"],
+                },
+                {
+                    "requirement": "Access Agreement",
+                    "completion_date": selected_user["access_agreement_date"],
+                    "expiration_date": "",
+                },
+            ]
+        ),
         use_container_width=True,
     )
 
+    st.markdown("### Access by System")
+    if selected_access.empty:
+        st.info("This user does not currently have access assignments.")
+    else:
+        st.dataframe(
+            selected_access.groupby(["system_id", "system_name", "system_type"])
+            .size()
+            .reset_index(name="access_records"),
+            use_container_width=True,
+        )
+
+    st.markdown("### Detailed Access Assignments")
+    st.dataframe(selected_access, use_container_width=True)
+
+    st.markdown("### Administrative Assignments")
+    if selected_admin_assignments.empty:
+        st.info("This user is not assigned as an administrator for any tracked systems.")
+    else:
+        st.dataframe(selected_admin_assignments, use_container_width=True)
+
 with tab3:
     st.subheader("System Catalog")
-    st.dataframe(systems, use_container_width=True)
+    
+    system_type_filter = st.multiselect(
+        "Filter by system type",
+        sorted(systems["system_type"].unique()),
+    )
+    system_category_filter = st.multiselect(
+        "Filter by system category",
+        sorted(systems["system_category"].unique()),
+    )
+    system_status_filter = st.multiselect(
+        "Filter by system record status",
+        sorted(systems["record_status"].unique()),
+    )
+
+    system_view = systems.copy()
+    if system_type_filter:
+        system_view = system_view[system_view["system_type"].isin(system_type_filter)]
+    if system_category_filter:
+        system_view = system_view[
+            system_view["system_category"].isin(system_category_filter)
+        ]
+    if system_status_filter:
+        system_view = system_view[system_view["record_status"].isin(system_status_filter)]
+
+    st.dataframe(system_view, use_container_width=True)
+
+    st.markdown("### Selected System Governance Profile")
+    selected_system = st.selectbox("Select system ID", systems["system_id"])
+    selected_system_record = systems[systems["system_id"] == selected_system].iloc[0]
+
+    selected_system_access = access[access["system_id"] == selected_system].merge(
+        users[["user_id", "display_name", "email", "department", "user_type"]],
+        on="user_id",
+        how="left",
+    )
+
+    selected_system_admins = (
+        system_admins[system_admins["system_id"] == selected_system]
+        .merge(
+            users[["user_id", "display_name", "email", "department"]],
+            on="user_id",
+            how="left",
+        )
+    )
+
+    st.markdown(f"#### {selected_system_record['system_name']}")
+    st.write(
+        f"""
+        **System ID:** {selected_system_record['system_id']}  
+        **System Type:** {selected_system_record['system_type']}  
+        **System Category:** {selected_system_record['system_category']}  
+        **Resource Scope:** {selected_system_record['resource_scope']}  
+        **Access Model:** {selected_system_record['access_model']}  
+        **Tracking Method:** {selected_system_record['tracking_method']}  
+        **System Owner:** {selected_system_record['system_owner']}  
+        **Admin Group:** {selected_system_record['admin_group']}  
+        **Record Status:** {selected_system_record['record_status']}  
+        **Notes:** {selected_system_record['notes']}
+        """
+    )
+
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Unique Users", selected_system_access["user_id"].nunique())
+    s2.metric("Access Assignments", len(selected_system_access))
+    s3.metric("System Administrators", len(selected_system_admins))
+    s4.metric("Resource Types", selected_system_access["resource_type"].nunique())
+
+    st.markdown("### Users with Access")
+    if selected_system_access.empty:
+        st.info("No access assignments are currently recorded for this system.")
+    else:
+        st.dataframe(
+            selected_system_access[
+                [
+                    "user_id",
+                    "display_name",
+                    "email",
+                    "department",
+                    "user_type",
+                    "resource_type",
+                    "resource_name",
+                    "permission_name",
+                    "access_status",
+                    "granted_date",
+                    "revoked_date",
+                    "source",
+                ]
+            ],
+            use_container_width=True,
+        )
+
+    st.markdown("### System Administrators")
+    if selected_system_admins.empty:
+        st.info("No system administrator assignments are currently recorded for this system.")
+    else:
+        st.dataframe(selected_system_admins, use_container_width=True)
+
+    st.markdown("### Resources and Permissions")
+    if selected_system_access.empty:
+        st.info("No resources or permissions are currently recorded for this system.")
+    else:
+        st.dataframe(
+            selected_system_access.groupby(
+                ["resource_type", "resource_name", "permission_name", "access_status"]
+            )
+            .size()
+            .reset_index(name="assigned_users"),
+            use_container_width=True,
+        )
 
     st.markdown("### Generic Access Model Examples")
     st.info(
@@ -378,7 +567,7 @@ with tab5:
 
 with tab6:
     st.subheader("Access Reconciliation")
-    st.write("Upload an access export or use the included sample file.")
+    st.write("Upload an access export from a tracked system (this example uses the included sample file).")
     upload = st.file_uploader(
         "Upload CSV with source_system_record_id, user_id, system_id, "
         "resource_type, resource_name, permission_name, access_status",

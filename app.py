@@ -382,26 +382,6 @@ with tab2:
     else:
         st.dataframe(selected_admin_assignments, width="stretch")
 
-    st.markdown("### Access by System")
-    if selected_access.empty:
-        st.info("This user does not currently have access assignments.")
-    else:
-        st.dataframe(
-            selected_access.groupby(["system_id", "system_name", "system_type"])
-            .size()
-            .reset_index(name="access_records"),
-            width="stretch",
-        )
-
-    st.markdown("### Detailed Access Assignments")
-    st.dataframe(selected_access, width="stretch")
-
-    st.markdown("### Administrative Assignments")
-    if selected_admin_assignments.empty:
-        st.info("This user is not assigned as an administrator for any tracked systems.")
-    else:
-        st.dataframe(selected_admin_assignments, width="stretch")
-
 with tab3:
     st.subheader("System Catalog")
 

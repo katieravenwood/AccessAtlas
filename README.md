@@ -1,61 +1,116 @@
 # AccessAtlas
 
-A Streamlit-based reference implementation for centralized access governance, compliance tracking, permission cataloging, and access reconciliation.
+AccessAtlas is a Streamlit-based reference implementation for centralized access governance, compliance tracking, permission cataloging, and access reconciliation.
 
-AccessAtlas demonstrates how organizations can maintain a single inventory of users, systems, permissions, certifications, and access reviews across applications, databases, cloud platforms, dashboards, and collaboration environments.
+It demonstrates how organizations can maintain a single inventory of users, systems, permissions, administrator assignments, compliance records, and access review data across applications, databases, cloud platforms, dashboards, and collaboration environments.
 
-The project uses synthetic sample data and generic system examples so it can be adapted to virtually any industry, organization, or technology stack.
+The project uses synthetic sample data and generic system examples so it can be adapted to different industries, organizations, and technology stacks.
+
+---
 
 ## Design Principles
 
 AccessAtlas is built around five core principles:
 
-1. Centralized governance
-2. Platform neutrality
-3. Auditability
-4. Transparency
-5. Extensibility
+1. **Centralized governance** — maintain one place to understand users, systems, permissions, and compliance posture.
+2. **Platform neutrality** — support applications, databases, dashboards, cloud platforms, sites, folders, and future system types.
+3. **Auditability** — preserve inactive records and historical access context rather than deleting governance history.
+4. **Transparency** — make access relationships, administrative responsibility, and compliance status easy to inspect.
+5. **Extensibility** — keep the reference implementation simple while allowing migration to enterprise backends and workflows.
 
-## Purpose
+---
 
-Organizations frequently manage access information across multiple systems, often using disconnected spreadsheets, exports, ticketing systems, and administrative tools.
+## What This Project Demonstrates
 
-AccessAtlas demonstrates a practical architecture for consolidating access governance activities into a single platform that can:
+AccessAtlas demonstrates practical patterns for:
 
-- Maintain centralized user inventories
-- Catalog managed systems and resources
-- Track permissions and access assignments
-- Track system administrator assignments
-- Monitor compliance requirements
-- Support access reviews and audits
-- Reconcile authoritative access exports
-- Provide governance reporting and oversight
+- Central user registry management
+- Cross-system access cataloging
+- Resource-level permission tracking
+- System administrator assignment tracking
+- Training and agreement compliance monitoring
+- Upload-based access reconciliation
+- Audit-friendly inactive record handling
+- Governance reporting summaries
 
-## Key Capabilities
+---
 
-### User Registry
+## Application Tabs
 
-Maintain a centralized inventory of users including identifiers, names, contact information, user type, application role, manager relationship, training records, and governance record status.
+The application is organized into six main tabs.
 
-### System Catalog
+### Overview
 
-Track applications, databases, cloud data platforms, dashboards, collaboration sites, shared folders, and data management systems.
+Provides a dashboard-style summary of the governance dataset, including:
 
-### Access Governance
+- total users
+- tracked systems
+- access records
+- system administrator assignments
+- expired or expiring compliance records
+- user record status summaries
+- compliance status summaries
+- access records by system type, resource type, and access status
 
-Maintain relationships between users and systems including permission assignments, role assignments, access status, access history, and administrative ownership.
+### Users
 
-### System Administrator Assignments
+Provides a user-centered governance profile including:
 
-Assign users as administrators for one or more specific systems without storing comma-separated roles in a user record. This supports a clean many-to-many relationship between users and systems.
+- user registry filters
+- selected user profile
+- manager lookup
+- access assignment metrics
+- administrative assignment metrics
+- training and agreement snapshot
+- access by system
+- detailed access records
+- systems administered by the selected user
 
-### Compliance Tracking
+### Systems (Resources)
 
-Monitor recurring training, certifications, acknowledgements, and governance obligations.
+Provides a system-centered governance profile including:
+
+- system catalog filters
+- selected system details
+- system owner and administrative group
+- resource scope and access model
+- users with access
+- system administrators
+- resources and permissions assigned within the system
+
+### System Admins
+
+Shows administrative responsibility across systems, including:
+
+- administrator assignment metrics
+- filters by admin role, status, system type, and system category
+- administrator-centered view
+- system-centered view
+- admin coverage by system
+
+### Compliance
+
+Provides compliance monitoring and follow-up reporting, including:
+
+- current, expiring, and expired compliance counts
+- active records requiring follow-up
+- filters by compliance status, department, and user type
+- follow-up queue
+- compliance summaries by department and user type
 
 ### Access Reconciliation
 
-Compare authoritative access exports against existing records to identify new users, removed users, permission changes, and status changes.
+Demonstrates upload-based reconciliation of external access exports against current access assignment records, including:
+
+- expected upload schema
+- upload validation
+- reconciliation scope selection
+- uploaded export preview
+- summary by change type
+- summary by resource type
+- action queue
+- source record traceability
+- audit-friendly inactive status recommendations
 
 ### Audit Support
 
@@ -103,15 +158,19 @@ AccessAtlas can be adapted to support:
 - Pandas
 - CSV Data Sources
 
-Common production backends include Snowflake, PostgreSQL, SQL Server, Oracle, Databricks, REST APIs, and identity management platforms.
+Common production backends for which this sample implementation could be modified include Snowflake, PostgreSQL, SQL Server, Oracle, Databricks, REST APIs, and identity management platforms.
+
+---
 
 ## Core Data Model
 
-### Users
+The AccessAtlas reference implementation is built around five primary entities.
 
-Individuals or service identities requiring access to systems and resources.
+### User Records
 
-Key fields include:
+Individuals, contractors, vendors, consultants, service accounts, or other identities requiring access to managed resources.
+
+Key attributes include:
 
 - `user_id`
 - `display_name`
@@ -121,22 +180,87 @@ Key fields include:
 - `department`
 - `user_type`
 - `record_status`
+- training and agreement dates
 
 `user_type` describes the user's relationship to the organization, such as Employee, Contractor, Vendor, Consultant, or Service Account.
 
 `record_status` describes whether the user record is active for governance purposes.
 
-### Systems
+### Systems Records
 
-Applications, databases, cloud platforms, dashboards, and collaboration environments.
+Applications, databases, cloud platforms, dashboards, collaboration sites, and other governed resources.
+
+Key attributes include:
+
+- `system_id`
+- `system_name`
+- `system_type`
+- `system_category`
+- `resource_scope`
+- `access_model`
+- `tracking_method`
+- `system_owner`
+- `admin_group`
+- `record_status`
 
 ### Access Assignments
 
-Relationships between users and systems that define permissions and access levels.
+Relationships between users and systems that define access permissions to specific resources.
+
+The model supports:
+
+```text
+User → System → Resource → Permission
+```
+
+Key attributes include:
+
+- `user_id`
+- `system_id`
+- `resource_type`
+- `resource_name`
+- `permission_name`
+- `access_status`
+- `granted_date`
+- `revoked_date`
+- `source`
 
 ### System Administrator Assignments
 
-Relationships between users and systems that define which users administer which systems.
+Relationships between users and systems that define administrative responsibility.
+
+The model supports:
+
+```text
+User → System → Administrative Role
+```
+
+This allows one user to administer multiple systems and one system to have multiple administrators.
+
+### Access Reconciliation Uploads
+
+Authoritative access exports used to compare current access records against external systems.
+
+Uploads may represent:
+
+- application access
+- role-based platform access
+- database permissions
+- dashboard access
+- site membership
+- other governed resources
+
+The recommended reconciliation key is:
+
+```text
+user_id
+system_id
+resource_type
+resource_name
+permission_name
+```
+
+---
 
 ## Repository Structure
 
@@ -154,6 +278,30 @@ Relationships between users and systems that define which users administer which
     └── sample_access_upload.csv
 ```
 
+---
+
+## Tech Stack
+
+Included in this reference implementation:
+
+- Streamlit
+- Python
+- Pandas
+- CSV data sources
+
+Common production backends or integrations may include:
+
+- Snowflake
+- PostgreSQL
+- SQL Server
+- Oracle
+- Databricks
+- REST APIs
+- identity management platforms
+- notification services
+
+---
+
 ## Running the Application
 
 Install dependencies:
@@ -168,11 +316,46 @@ Launch the application:
 streamlit run app.py
 ```
 
+---
+
 ## Sample Data
 
 All sample data included in this repository is synthetic.
 
 No proprietary information, organizational data, user records, credentials, or production system details are included.
+
+The sample data is intentionally generic and demonstrates access governance patterns across multiple system and resource types.
+
+---
+
+## Access Reconciliation Upload Schema
+
+The sample upload file uses the following structure:
+
+```text
+source_system_record_id
+user_id
+system_id
+resource_type
+resource_name
+permission_name
+access_status
+```
+
+Required fields for reconciliation are:
+
+```text
+user_id
+system_id
+resource_type
+resource_name
+permission_name
+access_status
+```
+
+The `source_system_record_id` field is optional but recommended because it preserves traceability back to the source export.
+
+---
 
 ## Production Deployment Considerations
 
@@ -188,9 +371,44 @@ A production implementation would typically include:
 - Automated reconciliation processes
 - Monitoring and observability
 - Backup and recovery processes
+- Secure secrets management
 
-## Snowflake Example
+The architecture is intentionally designed so the CSV-based data layer can be replaced with enterprise databases or identity platforms with limited changes to the application layer.
+
+---
+
+## Snowflake Migration Path
 
 The included `SNOWFLAKE_NOTES.md` document demonstrates how the same architecture can be migrated from CSV-backed storage to a Snowflake-backed implementation.
 
+The CSV files map naturally to Snowflake tables:
+
+```text
+users.csv → ACCESSATLAS.USERS
+systems.csv → ACCESSATLAS.SYSTEMS
+access_assignments.csv → ACCESSATLAS.ACCESS_ASSIGNMENTS
+system_admin_assignments.csv → ACCESSATLAS.SYSTEM_ADMIN_ASSIGNMENTS
+sample_access_upload.csv → ACCESSATLAS.ACCESS_RECONCILIATION_UPLOADS
+```
+
 Only the data access layer needs to change; the user interface and governance workflows remain largely unchanged.
+
+---
+
+## Future Enhancements
+
+Potential enhancements include:
+
+- resource and environment dimension tables
+- notification history
+- approval workflows
+- access review campaigns
+- audit event logging
+- user group management
+- team membership management
+- Snowflake-native role metadata ingestion
+- API-based access synchronization
+- dashboard visualizations
+- test suite and CI workflow
+
+AccessAtlas is intended as a foundation that organizations can extend to fit their own governance, compliance, and operational requirements.

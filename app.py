@@ -462,110 +462,110 @@ with tab2:
     else:
         st.subheader("Central User Registry")
 
-    role_filter = st.multiselect(
-        "Filter by application role",
-        sorted(users["application_role"].dropna().unique()),
-        key="role_filter",
-    )
-    type_filter = st.multiselect(
-        "Filter by user type",
-        sorted(users["user_type"].unique()),
-        key="type_filter",
-    )
-    status_filter = st.multiselect(
-        "Filter by record status",
-        sorted(users["record_status"].dropna().unique()),
-        key="status_filter",
-    )
+        role_filter = st.multiselect(
+            "Filter by application role",
+            sorted(users["application_role"].dropna().unique()),
+            key="role_filter",
+        )
+        type_filter = st.multiselect(
+            "Filter by user type",
+            sorted(users["user_type"].unique()),
+            key="type_filter",
+        )
+        status_filter = st.multiselect(
+            "Filter by record status",
+            sorted(users["record_status"].dropna().unique()),
+            key="status_filter",
+        )
 
-    user_view = users.copy()
-    user_view = apply_multiselect_filter(user_view, "application_role", role_filter)
-    user_view = apply_multiselect_filter(user_view, "user_type", type_filter)
-    user_view = apply_multiselect_filter(user_view, "record_status", status_filter)
+        user_view = users.copy()
+        user_view = apply_multiselect_filter(user_view, "application_role", role_filter)
+        user_view = apply_multiselect_filter(user_view, "user_type", type_filter)
+        user_view = apply_multiselect_filter(user_view, "record_status", status_filter)
 
-    st.dataframe(user_view[USER_DISPLAY_COLUMNS], 
-                 width="stretch"
-                 )
+        st.dataframe(user_view[USER_DISPLAY_COLUMNS], 
+                    width="stretch"
+                    )
 
-    st.markdown("### Selected User Governance Profile")
-    selected_user_id = st.selectbox(
-        "Select user ID", 
-        users["user_id"],
-        key="selected_user_id",
-    )
-    selected_user = users[users["user_id"] == selected_user_id].iloc[0]
-    manager_name = get_display_name(users, selected_user["manager_user_id"])
+        st.markdown("### Selected User Governance Profile")
+        selected_user_id = st.selectbox(
+            "Select user ID", 
+            users["user_id"],
+            key="selected_user_id",
+        )
+        selected_user = users[users["user_id"] == selected_user_id].iloc[0]
+        manager_name = get_display_name(users, selected_user["manager_user_id"])
 
-    selected_access = access[access["user_id"] == selected_user_id].merge(
-        systems,
-        on="system_id",
-        how="left",
-    )
-    selected_admin_assignments = (
-        system_admins[system_admins["user_id"] == selected_user_id]
-        .merge(
-            systems[["system_id", "system_name", "system_type", "system_category"]],
+        selected_access = access[access["user_id"] == selected_user_id].merge(
+            systems,
             on="system_id",
             how="left",
         )
-    )
+        selected_admin_assignments = (
+            system_admins[system_admins["user_id"] == selected_user_id]
+            .merge(
+                systems[["system_id", "system_name", "system_type", "system_category"]],
+                on="system_id",
+                how="left",
+            )
+        )
 
-    st.markdown(f"#### {selected_user['display_name']}")
-    st.write(user_profile_markdown(selected_user, manager_name))
+        st.markdown(f"#### {selected_user['display_name']}")
+        st.write(user_profile_markdown(selected_user, manager_name))
 
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Systems Accessed", selected_access["system_id"].nunique())
-    m2.metric("Access Assignments", len(selected_access))
-    m3.metric("Admin Assignments", len(selected_admin_assignments))
-    m4.metric("Compliance", selected_user["compliance_status"])
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Systems Accessed", selected_access["system_id"].nunique())
+        m2.metric("Access Assignments", len(selected_access))
+        m3.metric("Admin Assignments", len(selected_admin_assignments))
+        m4.metric("Compliance", selected_user["compliance_status"])
 
-    st.markdown("### Training & Agreement Snapshot")
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "requirement": "Annual Training",
-                    "completion_date": selected_user["annual_training_date"],
-                    "expiration_date": selected_user["annual_training_expiration"],
-                },
-                {
-                    "requirement": "Biennial Training",
-                    "completion_date": selected_user["biennial_training_date"],
-                    "expiration_date": selected_user["biennial_training_expiration"],
-                },
-                {
-                    "requirement": "Access Agreement",
-                    "completion_date": selected_user["access_agreement_date"],
-                    "expiration_date": "",
-                },
-            ]
-        ),
-        width="stretch",
-    )
-
-    st.markdown("### Access by System")
-    if selected_access.empty:
-        st.info("This user does not currently have access assignments.")
-    else:
+        st.markdown("### Training & Agreement Snapshot")
         st.dataframe(
-            count_by(
-                selected_access,
-                ["system_id", "system_name", "system_type"],
-                "access_records",
+            pd.DataFrame(
+                [
+                    {
+                        "requirement": "Annual Training",
+                        "completion_date": selected_user["annual_training_date"],
+                        "expiration_date": selected_user["annual_training_expiration"],
+                    },
+                    {
+                        "requirement": "Biennial Training",
+                        "completion_date": selected_user["biennial_training_date"],
+                        "expiration_date": selected_user["biennial_training_expiration"],
+                    },
+                    {
+                        "requirement": "Access Agreement",
+                        "completion_date": selected_user["access_agreement_date"],
+                        "expiration_date": "",
+                    },
+                ]
             ),
             width="stretch",
         )
 
-    st.markdown("### Detailed Access Assignments")
-    st.dataframe(selected_access, 
-                 width="stretch")
+        st.markdown("### Access by System")
+        if selected_access.empty:
+            st.info("This user does not currently have access assignments.")
+        else:
+            st.dataframe(
+                count_by(
+                    selected_access,
+                    ["system_id", "system_name", "system_type"],
+                    "access_records",
+                ),
+                width="stretch",
+            )
 
-    st.markdown("### Administrative Assignments")
-    if selected_admin_assignments.empty:
-        st.info("This user is not assigned as an administrator for any tracked systems.")
-    else:
-        st.dataframe(selected_admin_assignments, 
-                     width="stretch")
+        st.markdown("### Detailed Access Assignments")
+        st.dataframe(selected_access, 
+                    width="stretch")
+
+        st.markdown("### Administrative Assignments")
+        if selected_admin_assignments.empty:
+            st.info("This user is not assigned as an administrator for any tracked systems.")
+        else:
+            st.dataframe(selected_admin_assignments, 
+                        width="stretch")
 
 with tab3:
     if not is_tab_visible("Systems", visible_tabs):
@@ -573,120 +573,120 @@ with tab3:
     else:
         st.subheader("System Catalog")
 
-    system_type_filter = st.multiselect(
-        "Filter by system type",
-        sorted(systems["system_type"].dropna().unique()),
-        key="system_type_filter",
-    )
-    system_category_filter = st.multiselect(
-        "Filter by system category",
-        sorted(systems["system_category"].dropna().unique()),
-        key="system_category_filter",
-    )
-    system_status_filter = st.multiselect(
-        "Filter by system record status",
-        sorted(systems["record_status"].dropna().unique()),
-        key="system_status_filter",
-    )
+        system_type_filter = st.multiselect(
+            "Filter by system type",
+            sorted(systems["system_type"].dropna().unique()),
+            key="system_type_filter",
+        )
+        system_category_filter = st.multiselect(
+            "Filter by system category",
+            sorted(systems["system_category"].dropna().unique()),
+            key="system_category_filter",
+        )
+        system_status_filter = st.multiselect(
+            "Filter by system record status",
+            sorted(systems["record_status"].dropna().unique()),
+            key="system_status_filter",
+        )
 
-    system_view = systems.copy()
-    system_view = apply_multiselect_filter(system_view, "system_type", system_type_filter)
-    system_view = apply_multiselect_filter(
-        system_view,
-        "system_category",
-        system_category_filter,
-    )
-    system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
+        system_view = systems.copy()
+        system_view = apply_multiselect_filter(system_view, "system_type", system_type_filter)
+        system_view = apply_multiselect_filter(
+            system_view,
+            "system_category",
+            system_category_filter,
+        )
+        system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
 
-    st.dataframe(system_view, 
-                 width="stretch")
+        st.dataframe(system_view, 
+                    width="stretch")
 
-    st.markdown("### Selected System Governance Profile")
-    selected_system_id = st.selectbox(
-        "Select system ID", 
-        systems["system_id"],
-        key="selected_system_id",
-    )
-    selected_system = systems[systems["system_id"] == selected_system_id].iloc[0]
+        st.markdown("### Selected System Governance Profile")
+        selected_system_id = st.selectbox(
+            "Select system ID", 
+            systems["system_id"],
+            key="selected_system_id",
+        )
+        selected_system = systems[systems["system_id"] == selected_system_id].iloc[0]
 
-    selected_system_access = access[access["system_id"] == selected_system_id].merge(
-        users[["user_id", "display_name", "email", "department", "user_type"]],
-        on="user_id",
-        how="left",
-    )
-    selected_system_admins = (
-        system_admins[system_admins["system_id"] == selected_system_id]
-        .merge(
-            users[["user_id", "display_name", "email", "department"]],
+        selected_system_access = access[access["system_id"] == selected_system_id].merge(
+            users[["user_id", "display_name", "email", "department", "user_type"]],
             on="user_id",
             how="left",
         )
-    )
-
-    st.markdown(f"#### {selected_system['system_name']}")
-    st.write(system_profile_markdown(selected_system))
-
-    s1, s2, s3, s4 = st.columns(4)
-    s1.metric("Unique Users", selected_system_access["user_id"].nunique())
-    s2.metric("Access Assignments", len(selected_system_access))
-    s3.metric("System Administrators", len(selected_system_admins))
-    s4.metric("Resource Types", selected_system_access["resource_type"].nunique())
-
-    st.markdown("### Users with Access")
-    if selected_system_access.empty:
-        st.info("No access assignments are currently recorded for this system.")
-    else:
-        st.dataframe(
-            selected_system_access[
-                [
-                    "user_id",
-                    "display_name",
-                    "email",
-                    "department",
-                    "user_type",
-                    "resource_type",
-                    "resource_name",
-                    "permission_name",
-                    "access_status",
-                    "granted_date",
-                    "revoked_date",
-                    "source",
-                ]
-            ],
-            width="stretch",
+        selected_system_admins = (
+            system_admins[system_admins["system_id"] == selected_system_id]
+            .merge(
+                users[["user_id", "display_name", "email", "department"]],
+                on="user_id",
+                how="left",
+            )
         )
 
-    st.markdown("### System Administrators")
-    if selected_system_admins.empty:
-        st.info("No system administrator assignments are currently recorded for this system.")
-    else:
-        st.dataframe(selected_system_admins, 
-                     width="stretch")
+        st.markdown(f"#### {selected_system['system_name']}")
+        st.write(system_profile_markdown(selected_system))
 
-    st.markdown("### Resources and Permissions")
-    if selected_system_access.empty:
-        st.info("No resources or permissions are currently recorded for this system.")
-    else:
-        st.dataframe(
-            count_by(
-                selected_system_access,
-                ["resource_type", "resource_name", "permission_name", "access_status"],
-                "assigned_users",
-            ),
-            width="stretch",
+        s1, s2, s3, s4 = st.columns(4)
+        s1.metric("Unique Users", selected_system_access["user_id"].nunique())
+        s2.metric("Access Assignments", len(selected_system_access))
+        s3.metric("System Administrators", len(selected_system_admins))
+        s4.metric("Resource Types", selected_system_access["resource_type"].nunique())
+
+        st.markdown("### Users with Access")
+        if selected_system_access.empty:
+            st.info("No access assignments are currently recorded for this system.")
+        else:
+            st.dataframe(
+                selected_system_access[
+                    [
+                        "user_id",
+                        "display_name",
+                        "email",
+                        "department",
+                        "user_type",
+                        "resource_type",
+                        "resource_name",
+                        "permission_name",
+                        "access_status",
+                        "granted_date",
+                        "revoked_date",
+                        "source",
+                    ]
+                ],
+                width="stretch",
+            )
+
+        st.markdown("### System Administrators")
+        if selected_system_admins.empty:
+            st.info("No system administrator assignments are currently recorded for this system.")
+        else:
+            st.dataframe(selected_system_admins, 
+                        width="stretch")
+
+        st.markdown("### Resources and Permissions")
+        if selected_system_access.empty:
+            st.info("No resources or permissions are currently recorded for this system.")
+        else:
+            st.dataframe(
+                count_by(
+                    selected_system_access,
+                    ["resource_type", "resource_name", "permission_name", "access_status"],
+                    "assigned_users",
+                ),
+                width="stretch",
+            )
+
+        st.markdown("### Generic Access Model Examples")
+        st.info(
+            """
+            • Applications can be tracked through periodic user exports.
+            • Data management systems can be tracked through role assignments.
+            • Cloud data platforms can be tracked through user-to-role metadata.
+            • Databases can be tracked through database, schema, and table permissions.
+            • Dashboards may require both dashboard access and hosting site access.
+            • Collaboration sites can be tracked through site or group membership.
+            """
         )
-
-    st.markdown("### Generic Access Model Examples")
-    st.info(
-        """
-        • Applications can be tracked through periodic user exports.
-        • Data management systems can be tracked through role assignments.
-        • Cloud data platforms can be tracked through user-to-role metadata.
-        • Databases can be tracked through database, schema, and table permissions.
-        • Dashboards may require both dashboard access and hosting site access.
-        • Collaboration sites can be tracked through site or group membership.
-        """
-    )
 
 with tab4:
     if not is_tab_visible("System Admins", visible_tabs):
@@ -825,80 +825,80 @@ with tab5:
     else:
         st.subheader("Compliance Monitoring")
 
-    current_count = len(users[users["compliance_status"] == "Current"])
-    expiring_count = len(users[users["compliance_status"] == "Expiring Soon"])
-    expired_count = len(users[users["compliance_status"] == "Expired"])
-    follow_up_count = len(
-        users[
+        current_count = len(users[users["compliance_status"] == "Current"])
+        expiring_count = len(users[users["compliance_status"] == "Expiring Soon"])
+        expired_count = len(users[users["compliance_status"] == "Expired"])
+        follow_up_count = len(
+            users[
+                (users["compliance_status"] != "Current")
+                & (users["record_status"] == "Active")
+            ]
+        )
+
+        cm1, cm2, cm3, cm4 = st.columns(4)
+        cm1.metric("Current", current_count)
+        cm2.metric("Expiring Soon", expiring_count)
+        cm3.metric("Expired", expired_count)
+        cm4.metric("Active Records Requiring Follow-Up", follow_up_count)
+
+        st.markdown("### Filters")
+        compliance_filter = st.multiselect(
+            "Filter by compliance status",
+            sorted(users["compliance_status"].dropna().unique()),
+            key="compliance_filter",
+        )
+        department_filter = st.multiselect(
+            "Filter by department",
+            sorted(users["department"].dropna().unique()),
+            key="department_filter",
+        )
+        user_type_filter = st.multiselect(
+            "Filter by user type",
+            sorted(users["user_type"].dropna().unique()),
+            key="compliance_user_type_filter",
+        )
+
+        comp = users.copy()
+        comp = apply_multiselect_filter(comp, "compliance_status", compliance_filter)
+        comp = apply_multiselect_filter(comp, "department", department_filter)
+        comp = apply_multiselect_filter(comp, "user_type", user_type_filter)
+
+        st.markdown("### Compliance Detail")
+        st.dataframe(comp[COMPLIANCE_COLUMNS], 
+                    width="stretch")
+
+        st.markdown("### Follow-Up Queue")
+        follow_up = users[
             (users["compliance_status"] != "Current")
             & (users["record_status"] == "Active")
         ]
-    )
+        if follow_up.empty:
+            st.success("No active user records currently require compliance follow-up.")
+        else:
+            st.dataframe(follow_up[COMPLIANCE_COLUMNS], 
+                        width="stretch")
 
-    cm1, cm2, cm3, cm4 = st.columns(4)
-    cm1.metric("Current", current_count)
-    cm2.metric("Expiring Soon", expiring_count)
-    cm3.metric("Expired", expired_count)
-    cm4.metric("Active Records Requiring Follow-Up", follow_up_count)
+        st.markdown("### Compliance by Department")
+        st.dataframe(
+            count_by(users, ["department", "compliance_status"], "users"),
+            width="stretch",
+        )
 
-    st.markdown("### Filters")
-    compliance_filter = st.multiselect(
-        "Filter by compliance status",
-        sorted(users["compliance_status"].dropna().unique()),
-        key="compliance_filter",
-    )
-    department_filter = st.multiselect(
-        "Filter by department",
-        sorted(users["department"].dropna().unique()),
-        key="department_filter",
-    )
-    user_type_filter = st.multiselect(
-        "Filter by user type",
-        sorted(users["user_type"].dropna().unique()),
-        key="compliance_user_type_filter",
-    )
+        st.markdown("### Compliance by User Type")
+        st.dataframe(
+            count_by(users, ["user_type", "compliance_status"], "users"),
+            width="stretch",
+        )
 
-    comp = users.copy()
-    comp = apply_multiselect_filter(comp, "compliance_status", compliance_filter)
-    comp = apply_multiselect_filter(comp, "department", department_filter)
-    comp = apply_multiselect_filter(comp, "user_type", user_type_filter)
-
-    st.markdown("### Compliance Detail")
-    st.dataframe(comp[COMPLIANCE_COLUMNS], 
-                 width="stretch")
-
-    st.markdown("### Follow-Up Queue")
-    follow_up = users[
-        (users["compliance_status"] != "Current")
-        & (users["record_status"] == "Active")
-    ]
-    if follow_up.empty:
-        st.success("No active user records currently require compliance follow-up.")
-    else:
-        st.dataframe(follow_up[COMPLIANCE_COLUMNS], 
-                     width="stretch")
-
-    st.markdown("### Compliance by Department")
-    st.dataframe(
-        count_by(users, ["department", "compliance_status"], "users"),
-        width="stretch",
-    )
-
-    st.markdown("### Compliance by User Type")
-    st.dataframe(
-        count_by(users, ["user_type", "compliance_status"], "users"),
-        width="stretch",
-    )
-
-    st.markdown("### Reminder Schedule")
-    st.write(
-        f"""
-        Reminder logic can be implemented for {EXPIRING_SOON_DAYS} days before
-        expiration, 7 days before expiration, and the date of expiration.
-        In production, notifications would use an approved organizational
-        email or orchestration service.
-        """
-    )
+        st.markdown("### Reminder Schedule")
+        st.write(
+            f"""
+            Reminder logic can be implemented for {EXPIRING_SOON_DAYS} days before
+            expiration, 7 days before expiration, and the date of expiration.
+            In production, notifications would use an approved organizational
+            email or orchestration service.
+            """
+        )
 
 with tab6:
     if not is_tab_visible("Access Reconciliation", visible_tabs):

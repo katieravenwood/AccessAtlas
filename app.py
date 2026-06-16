@@ -35,6 +35,35 @@ RECONCILIATION_KEY_COLUMNS = [
 ]
 RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
 
+ROLE_VISIBLE_TABS = {
+    "User": ["Overview", "Users"],
+    "Manager": ["Overview", "Users", "Compliance", "Access Reconciliation"],
+    "System Administrator": [
+        "Overview",
+        "Systems",
+        "System Admins",
+        "Access Reconciliation",
+    ],
+    "Super Administrator": [
+        "Overview",
+        "Users",
+        "Systems",
+        "System Admins",
+        "Compliance",
+        "Access Reconciliation",
+    ],
+}
+
+TAB_LABELS = [
+    "Overview",
+    "Users",
+    "Systems",
+    "System Admins",
+    "Compliance",
+    "Access Reconciliation",
+]
+
+
 USER_DISPLAY_COLUMNS = [
     "user_id",
     "display_name",
@@ -274,6 +303,49 @@ def reconcile(current_access, upload_df, selected_system_id=None):
 
 
 # Load and prepare data.
+
+def get_demo_user_options(users):
+    """Return formatted demo user options for the sidebar selector."""
+    demo_users = users.sort_values(["application_role", "display_name"]).copy()
+    demo_users["demo_label"] = (
+        demo_users["display_name"]
+        + " — "
+        + demo_users["application_role"]
+        + " ("
+        + demo_users["user_id"]
+        + ")"
+    )
+    return demo_users[["user_id", "demo_label"]]
+
+
+def get_current_demo_user(users, selected_label):
+    """Return the selected demo user row based on the sidebar label."""
+    demo_options = get_demo_user_options(users)
+    selected_user_id = demo_options[
+        demo_options["demo_label"] == selected_label
+    ].iloc[0]["user_id"]
+    return users[users["user_id"] == selected_user_id].iloc[0]
+
+
+def get_visible_tabs(application_role):
+    """Return the tab labels visible to the selected demo role."""
+    return ROLE_VISIBLE_TABS.get(application_role, ["Overview"])
+
+
+def is_tab_visible(tab_name, visible_tabs):
+    """Return whether a tab should be rendered for the selected demo role."""
+    return tab_name in visible_tabs
+
+
+def render_hidden_tab_message(tab_name, current_user):
+    """Render a standard message for tabs hidden from the current demo role."""
+    st.info(
+        f"The {tab_name} section is not visible when viewing the app as "
+        f"{current_user['application_role']}. Select a different demo account "
+        "from the sidebar to view this functionality."
+    )
+
+
 data = load_data()
 users = add_expirations(data["users"])
 systems = data["systems"]
@@ -281,25 +353,52 @@ access = data["access_assignments"]
 system_admins = data["system_admin_assignments"]
 access_with_systems = access.merge(systems, on="system_id", how="left")
 
+st.sidebar.title("Demo Mode")
+st.sidebar.write(
+    "Select a synthetic demo account to view the application from that role's perspective."
+)
+
+demo_options = get_demo_user_options(users)
+selected_demo_label = st.sidebar.selectbox(
+    "View app as",
+    demo_options["demo_label"].tolist(),
+)
+current_user = get_current_demo_user(users, selected_demo_label)
+visible_tabs = get_visible_tabs(current_user["application_role"])
+
+st.sidebar.markdown("### Current Demo User")
+st.sidebar.write(
+    f"""
+    **Name:** {current_user['display_name']}  
+    **Role:** {current_user['application_role']}  
+    **User Type:** {current_user['user_type']}  
+    **Department:** {current_user['department']}
+    """
+)
+st.sidebar.warning(
+    "Demo Mode is not authentication. It is a simulated role-view selector for "
+    "learning, testing, and demonstration purposes only."
+)
+
 st.title("AccessAtlas")
 st.caption(
     "Reference implementation for centralized access governance across "
     "applications, databases, data platforms, dashboards, and collaboration sites."
 )
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    [
-        "Overview",
-        "Users",
-        "Systems",
-        "System Admins",
-        "Compliance",
-        "Access Reconciliation",
-    ]
+st.info(
+    f"Viewing as **{current_user['display_name']}** "
+    f"with role **{current_user['application_role']}**. "
+    "Visible sections are controlled by simulated demo-role rules."
 )
 
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_LABELS)
+
 with tab1:
-    st.subheader("Access Governance Overview")
+    if not is_tab_visible("Overview", visible_tabs):
+        render_hidden_tab_message("Overview", current_user)
+    else:
+        st.subheader("Access Governance Overview")
 
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Users", len(users))
@@ -310,8 +409,6 @@ with tab1:
         "Expired / Expiring",
         len(users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]),
     )
-    
-    joined = access.merge(systems, on="system_id", how="left")
 
     st.markdown("### User Record Status")
     st.dataframe(
@@ -338,7 +435,8 @@ with tab1:
     )
 
     st.markdown("### Access Records by Access Status")
-    st.dataframe(count_by(access, "access_status"), 
+    st.dataframe(
+        count_by(access, "access_status"), 
         width="stretch",
     )
 
@@ -357,8 +455,12 @@ with tab1:
         """
     )
 
+
 with tab2:
-    st.subheader("Central User Registry")
+    if not is_tab_visible("Users", visible_tabs):
+        render_hidden_tab_message("Users", current_user)
+    else:
+        st.subheader("Central User Registry")
 
     role_filter = st.multiselect(
         "Filter by application role",
@@ -466,7 +568,10 @@ with tab2:
                      width="stretch")
 
 with tab3:
-    st.subheader("System Catalog")
+    if not is_tab_visible("Systems", visible_tabs):
+        render_hidden_tab_message("Systems", current_user)
+    else:
+        st.subheader("System Catalog")
 
     system_type_filter = st.multiselect(
         "Filter by system type",
@@ -584,135 +689,141 @@ with tab3:
     )
 
 with tab4:
-    st.subheader("System Administrator Assignments")
+    if not is_tab_visible("System Admins", visible_tabs):
+        render_hidden_tab_message("System Admins", current_user)
+    else:
+        st.subheader("System Administrator Assignments")
 
-    admin_view = (
-        system_admins.merge(
-            users[["user_id", "display_name", "email", "department"]],
-            on="user_id",
-            how="left",
+        admin_view = (
+            system_admins.merge(
+                users[["user_id", "display_name", "email", "department"]],
+                on="user_id",
+                how="left",
+            )
+            .merge(
+                systems[
+                    [
+                        "system_id",
+                        "system_name",
+                        "system_type",
+                        "system_category",
+                        "record_status",
+                    ]
+                ],
+                on="system_id",
+                how="left",
+            )
         )
-        .merge(
-            systems[
-                [
-                    "system_id",
-                    "system_name",
-                    "system_type",
-                    "system_category",
-                    "record_status",
-                ]
-            ],
+
+        a1, a2, a3, a4 = st.columns(4)
+        a1.metric("Admin Assignments", len(admin_view))
+        a2.metric("Unique Administrators", admin_view["user_id"].nunique())
+        a3.metric("Systems with Admins", admin_view["system_id"].nunique())
+        a4.metric(
+            "Active Assignments",
+            len(admin_view[admin_view["assignment_status"] == "Active"]),
+        )
+
+        st.markdown("### Filters")
+        admin_role_filter = st.multiselect(
+            "Filter by admin role",
+            sorted(admin_view["admin_role"].dropna().unique()),
+            key="admin_role_filter",
+        )
+        assignment_status_filter = st.multiselect(
+            "Filter by assignment status",
+            sorted(admin_view["assignment_status"].dropna().unique()),
+            key="assignment_status_filter",
+        )
+        admin_system_type_filter = st.multiselect(
+            "Filter by system type",
+            sorted(admin_view["system_type"].dropna().unique()),
+            key="admin_system_type_filter",
+        )
+        admin_system_category_filter = st.multiselect(
+            "Filter by system category",
+            sorted(admin_view["system_category"].dropna().unique()),
+            key="admin_system_category_filter",
+        )
+
+        filtered_admin_view = admin_view.copy()
+        filtered_admin_view = apply_multiselect_filter(
+            filtered_admin_view,
+            "admin_role",
+            admin_role_filter,
+        )
+        filtered_admin_view = apply_multiselect_filter(
+            filtered_admin_view,
+            "assignment_status",
+            assignment_status_filter,
+        )
+        filtered_admin_view = apply_multiselect_filter(
+            filtered_admin_view,
+            "system_type",
+            admin_system_type_filter,
+        )
+        filtered_admin_view = apply_multiselect_filter(
+            filtered_admin_view,
+            "system_category",
+            admin_system_category_filter,
+        )
+
+        st.markdown("### All System Administrator Assignments")
+        st.dataframe(filtered_admin_view, 
+                    width="stretch")
+
+        st.markdown("### Administrator-Centered View")
+        selected_admin = st.selectbox(
+            "Select administrator",
+            sorted(admin_view["display_name"].dropna().unique()),
+            key="selected_administrator",
+        )
+        st.dataframe(
+            admin_view[admin_view["display_name"] == selected_admin],
+            width="stretch",
+        )
+
+        st.markdown("### System-Centered View")
+        selected_admin_system = st.selectbox(
+            "Select system",
+            sorted(systems["system_name"].dropna().unique()),
+            key="selected_admin_system",
+        )
+        selected_admin_system_id = systems[
+            systems["system_name"] == selected_admin_system
+        ].iloc[0]["system_id"]
+        system_admin_detail = admin_view[
+            admin_view["system_id"] == selected_admin_system_id
+        ]
+
+        if system_admin_detail.empty:
+            st.info("No administrator assignments are currently recorded for this system.")
+        else:
+            st.dataframe(system_admin_detail, 
+                        width="stretch")
+
+        st.markdown("### Admin Coverage by System")
+        coverage = systems[
+            ["system_id", "system_name", "system_type", "system_category", "record_status"]
+        ].merge(
+            count_by(admin_view, "system_id", "admin_assignment_count"),
             on="system_id",
             how="left",
         )
-    )
-
-    a1, a2, a3, a4 = st.columns(4)
-    a1.metric("Admin Assignments", len(admin_view))
-    a2.metric("Unique Administrators", admin_view["user_id"].nunique())
-    a3.metric("Systems with Admins", admin_view["system_id"].nunique())
-    a4.metric(
-        "Active Assignments",
-        len(admin_view[admin_view["assignment_status"] == "Active"]),
-    )
-
-    st.markdown("### Filters")
-    admin_role_filter = st.multiselect(
-        "Filter by admin role",
-        sorted(admin_view["admin_role"].dropna().unique()),
-        key="admin_role_filter",
-    )
-    assignment_status_filter = st.multiselect(
-        "Filter by assignment status",
-        sorted(admin_view["assignment_status"].dropna().unique()),
-        key="assignment_status_filter",
-    )
-    admin_system_type_filter = st.multiselect(
-        "Filter by system type",
-        sorted(admin_view["system_type"].dropna().unique()),
-        key="admin_system_type_filter",
-    )
-    admin_system_category_filter = st.multiselect(
-        "Filter by system category",
-        sorted(admin_view["system_category"].dropna().unique()),
-        key="admin_system_category_filter",
-    )
-
-    filtered_admin_view = admin_view.copy()
-    filtered_admin_view = apply_multiselect_filter(
-        filtered_admin_view,
-        "admin_role",
-        admin_role_filter,
-    )
-    filtered_admin_view = apply_multiselect_filter(
-        filtered_admin_view,
-        "assignment_status",
-        assignment_status_filter,
-    )
-    filtered_admin_view = apply_multiselect_filter(
-        filtered_admin_view,
-        "system_type",
-        admin_system_type_filter,
-    )
-    filtered_admin_view = apply_multiselect_filter(
-        filtered_admin_view,
-        "system_category",
-        admin_system_category_filter,
-    )
-
-    st.markdown("### All System Administrator Assignments")
-    st.dataframe(filtered_admin_view, 
-                 width="stretch")
-
-    st.markdown("### Administrator-Centered View")
-    selected_admin = st.selectbox(
-        "Select administrator",
-        sorted(admin_view["display_name"].dropna().unique()),
-        key="selected_administrator",
-    )
-    st.dataframe(
-        admin_view[admin_view["display_name"] == selected_admin],
-        width="stretch",
-    )
-
-    st.markdown("### System-Centered View")
-    selected_admin_system = st.selectbox(
-        "Select system",
-        sorted(systems["system_name"].dropna().unique()),
-        key="selected_admin_system",
-    )
-    selected_admin_system_id = systems[
-        systems["system_name"] == selected_admin_system
-    ].iloc[0]["system_id"]
-    system_admin_detail = admin_view[
-        admin_view["system_id"] == selected_admin_system_id
-    ]
-
-    if system_admin_detail.empty:
-        st.info("No administrator assignments are currently recorded for this system.")
-    else:
-        st.dataframe(system_admin_detail, 
-                     width="stretch")
-
-    st.markdown("### Admin Coverage by System")
-    coverage = systems[
-        ["system_id", "system_name", "system_type", "system_category", "record_status"]
-    ].merge(
-        count_by(admin_view, "system_id", "admin_assignment_count"),
-        on="system_id",
-        how="left",
-    )
-    coverage["admin_assignment_count"] = (
-        coverage["admin_assignment_count"].fillna(0).astype(int)
-    )
-    coverage["coverage_status"] = coverage["admin_assignment_count"].apply(
-        lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
-    )
-    st.dataframe(coverage, 
-                 width="stretch")
+        coverage["admin_assignment_count"] = (
+            coverage["admin_assignment_count"].fillna(0).astype(int)
+        )
+        coverage["coverage_status"] = coverage["admin_assignment_count"].apply(
+            lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
+        )
+        st.dataframe(coverage, 
+                    width="stretch")
 
 with tab5:
-    st.subheader("Compliance Monitoring")
+    if not is_tab_visible("Compliance", visible_tabs):
+        render_hidden_tab_message("Compliance", current_user)
+    else:
+        st.subheader("Compliance Monitoring")
 
     current_count = len(users[users["compliance_status"] == "Current"])
     expiring_count = len(users[users["compliance_status"] == "Expiring Soon"])
@@ -790,128 +901,135 @@ with tab5:
     )
 
 with tab6:
-    st.subheader("Access Reconciliation")
-    st.write(
-        """
-        Upload an access export from a tracked system and compare it against the current
-        AccessAtlas access assignment records.
-        """
-    )
-
-    with st.expander("Expected upload schema"):
+    if not is_tab_visible("Access Reconciliation", visible_tabs):
+        render_hidden_tab_message("Access Reconciliation", current_user)
+    else:
+        st.subheader("Access Reconciliation")
         st.write(
             """
-            Uploaded reconciliation files should include the following required columns:
+            Upload an access export from a tracked system and compare it against the current
+            AccessAtlas access assignment records.
             """
         )
+
+        with st.expander("Expected upload schema"):
+            st.write(
+                """
+                Uploaded reconciliation files should include the following required columns:
+                """
+            )
+            st.dataframe(
+                pd.DataFrame(
+                    {
+                        "column_name": RECONCILIATION_REQUIRED_COLUMNS,
+                        "description": [
+                            "Unique user identifier",
+                            "Tracked system identifier",
+                            "Type of resource being governed",
+                            "Specific resource name",
+                            "Permission or role name",
+                            "Current access status in the uploaded source",
+                        ],
+                    }
+                ),
+                width="stretch",
+            )
+            st.write(
+                """
+                The optional `source_system_record_id` column can be included to preserve
+                traceability back to the source export. First (`first_name`) and last 
+                (`last_name`) names may be included in uploads for validation and alignment 
+                but are not required for reconciliation, as they may not be identical in 
+                the currently present access assignment records. 
+                """
+            )
+
+        upload = st.file_uploader(
+            "Upload CSV with source_system_record_id, user_id, system_id, "
+            "resource_type, resource_name, permission_name, access_status",
+            type=["csv"],
+            key="reconciliation_upload",
+        )
+
+        if upload:
+            uploaded_df = pd.read_csv(upload)
+        else:
+            uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
+            st.caption("Using bundled sample access export.")
+
+        missing_columns = validate_upload(uploaded_df, RECONCILIATION_REQUIRED_COLUMNS)
+        if missing_columns:
+            st.error(
+                "Uploaded file is missing required columns: "
+                + ", ".join(missing_columns)
+            )
+            st.stop()
+
+        st.success("Uploaded file contains all required reconciliation columns.")
+
+        system_options = ["All Systems"] + systems["system_id"].tolist()
+        selected_system = st.selectbox(
+            "Select reconciliation scope",
+            system_options,
+            key="reconciliation_scope",
+        )
+
+        st.markdown("### Uploaded Access Export")
+        st.dataframe(uploaded_df, 
+                    width="stretch")
+
+        result = reconcile(access, uploaded_df, selected_system_id=selected_system)
+        result_with_system = result.merge(
+            systems[["system_id", "system_name"]],
+            on="system_id",
+            how="left",
+        )
+
+        st.markdown("### Reconciliation Summary by Change Type")
         st.dataframe(
-            pd.DataFrame(
-                {
-                    "column_name": RECONCILIATION_REQUIRED_COLUMNS,
-                    "description": [
-                        "Unique user identifier",
-                        "Tracked system identifier",
-                        "Type of resource being governed",
-                        "Specific resource name",
-                        "Permission or role name",
-                        "Current access status in the uploaded source",
-                    ],
-                }
-            ),
+            count_by(result_with_system, "change_type"),
             width="stretch",
         )
-        st.write(
-            """
-            The optional `source_system_record_id` column can be included to preserve
-            traceability back to the source export. First (`first_name`) and last 
-            (`last_name`) names may be included in uploads for validation and alignment 
-            but are not required for reconciliation, as they may not be identical in 
-            the currently present access assignment records. 
-            """
+
+        st.markdown("### Reconciliation Summary by Resource Type")
+        st.dataframe(
+            count_by(result_with_system, "resource_type"),
+            width="stretch",
         )
 
-    upload = st.file_uploader(
-        "Upload CSV with source_system_record_id, user_id, system_id, "
-        "resource_type, resource_name, permission_name, access_status",
-        type=["csv"],
-        key="reconciliation_upload",
-    )
+        st.markdown("### Action Queue")
+        action_queue = result_with_system[
+            result_with_system["recommended_action"] != "No action"
+        ]
+        if action_queue.empty:
+            st.success("No reconciliation results currently require follow-up.")
+        else:
+            st.dataframe(action_queue, 
+                        width="stretch")
 
-    if upload:
-        uploaded_df = pd.read_csv(upload)
-    else:
-        uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
-        st.caption("Using bundled sample access export.")
-
-    missing_columns = validate_upload(uploaded_df, RECONCILIATION_REQUIRED_COLUMNS)
-    if missing_columns:
-        st.error(
-            "Uploaded file is missing required columns: "
-            + ", ".join(missing_columns)
+        st.markdown("### Reconciliation Results")
+        change_type_filter = st.multiselect(
+            "Filter by change type",
+            sorted(result_with_system["change_type"].dropna().unique()),
+            key="change_type_filter",
         )
-        st.stop()
 
-    st.success("Uploaded file contains all required reconciliation columns.")
+        filtered_results = result_with_system.copy()
+        filtered_results = apply_multiselect_filter(
+            filtered_results,
+            "change_type",
+            change_type_filter,
+        )
 
-    system_options = ["All Systems"] + systems["system_id"].tolist()
-    selected_system = st.selectbox("Select reconciliation scope", system_options)
+        st.dataframe(filtered_results, 
+                    width="stretch")
 
-    st.markdown("### Uploaded Access Export")
-    st.dataframe(uploaded_df, 
-                 width="stretch")
-
-    result = reconcile(access, uploaded_df, selected_system_id=selected_system)
-    result_with_system = result.merge(
-        systems[["system_id", "system_name"]],
-        on="system_id",
-        how="left",
-    )
-
-    st.markdown("### Reconciliation Summary by Change Type")
-    st.dataframe(
-        count_by(result_with_system, "change_type"),
-        width="stretch",
-    )
-
-    st.markdown("### Reconciliation Summary by Resource Type")
-    st.dataframe(
-        count_by(result_with_system, "resource_type"),
-        width="stretch",
-    )
-
-    st.markdown("### Action Queue")
-    action_queue = result_with_system[
-        result_with_system["recommended_action"] != "No action"
-    ]
-    if action_queue.empty:
-        st.success("No reconciliation results currently require follow-up.")
-    else:
-        st.dataframe(action_queue, 
-                     width="stretch")
-
-    st.markdown("### Reconciliation Results")
-    change_type_filter = st.multiselect(
-        "Filter by change type",
-        sorted(result_with_system["change_type"].dropna().unique()),
-        key="change_type_filter",
-    )
-
-    filtered_results = result_with_system.copy()
-    filtered_results = apply_multiselect_filter(
-        filtered_results,
-        "change_type",
-        change_type_filter,
-    )
-
-    st.dataframe(filtered_results, 
-                 width="stretch")
-
-    st.markdown("### Governance Rule Demonstrated")
-    st.warning(
-        """
-        User access records missing from an uploaded access export are recommended for
-        Inactive status review rather than deletion, preserving access history for
-        audit purposes. Actual access changes remain outside this reference
-        implementation.
-        """
-    )
+        st.markdown("### Governance Rule Demonstrated")
+        st.warning(
+            """
+            User access records missing from an uploaded access export are recommended for
+            Inactive status review rather than deletion, preserving access history for
+            audit purposes. Actual access changes remain outside this reference
+            implementation.
+            """
+        )

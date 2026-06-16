@@ -37,16 +37,14 @@ AccessAtlas demonstrates practical patterns for:
 
 ## Simulated Role-Based Data Scoping
 
-Demo Mode scopes both visible sections and visible records based on the selected synthetic user's role.
+Demo Mode scopes visible records based on the selected synthetic user's role.
 
-The simulated rules are:
+- **User** accounts see only their own user record, related systems, and related access records.
+- **Manager** accounts see their own record, direct reports, and systems/access records associated with that group.
+- **System Administrator** accounts see only users with access to systems they administer and only information about systems they administer.
+- **Super Administrator** accounts see all synthetic records.
 
-- **User** — sees only their own user record, access records, and related systems.
-- **Manager** — sees direct reports and systems/access records associated with those users.
-- **System Administrator** — sees systems they administer and users/access records associated with those systems.
-- **Super Administrator** — sees all synthetic records.
-
-This is an educational simulation only. Production deployments should enforce access control through real authentication, backend authorization, and database-level security where appropriate.
+This feature is for demonstration only. Production deployments should enforce access control through real authentication, backend authorization, and database-level security.
 
 ---
 

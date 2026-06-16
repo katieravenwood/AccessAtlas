@@ -1,6 +1,6 @@
 # Governance Patterns
 
-## Introduction
+## 1. Introduction
 
 AccessAtlas is a reference implementation that demonstrates common access governance patterns used across organizations of all sizes.
 
@@ -10,9 +10,9 @@ This document explains the governance patterns represented in AccessAtlas and th
 
 ---
 
-## Central User Registry
+## 2. Central User Registry
 
-### Business Problem
+### 2.1 Business Problem
 
 Organizations often maintain user information across multiple disconnected systems.
 
@@ -33,7 +33,7 @@ As systems grow, it becomes difficult to answer basic questions such as:
 * Are they still active?
 * Are they compliant with organizational requirements?
 
-### Governance Pattern
+### 2.2 Governance Pattern
 
 A Central User Registry provides a single inventory of users who may have access to governed systems.
 
@@ -50,7 +50,7 @@ Example attributes include:
 * Record Status
 * Compliance Information
 
-### Benefits
+### 2.3 Benefits
 
 * Improved visibility
 * Simplified reporting
@@ -60,9 +60,9 @@ Example attributes include:
 
 ---
 
-## Access Cataloging
+## 3. Access Cataloging
 
-### Business Problem
+### 3.1 Business Problem
 
 Users often have access to multiple systems, each with different permission models.
 
@@ -76,7 +76,7 @@ Examples include:
 
 Without a centralized inventory, understanding access relationships becomes difficult.
 
-### Governance Pattern
+### 3.2 Governance Pattern
 
 Access Cataloging maintains a centralized inventory of user access assignments across governed systems.
 
@@ -96,7 +96,7 @@ User → Reporting Database → analytics_schema → Read
 User → Cloud Data Platform → ROLE_DATA_READER → Data Reader
 ```
 
-### Benefits
+### 3.3 Benefits
 
 * Centralized visibility
 * Consistent reporting
@@ -106,9 +106,9 @@ User → Cloud Data Platform → ROLE_DATA_READER → Data Reader
 
 ---
 
-## Administrative Responsibility Tracking
+## 4. Administrative Responsibility Tracking
 
-### Business Problem
+### 4.1 Business Problem
 
 Organizations frequently know who has access but do not consistently track who is responsible for managing that access.
 
@@ -119,7 +119,7 @@ This can lead to:
 * Governance gaps
 * Increased operational risk
 
-### Governance Pattern
+### 4.2 Governance Pattern
 
 Administrative Responsibility Tracking identifies individuals responsible for governing specific systems.
 
@@ -141,7 +141,7 @@ Taylor Jones → Data Warehouse → Platform Administrator
 
 A user may administer multiple systems, and a system may have multiple administrators.
 
-### Benefits
+### 4.3 Benefits
 
 * Clear accountability
 * Defined ownership
@@ -150,9 +150,9 @@ A user may administer multiple systems, and a system may have multiple administr
 
 ---
 
-## Compliance Monitoring
+## 5. Compliance Monitoring
 
-### Business Problem
+### 5.1 Business Problem
 
 Organizations often require users to complete periodic activities before retaining access to governed systems.
 
@@ -166,7 +166,7 @@ Examples include:
 
 Tracking these activities manually can become difficult as organizations grow.
 
-### Governance Pattern
+### 5.2 Governance Pattern
 
 Compliance Monitoring tracks completion and expiration of governance-related requirements.
 
@@ -184,7 +184,7 @@ Compliance information can be associated with:
 * Consultants
 * Service Accounts
 
-### Benefits
+### 5.3 Benefits
 
 * Improved visibility
 * Reduced compliance risk
@@ -194,9 +194,9 @@ Compliance information can be associated with:
 
 ---
 
-## Access Reconciliation
+## 6. Access Reconciliation
 
-### Business Problem
+### 6.1 Business Problem
 
 Access records maintained in governance systems often drift from the actual access maintained in operational systems.
 
@@ -208,7 +208,7 @@ Examples include:
 
 Over time, discrepancies accumulate and reduce confidence in governance reporting.
 
-### Governance Pattern
+### 6.2 Governance Pattern
 
 Access Reconciliation compares governance records against authoritative source systems.
 
@@ -237,7 +237,7 @@ Common reconciliation outcomes include:
 * Status Changed
 * No Change
 
-### Benefits
+### 6.3 Benefits
 
 * Improved data quality
 * Reduced access drift
@@ -247,9 +247,9 @@ Common reconciliation outcomes include:
 
 ---
 
-## Audit-Friendly Record Retention
+## 7. Audit-Friendly Record Retention
 
-### Business Problem
+### 7.1 Business Problem
 
 Organizations frequently remove records when access is revoked.
 
@@ -260,7 +260,7 @@ While operationally simple, deletion can create challenges for:
 * Historical reporting
 * Governance reviews
 
-### Governance Pattern
+### 7.2 Governance Pattern
 
 Instead of deleting governance records, organizations retain historical records and mark them inactive.
 
@@ -274,7 +274,7 @@ Archived
 
 This preserves historical context while clearly distinguishing current records from historical records.
 
-### Benefits
+### 7.3 Benefits
 
 * Historical traceability
 * Improved audit support
@@ -283,9 +283,9 @@ This preserves historical context while clearly distinguishing current records f
 
 ---
 
-## Governance Reporting
+## 8. Governance Reporting
 
-### Business Problem
+### 8.1 Business Problem
 
 Governance data often exists across multiple systems and formats, making reporting difficult.
 
@@ -296,7 +296,7 @@ Leaders frequently need answers to questions such as:
 * Which users require compliance follow-up?
 * Which systems have outstanding reconciliation issues?
 
-### Governance Pattern
+### 8.2 Governance Pattern
 
 Governance Reporting aggregates governance data into operational and management views.
 
@@ -308,7 +308,7 @@ Examples include:
 * Administrative coverage reports
 * Reconciliation action queues
 
-### Benefits
+### 8.3 Benefits
 
 * Improved decision-making
 * Increased visibility
@@ -317,7 +317,7 @@ Examples include:
 
 ---
 
-## How These Patterns Work Together
+## 9. How These Patterns Work Together
 
 Each governance pattern addresses a different aspect of access governance.
 

@@ -35,6 +35,21 @@ AccessAtlas demonstrates practical patterns for:
 
 ---
 
+## Simulated Role-Based Data Scoping
+
+Demo Mode scopes both visible sections and visible records based on the selected synthetic user's role.
+
+The simulated rules are:
+
+- **User** — sees only their own user record, access records, and related systems.
+- **Manager** — sees direct reports and systems/access records associated with those users.
+- **System Administrator** — sees systems they administer and users/access records associated with those systems.
+- **Super Administrator** — sees all synthetic records.
+
+This is an educational simulation only. Production deployments should enforce access control through real authentication, backend authorization, and database-level security where appropriate.
+
+---
+
 ## Application Tabs
 
 The application is organized into six main tabs.
@@ -66,7 +81,7 @@ Provides a user-centered governance profile including:
 - detailed access records
 - systems administered by the selected user
 
-### Systems (Resources)
+### Systems
 
 Provides a system-centered governance profile including:
 
@@ -111,54 +126,6 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - action queue
 - source record traceability
 - audit-friendly inactive status recommendations
-
-### Audit Support
-
-Support governance and compliance activities through historical record retention, inactive-user management, access review workflows, reconciliation reporting, and compliance monitoring.
-
-## Example Use Cases
-
-AccessAtlas can be adapted to support:
-
-- Application access inventories
-- Database and schema permission tracking
-- Dashboard and reporting access reviews
-- Collaboration site governance
-- User certification management
-- Periodic access audits
-- Role-based access reviews
-- System administrator assignment tracking
-- Access reconciliation workflows
-- Internal compliance programs
-- Data governance initiatives
-
-## Example Architecture
-
-```text
-                           AccessAtlas
-                                │
-            ┌───────────────────┼───────────────────┐
-            │                   │                   │
-            ▼                   ▼                   ▼
-         Users              Systems          Permissions
-            │                   │                   │
-            └───────────────────┼───────────────────┘
-                                ▼
-                      Governance Services
-                                │
-            ┌───────────────────┼───────────────────┐
-            ▼                   ▼                   ▼
-      Compliance         Reconciliation         Audit
-```
-
-## Technology Stack
-
-- Streamlit
-- Python
-- Pandas
-- CSV Data Sources
-
-Common production backends for which this sample implementation could be modified include Snowflake, PostgreSQL, SQL Server, Oracle, Databricks, REST APIs, and identity management platforms.
 
 ---
 

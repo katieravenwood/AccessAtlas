@@ -170,6 +170,105 @@ def add_expirations(users):
     return users
 
 
+
+def initialize_user_update_state():
+    """Initialize session state used for demo self-service updates."""
+    if "user_compliance_updates" not in st.session_state:
+        st.session_state["user_compliance_updates"] = {}
+
+
+def apply_user_compliance_updates(users):
+    """Apply in-session user compliance updates to the user dataset."""
+    initialize_user_update_state()
+    users = users.copy()
+
+    for user_id, updates in st.session_state["user_compliance_updates"].items():
+        user_mask = users["user_id"] == user_id
+        if not user_mask.any():
+            continue
+
+        for column_name, value in updates.items():
+            users.loc[user_mask, column_name] = pd.Timestamp(value)
+
+    return users
+
+
+def update_user_compliance_dates(
+    user_id,
+    annual_training_date,
+    biennial_training_date,
+    access_agreement_date,
+):
+    """Store user-submitted compliance date updates in session state."""
+    initialize_user_update_state()
+    st.session_state["user_compliance_updates"][user_id] = {
+        "annual_training_date": annual_training_date,
+        "biennial_training_date": biennial_training_date,
+        "access_agreement_date": access_agreement_date,
+    }
+
+
+def render_self_service_update_form(selected_user):
+    """Render a self-service form for updating training and agreement dates."""
+    st.markdown("### Update My Certification and Agreement Dates")
+    st.caption(
+        "This demo form updates the selected user's compliance dates for the "
+        "current Streamlit session. In production, this would write to an approved "
+        "database workflow and may require review or approval."
+    )
+
+    annual_default = pd.to_datetime(selected_user["annual_training_date"]).date()
+    biennial_default = pd.to_datetime(selected_user["biennial_training_date"]).date()
+    agreement_default = pd.to_datetime(selected_user["access_agreement_date"]).date()
+
+    with st.form("self_service_compliance_update_form"):
+        updated_annual_date = st.date_input(
+            "Annual training completion date",
+            value=annual_default,
+            key="update_annual_training_date",
+        )
+        updated_biennial_date = st.date_input(
+            "Biennial training completion date",
+            value=biennial_default,
+            key="update_biennial_training_date",
+        )
+        updated_agreement_date = st.date_input(
+            "Access agreement completion date",
+            value=agreement_default,
+            key="update_access_agreement_date",
+        )
+
+        updated_annual_expiration = pd.Timestamp(updated_annual_date) + pd.DateOffset(
+            years=ANNUAL_TRAINING_VALID_YEARS
+        )
+        updated_biennial_expiration = pd.Timestamp(updated_biennial_date) + pd.DateOffset(
+            years=BIENNIAL_TRAINING_VALID_YEARS
+        )
+
+        st.write(
+            f"""
+            **Calculated annual training expiration:** {updated_annual_expiration.date()}  
+            **Calculated biennial training expiration:** {updated_biennial_expiration.date()}
+            """
+        )
+
+        submitted = st.form_submit_button("Update My Dates")
+
+    if submitted:
+        update_user_compliance_dates(
+            selected_user["user_id"],
+            updated_annual_date,
+            updated_biennial_date,
+            updated_agreement_date,
+        )
+        st.success(
+            "Compliance dates updated for this demo session. Refreshing the app "
+            "or clearing session state will reset the sample CSV-backed data."
+        )
+        st.rerun()
+
+
+
 def validate_upload(upload_df, required_columns):
     """Return a list of required columns missing from an uploaded file."""
     return [column for column in required_columns if column not in upload_df.columns]
@@ -453,7 +552,9 @@ def render_hidden_tab_message(tab_name, current_user):
 
 
 data = load_data()
-users = add_expirations(data["users"])
+initialize_user_update_state()
+users = apply_user_compliance_updates(data["users"])
+users = add_expirations(users)
 systems = data["systems"]
 access = data["access_assignments"]
 system_admins = data["system_admin_assignments"]
@@ -666,6 +767,9 @@ def render_my_record_tab():
         return
 
     render_selected_user_profile(current_user_id, user_selection_enabled=False)
+
+    selected_user = users[users["user_id"] == current_user_id].iloc[0]
+    render_self_service_update_form(selected_user)
 
 
 def render_users_tab():

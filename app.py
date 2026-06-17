@@ -35,10 +35,11 @@ RECONCILIATION_KEY_COLUMNS = [
 RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
 
 ROLE_VISIBLE_TABS = {
-    "User": ["Users"],
-    "Manager": ["Overview", "Users", "Compliance", "Access Reconciliation"],
+    "User": ["My Record"],
+    "Manager": ["Overview", "My Record", "Users", "Compliance", "Access Reconciliation"],
     "System Administrator": [
         "Overview",
+        "My Record",
         "Users",
         "Systems",
         "System Admins",
@@ -46,6 +47,7 @@ ROLE_VISIBLE_TABS = {
     ],
     "Super Administrator": [
         "Overview",
+        "My Record",
         "Users",
         "Systems",
         "System Admins",
@@ -56,6 +58,7 @@ ROLE_VISIBLE_TABS = {
 
 TAB_LABELS = [
     "Overview",
+    "My Record",
     "Users",
     "Systems",
     "System Admins",
@@ -570,48 +573,9 @@ def render_overview_tab():
     )
 
 
-def render_users_tab():
-    if should_show_user_registry(current_user):
-        st.subheader("Central User Registry")
 
-        role_filter = st.multiselect(
-            "Filter by application role",
-            sorted(users["application_role"].dropna().unique()),
-            key="role_filter",
-        )
-        type_filter = st.multiselect(
-            "Filter by user type",
-            sorted(users["user_type"].unique()),
-            key="type_filter",
-        )
-        status_filter = st.multiselect(
-            "Filter by record status",
-            sorted(users["record_status"].dropna().unique()),
-            key="status_filter",
-        )
-
-        user_view = users.copy()
-        user_view = apply_multiselect_filter(user_view, "application_role", role_filter)
-        user_view = apply_multiselect_filter(user_view, "user_type", type_filter)
-        user_view = apply_multiselect_filter(user_view, "record_status", status_filter)
-
-        st.dataframe(
-            user_view[USER_DISPLAY_COLUMNS],
-            width="stretch",
-        )
-    else:
-        st.subheader("My Access Profile")
-        st.caption(
-            "This self-service view shows the selected user's own governance, "
-            "compliance, access, and administrative assignment information."
-        )
-
-    st.markdown("### Selected User Governance Profile")
-    selected_user_id = st.selectbox(
-        "Select user ID" if should_show_user_registry(current_user) else "Current user ID",
-        users["user_id"],
-        key="selected_user_id",
-    )
+def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
+    """Render an individual user's governance profile."""
     selected_user = users[users["user_id"] == selected_user_id].iloc[0]
     manager_name = get_display_name(all_users, selected_user["manager_user_id"])
 
@@ -685,6 +649,61 @@ def render_users_tab():
     else:
         st.dataframe(selected_admin_assignments, 
                     width="stretch")
+def render_my_record_tab():
+    """Render the self-service individual user record tab."""
+    st.subheader("My Record")
+    st.caption(
+        "This view shows the selected user's own governance profile, compliance "
+        "dates, access assignments, and administrative assignments."
+    )
+
+    current_user_id = current_user["user_id"]
+    if current_user_id not in users["user_id"].tolist():
+        st.warning(
+            "The selected demo user is outside the current scoped user dataset. "
+            "Select another demo account or review the role-scoping rules."
+        )
+        return
+
+    render_selected_user_profile(current_user_id, user_selection_enabled=False)
+
+
+def render_users_tab():
+    st.subheader("Central User Registry")
+
+    role_filter = st.multiselect(
+        "Filter by application role",
+        sorted(users["application_role"].dropna().unique()),
+        key="role_filter",
+    )
+    type_filter = st.multiselect(
+        "Filter by user type",
+        sorted(users["user_type"].unique()),
+        key="type_filter",
+    )
+    status_filter = st.multiselect(
+        "Filter by record status",
+        sorted(users["record_status"].dropna().unique()),
+        key="status_filter",
+    )
+
+    user_view = users.copy()
+    user_view = apply_multiselect_filter(user_view, "application_role", role_filter)
+    user_view = apply_multiselect_filter(user_view, "user_type", type_filter)
+    user_view = apply_multiselect_filter(user_view, "record_status", status_filter)
+
+    st.dataframe(
+        user_view[USER_DISPLAY_COLUMNS],
+        width="stretch",
+    )
+
+    st.markdown("### Selected User Governance Profile")
+    selected_user_id = st.selectbox(
+        "Select user ID",
+        users["user_id"],
+        key="selected_user_id",
+    )
+    render_selected_user_profile(selected_user_id)
 
 
 def render_systems_tab():
@@ -1145,10 +1164,9 @@ def render_access_reconciliation_tab():
         """
     )
 
-
-
 TAB_RENDERERS = {
     "Overview": render_overview_tab,
+    "My Record": render_my_record_tab,
     "Users": render_users_tab,
     "Systems": render_systems_tab,
     "System Admins": render_system_admins_tab,

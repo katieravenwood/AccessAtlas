@@ -54,7 +54,7 @@ AccessAtlas only renders tabs available to the selected Demo Mode role.
 
 Unavailable sections are not shown in the tab bar. This keeps the demo interface closer to the intended user experience for each persona:
 
-- User: self-service profile only
+- User: My Record self-service tab only
 - Manager: review-oriented views
 - System Administrator: administered-system views
 - Super Administrator: full application
@@ -65,7 +65,9 @@ This is still simulated UI behavior only; production applications should enforce
 
 ## Application Tabs
 
-The application is organized into six main tabs.
+The application includes a dedicated **My Record** tab for individual self-service access review. The broader **Users** tab remains available only to roles that need registry or review functionality.
+
+The application is organized into role-aware tabs.
 
 ### Overview
 
@@ -79,6 +81,10 @@ Provides a dashboard-style summary of the governance dataset, including:
 - user record status summaries
 - compliance status summaries
 - access records by system type, resource type, and access status
+
+### My Record
+
+Provides an individual self-service view of the selected user's governance record, including profile information, compliance dates, access assignments, and administrative assignments.
 
 ### Users
 

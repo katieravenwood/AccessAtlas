@@ -63,6 +63,19 @@ This is still simulated UI behavior only; production applications should enforce
 
 ---
 
+## Self-Service Date Updates
+
+The **My Record** tab includes a simulated self-service form that allows the selected demo user to update their own training and agreement completion dates.
+
+The app recalculates expiration dates based on the configured validity periods:
+
+- annual training: 1 year
+- biennial training: 2 years
+
+These updates are stored only in Streamlit session state for demonstration purposes. They do not modify the source CSV files. In a production implementation, this workflow would write to an approved database table and may require review, approval, document upload, or audit logging.
+
+---
+
 ## Application Tabs
 
 The application includes a dedicated **My Record** tab for individual self-service access review. The broader **Users** tab remains available only to roles that need registry or review functionality.

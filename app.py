@@ -58,12 +58,12 @@ ROLE_VISIBLE_TABS = {
 
 TAB_LABELS = [
     "Overview",
-    "My Record",
     "Users",
     "Systems",
     "System Admins",
     "Compliance",
     "Access Reconciliation",
+    "My Record",
 ]
 
 USER_DISPLAY_COLUMNS = [
@@ -567,6 +567,10 @@ all_system_admins = system_admins.copy()
 access_with_systems = access.merge(systems, on="system_id", how="left")
 
 st.sidebar.title("Demo Mode")
+st.sidebar.warning(
+    "Demo Mode is for simulated role-based visibility demonstration purposes only, not a true " \
+    "authentication method. "
+)
 st.sidebar.write(
     "Select an example user account to view the application from that role's perspective."
 )
@@ -587,10 +591,6 @@ st.sidebar.write(
     **User Type:** {current_user['user_type']}  
     **Department:** {current_user['department']}
     """
-)
-st.sidebar.warning(
-    "Demo Mode is for simulated role-based visibility demonstration purposes only, not a true " \
-    "authentication method. "
 )
 
 users, systems, access, system_admins = apply_demo_role_scope(
@@ -750,27 +750,6 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
     else:
         st.dataframe(selected_admin_assignments, 
                     width="stretch")
-def render_my_record_tab():
-    """Render the self-service individual user record tab."""
-    st.subheader("My Record")
-    st.caption(
-        "This view shows the selected user's own governance profile, compliance "
-        "dates, access assignments, and administrative assignments."
-    )
-
-    current_user_id = current_user["user_id"]
-    if current_user_id not in users["user_id"].tolist():
-        st.warning(
-            "The selected demo user is outside the current scoped user dataset. "
-            "Select another demo account or review the role-scoping rules."
-        )
-        return
-
-    render_selected_user_profile(current_user_id, user_selection_enabled=False)
-
-    selected_user = users[users["user_id"] == current_user_id].iloc[0]
-    render_self_service_update_form(selected_user)
-
 
 def render_users_tab():
     st.subheader("Central User Registry")
@@ -1268,14 +1247,36 @@ def render_access_reconciliation_tab():
         """
     )
 
+def render_my_record_tab():
+    """Render the self-service individual user record tab."""
+    st.subheader("My Record")
+    st.caption(
+        "This view shows the selected user's own governance profile, compliance "
+        "dates, access assignments, and administrative assignments."
+    )
+
+    current_user_id = current_user["user_id"]
+    if current_user_id not in users["user_id"].tolist():
+        st.warning(
+            "The selected demo user is outside the current scoped user dataset. "
+            "Select another demo account or review the role-scoping rules."
+        )
+        return
+
+    render_selected_user_profile(current_user_id, user_selection_enabled=False)
+
+    selected_user = users[users["user_id"] == current_user_id].iloc[0]
+    render_self_service_update_form(selected_user)
+
+
 TAB_RENDERERS = {
     "Overview": render_overview_tab,
-    "My Record": render_my_record_tab,
     "Users": render_users_tab,
     "Systems": render_systems_tab,
     "System Admins": render_system_admins_tab,
     "Compliance": render_compliance_tab,
     "Access Reconciliation": render_access_reconciliation_tab,
+    "My Record": render_my_record_tab,
 }
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]

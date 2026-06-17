@@ -4,3 +4,4 @@ ADM002,USR00003,SYS003,System Administrator,Active,2026-03-08,,USR00005,System I
 ADM003,USR00005,SYS004,Platform Administrator,Active,2026-05-07,,USR00005,Governance Review,Oversees cloud platform role assignments
 ADM004,USR00005,SYS006,Dashboard Administrator,Active,2026-05-07,,USR00005,Governance Review,Oversees dashboard access governance
 ADM005,USR00002,SYS005,Database Access Manager,Active,2025-11-23,,USR00005,Manual Entry,Reviews database access requests
+ADM006,USR00011,SYS005,System Administrator,Active,2026-06-10,,USR00005,System Inventory,Administers analytics database system

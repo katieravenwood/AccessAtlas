@@ -39,12 +39,27 @@ AccessAtlas demonstrates practical patterns for:
 
 Demo Mode scopes visible records based on the selected synthetic user's role.
 
-- **User** accounts see only their own user record, related systems, and related access records.
+- **User** accounts see only the Users tab, beginning with their own selected governance profile; the broader registry/filter section and Overview tab are hidden.
 - **Manager** accounts see their own record, direct reports, and systems/access records associated with that group.
 - **System Administrator** accounts see only users with access to systems they administer and only information about systems they administer.
 - **Super Administrator** accounts see all synthetic records.
 
 This feature is for demonstration only. Production deployments should enforce access control through real authentication, backend authorization, and database-level security.
+
+---
+
+## Dynamic Role-Based Tabs
+
+AccessAtlas only renders tabs available to the selected Demo Mode role.
+
+Unavailable sections are not shown in the tab bar. This keeps the demo interface closer to the intended user experience for each persona:
+
+- User: self-service profile only
+- Manager: review-oriented views
+- System Administrator: administered-system views
+- Super Administrator: full application
+
+This is still simulated UI behavior only; production applications should enforce authorization on the backend as well as in the interface.
 
 ---
 

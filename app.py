@@ -19,6 +19,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+
 DATA_DIR = Path(__file__).parent / "data"
 
 ANNUAL_TRAINING_VALID_YEARS = 1
@@ -753,6 +754,16 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
 
 def render_users_tab():
     st.subheader("Central User Registry")
+
+    if current_user["application_role"] == "System Administrator":
+        st.caption(
+            "Showing only users with access to systems administered by the selected "
+            "System Administrator demo account."
+        )
+    elif current_user["application_role"] == "Manager":
+        st.caption(
+            "Showing users within the selected Manager demo account's visible review scope."
+        )
 
     role_filter = st.multiselect(
         "Filter by application role",

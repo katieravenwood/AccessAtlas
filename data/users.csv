@@ -7,3 +7,15 @@ USR00005,Casey Rivera,Casey,Rivera,casey.rivera@example.org,Super Administrator,
 USR00006,Jordan Kim,Jordan,Kim,jordan.kim@example.org,User,USR00002,Analytics,Consultant,Active,2026-05-22,2024-06-11,2026-05-22,2026-03-13,2026-06-06
 USR00007,Morgan Chen,Morgan,Chen,morgan.chen@example.org,User,USR00003,Technology,Vendor,Active,2026-04-12,2025-01-27,2026-04-12,2026-03-13,2026-06-06
 USR00008,Service Account - Reporting,Service Account,Reporting,svc.reporting@example.org,User,,Technology,Service Account,Active,2026-06-01,2026-06-01,2026-06-01,2026-03-13,2026-06-06
+USR00009,Service Account - Backup,Service Account,Backup,svc.backup@example.org,User,,Technology,Service Account,Active,2026-06-01,2026-06-01,2026-06-01,2026-03-13,2026-06-06
+USR00010,Avery Brooks,Avery,Brooks,avery.brooks@example.org,Manager,USR00005,Finance,Employee,Active,2026-03-10,2025-09-18,2026-03-10,2026-03-13,2026-06-15
+USR00011,Cameron Diaz,Cameron,Diaz,cameron.diaz@example.org,System Administrator,USR00005,Technology,Employee,Active,2025-11-20,2025-04-30,2026-01-05,2026-03-13,2026-06-10
+USR00012,Peyton Wright,Peyton,Wright,peyton.wright@example.org,User,USR00010,Finance,Contractor,Active,2025-04-12,2024-12-08,2025-04-12,2026-03-13,2026-06-06
+USR00013,Ashley Hughes,Ashley,Hughes,ashley.hughes@example.org,User,USR00011,Technology,Employee,Active,2026-01-08,2025-10-14,2026-01-08,2026-03-13,2026-06-06
+USR00014,Taylor Brooks,Taylor,Brooks,taylor.brooks@example.org,User,USR00002,Analytics,Employee,Active,2026-02-21,2024-08-30,2026-02-21,2026-03-13,2026-06-06
+USR00015,Sydney Morgan,Sydney,Morgan,sydney.morgan@example.org,User,USR00010,Operations,Contractor,Active,2026-03-09,2025-04-12,2026-03-09,2026-03-13,2026-06-06
+USR00016,Dakota Foster,Dakota,Foster,dakota.foster@example.org,User,USR00010,Finance,Employee,Active,2026-01-31,2025-09-22,2026-01-31,2026-03-13,2026-06-06
+USR00017,Harper Ellis,Harper,Ellis,harper.ellis@example.org,User,USR00011,Technology,Employee,Active,2025-12-15,2025-06-20,2025-12-15,2026-03-13,2026-06-06
+USR00018,Quinn Allen,Quinn,Allen,quinn.allen@example.org,User,USR00005,Technology,Vendor,Active,2026-05-05,2025-05-05,2026-05-05,2026-03-13,2026-06-06
+USR00019,Reese Patel,Reese,Patel,reese.patel@example.org,User,USR00003,Technology,Employee,Active,2026-02-10,2025-02-10,2026-02-10,2026-03-13,2026-06-06
+USR00020,Jordan Scott,Jordan,Scott,jordan.scott@example.org,User,USR00005,Operations,Employee,Active,2026-04-02,2025-11-20,2026-04-02,2026-03-13,2026-06-06

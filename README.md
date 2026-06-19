@@ -41,7 +41,7 @@ Demo Mode scopes visible records based on the selected synthetic user's role.
 
 - **User** accounts see only the Users tab, beginning with their own selected governance profile; the broader registry/filter section and Overview tab are hidden.
 - **Manager** accounts see their own record, direct reports, and systems/access records associated with that group.
-- **System Administrator** accounts see only users with access to systems they administer and only information about systems they administer.
+- **System Administrator** accounts can view the Users tab, but it is scoped to users with access to systems they administer. They can also view only information about systems they administer.
 - **Super Administrator** accounts see all synthetic records.
 
 This feature is for demonstration only. Production deployments should enforce access control through real authentication, backend authorization, and database-level security.
@@ -55,8 +55,8 @@ AccessAtlas only renders tabs available to the selected Demo Mode role.
 Unavailable sections are not shown in the tab bar. This keeps the demo interface closer to the intended user experience for each persona:
 
 - User: My Record self-service tab only
-- Manager: review-oriented views
-- System Administrator: administered-system views
+- Manager: review-oriented views for reconciling reporting employee accounts
+- System Administrator: administered-system views plus filered User view limited to administered systems records
 - Super Administrator: full application
 
 This is still simulated UI behavior only; production applications should enforce authorization on the backend as well as in the interface.
@@ -73,6 +73,38 @@ The app recalculates expiration dates based on the configured validity periods:
 - biennial training: 2 years
 
 These updates are stored only in Streamlit session state for demonstration purposes. They do not modify the source CSV files. In a production implementation, this workflow would write to an approved database table and may require review, approval, document upload, or audit logging.
+
+---
+
+## System Administrator Users Tab Scope
+
+System Administrator demo accounts can access the **Users** tab, but the table and selected user profile options are filtered to users who have access to systems administered by that System Administrator.
+
+This allows System Administrators to review relevant users without exposing the full user registry.
+
+---
+
+## Contextual Sidebar Guidance and Tab Selection Considerations
+
+The Overview, Compliance, and Access Reconciliation explanatory sections are displayed in the Demo Mode sidebar when the corresponding section is selected.
+
+Because native Streamlit tabs do not expose the active tab to Python, this version uses a role-aware horizontal section selector instead of `st.tabs()`. This keeps unavailable sections hidden and allows sidebar guidance to update based on the selected section. In non-demo implementations, use of `st.tabs()` would likely be a more standard implementation.
+
+---
+
+## Reconciliation Action Queue Updates
+
+The Access Reconciliation section includes a selectable Action Queue.
+
+Super Administrator and System Administrator demo users can select reconciliation exceptions and apply recommended actions to the session-state-backed access assignment table.
+
+Supported actions include:
+
+- **Add** records for access found in an uploaded export but missing from AccessAtlas
+- **Inactivate** records for access retained in AccessAtlas but missing from the uploaded export
+- **Update** records when access status differs between AccessAtlas and the uploaded export
+
+These actions update only the in-session demo dataset. They do not modify the source CSV files. In production, this workflow would write to an approved database table and should include authorization checks, audit logging, and approval controls.
 
 ---
 

@@ -601,6 +601,105 @@ def render_hidden_tab_message(tab_name, current_user):
     )
 
 
+
+def initialize_editable_access_state(access):
+    """Initialize session-state backed access assignments for demo CRUD actions."""
+    if "editable_access_assignments" not in st.session_state:
+        st.session_state["editable_access_assignments"] = access.copy()
+
+
+def get_editable_access_assignments(access):
+    """Return session-state access assignments, initializing them if needed."""
+    initialize_editable_access_state(access)
+    return st.session_state["editable_access_assignments"].copy()
+
+
+def generate_next_access_id(access_df):
+    """Generate the next synthetic access assignment ID."""
+    existing_numbers = (
+        access_df["access_id"]
+        .dropna()
+        .astype(str)
+        .str.extract(r"(\d+)$")[0]
+        .dropna()
+        .astype(int)
+    )
+
+    next_number = 1 if existing_numbers.empty else existing_numbers.max() + 1
+    return f"A{next_number:03d}"
+
+
+def access_key_mask(access_df, row):
+    """Return a boolean mask matching an access row by the reconciliation key."""
+    return (
+        (access_df["user_id"] == row["user_id"])
+        & (access_df["system_id"] == row["system_id"])
+        & (access_df["resource_type"] == row["resource_type"])
+        & (access_df["resource_name"] == row["resource_name"])
+        & (access_df["permission_name"] == row["permission_name"])
+    )
+
+
+def apply_reconciliation_action(access_df, row):
+    """Apply one reconciliation recommendation to the canonical access table."""
+    access_df = access_df.copy()
+    change_type = row["change_type"]
+    today = pd.Timestamp(date.today())
+
+    if change_type == "New Access in Upload":
+        new_record = {
+            "access_id": generate_next_access_id(access_df),
+            "user_id": row["user_id"],
+            "system_id": row["system_id"],
+            "resource_type": row["resource_type"],
+            "resource_name": row["resource_name"],
+            "permission_name": row["permission_name"],
+            "access_status": row["uploaded_access_status"] or "Active",
+            "granted_date": today,
+            "revoked_date": pd.NaT,
+            "source": "Reconciliation Action",
+        }
+        return pd.concat([access_df, pd.DataFrame([new_record])], ignore_index=True), "added"
+
+    mask = access_key_mask(access_df, row)
+
+    if not mask.any():
+        return access_df, "skipped"
+
+    if change_type == "Access Not Found in Upload":
+        access_df.loc[mask, "access_status"] = "Inactive"
+        access_df.loc[mask, "revoked_date"] = today
+        return access_df, "inactivated"
+
+    if change_type == "Status Changed":
+        access_df.loc[mask, "access_status"] = row["uploaded_access_status"]
+        if row["uploaded_access_status"] == "Inactive":
+            access_df.loc[mask, "revoked_date"] = today
+        elif row["uploaded_access_status"] == "Active":
+            access_df.loc[mask, "revoked_date"] = pd.NaT
+        return access_df, "updated"
+
+    return access_df, "skipped"
+
+
+def apply_reconciliation_actions(access_df, selected_rows):
+    """Apply selected reconciliation actions and return updated access data plus counts."""
+    updated_access = access_df.copy()
+    counts = {
+        "added": 0,
+        "inactivated": 0,
+        "updated": 0,
+        "skipped": 0,
+    }
+
+    for _, row in selected_rows.iterrows():
+        updated_access, outcome = apply_reconciliation_action(updated_access, row)
+        counts[outcome] += 1
+
+    return updated_access, counts
+
+
+
 data = load_data()
 initialize_user_update_state()
 users = apply_user_compliance_updates(data["users"])
@@ -608,6 +707,9 @@ users = add_expirations(users)
 systems = data["systems"]
 access = data["access_assignments"]
 system_admins = data["system_admin_assignments"]
+
+initialize_editable_access_state(access)
+access = get_editable_access_assignments(access)
 
 all_users = users.copy()
 all_systems = systems.copy()
@@ -785,6 +887,29 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
     else:
         st.dataframe(selected_admin_assignments, 
                     width="stretch")
+
+
+def render_my_record_tab():
+    """Render the self-service individual user record tab."""
+    st.subheader("My Record")
+    st.caption(
+        "This view shows the selected user's own governance profile, compliance "
+        "dates, access assignments, and administrative assignments."
+    )
+
+    current_user_id = current_user["user_id"]
+    if current_user_id not in users["user_id"].tolist():
+        st.warning(
+            "The selected demo user is outside the current scoped user dataset. "
+            "Select another demo account or review the role-scoping rules."
+        )
+        return
+
+    render_selected_user_profile(current_user_id, user_selection_enabled=False)
+
+    selected_user = users[users["user_id"] == current_user_id].iloc[0]
+    render_self_service_update_form(selected_user)
+
 
 def render_users_tab():
     st.subheader("Central User Registry")
@@ -1249,12 +1374,56 @@ def render_access_reconciliation_tab():
     st.markdown("### Action Queue")
     action_queue = result_with_system[
         result_with_system["recommended_action"] != "No action"
-    ]
+    ].copy()
+
     if action_queue.empty:
         st.success("No reconciliation results currently require follow-up.")
     else:
-        st.dataframe(action_queue, 
-                    width="stretch")
+        action_queue.insert(0, "apply_action", False)
+        editable_action_queue = st.data_editor(
+            action_queue,
+            width="stretch",
+            hide_index=True,
+            key="reconciliation_action_queue_editor",
+            column_config={
+                "apply_action": st.column_config.CheckboxColumn(
+                    "Apply?",
+                    help="Select rows to apply the recommended reconciliation action.",
+                    default=False,
+                )
+            },
+            disabled=[
+                column for column in action_queue.columns if column != "apply_action"
+            ],
+        )
+
+        selected_actions = editable_action_queue[
+            editable_action_queue["apply_action"] == True
+        ].drop(columns=["apply_action"])
+
+        st.caption(
+            "Recommended actions update the canonical access assignment table for "
+            "this demo session. They do not modify source CSV files."
+        )
+
+        if st.button(
+            "Apply Recommended Actions",
+            key="apply_reconciliation_actions_button",
+            disabled=selected_actions.empty,
+        ):
+            updated_access, action_counts = apply_reconciliation_actions(
+                st.session_state["editable_access_assignments"],
+                selected_actions,
+            )
+            st.session_state["editable_access_assignments"] = updated_access
+            st.success(
+                "Applied reconciliation actions: "
+                f"{action_counts['added']} added, "
+                f"{action_counts['inactivated']} inactivated, "
+                f"{action_counts['updated']} updated, "
+                f"{action_counts['skipped']} skipped."
+            )
+            st.rerun()
 
     st.markdown("### Reconciliation Results")
     change_type_filter = st.multiselect(
@@ -1274,26 +1443,6 @@ def render_access_reconciliation_tab():
                 width="stretch")
 
 
-def render_my_record_tab():
-    """Render the self-service individual user record tab."""
-    st.subheader("My Record")
-    st.caption(
-        "This view shows the selected user's own governance profile, compliance "
-        "dates, access assignments, and administrative assignments."
-    )
-
-    current_user_id = current_user["user_id"]
-    if current_user_id not in users["user_id"].tolist():
-        st.warning(
-            "The selected demo user is outside the current scoped user dataset. "
-            "Select another demo account or review the role-scoping rules."
-        )
-        return
-
-    render_selected_user_profile(current_user_id, user_selection_enabled=False)
-
-    selected_user = users[users["user_id"] == current_user_id].iloc[0]
-    render_self_service_update_form(selected_user)
 
 
 TAB_RENDERERS = {

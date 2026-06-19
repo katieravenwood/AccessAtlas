@@ -424,6 +424,10 @@ sample_access_upload.csv → ACCESSATLAS.ACCESS_RECONCILIATION_UPLOADS
 
 Only the data access layer needs to change; the user interface and governance workflows remain largely unchanged.
 
+## PostgreSQL Migration Path
+
+The included `POSTGRES_NOTES.md` document provides PostgreSQL table definitions, indexing recommendations, write-back examples, transaction guidance, and production authorization considerations.
+
 ---
 
 ## Future Enhancements

@@ -509,7 +509,56 @@ def render_demo_scope_summary(users, systems, access, system_admins):
     )
 
 
+def render_sidebar_guidance(selected_section):
+    """Render contextual sidebar guidance for selected role-visible sections."""
+    guidance = {
+        "Overview": {
+            "title": "Overview Guidance",
+            "body": """
+            AccessAtlas demonstrates a generic access governance pattern for:
+
+            - Central user registry management
+            - Cross-system access cataloging
+            - Resource-level permission tracking
+            - System administrator assignment tracking
+            - Training and agreement compliance monitoring
+            - Upload-based access reconciliation
+            - Audit-friendly inactive record handling
+            """,
+        },
+        "Compliance": {
+            "title": "Compliance Reminder Logic",
+            "body": f"""
+            Reminder logic can be implemented for {EXPIRING_SOON_DAYS} days before
+            expiration, 7 days before expiration, and the date of expiration.
+
+            In production, notifications would use an approved organizational email,
+            workflow, or orchestration service.
+            """,
+        },
+        "Access Reconciliation": {
+            "title": "Reconciliation Governance Rule",
+            "body": """
+            User access records missing from an uploaded access export are recommended
+            for Inactive status review rather than deletion.
+
+            This preserves access history for audit purposes. Actual access changes
+            remain outside this reference implementation.
+            """,
+        },
+    }
+
+    if selected_section not in guidance:
+        return
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"### {guidance[selected_section]['title']}")
+    st.sidebar.info(guidance[selected_section]["body"])
+
+
+
 # Load and prepare data.
+
 def get_demo_user_options(users):
     """Return formatted demo user options for the sidebar selector."""
     demo_users = users.sort_values(["application_role", "display_name"]).copy()
@@ -657,21 +706,6 @@ def render_overview_tab():
     st.dataframe(
     count_by(access, "access_status"), 
     width="stretch",
-    )
-
-    st.markdown("### What This Reference Implementation Demonstrates")
-    st.write(
-    """
-    AccessAtlas demonstrates a generic access governance pattern for:
-
-    - Central user registry management
-    - Cross-system access cataloging
-    - Resource-level permission tracking
-    - System administrator assignment tracking
-    - Training and agreement compliance monitoring
-    - Upload-based access reconciliation
-    - Audit-friendly inactive record handling
-    """
     )
 
 
@@ -1116,15 +1150,6 @@ def render_compliance_tab():
         width="stretch",
     )
 
-    st.markdown("### Reminder Schedule")
-    st.write(
-        f"""
-        Reminder logic can be implemented for {EXPIRING_SOON_DAYS} days before
-        expiration, 7 days before expiration, and the date of expiration.
-        In production, notifications would use an approved organizational
-        email or orchestration service.
-        """
-    )
 
 
 def render_access_reconciliation_tab():
@@ -1248,15 +1273,6 @@ def render_access_reconciliation_tab():
     st.dataframe(filtered_results, 
                 width="stretch")
 
-    st.markdown("### Governance Rule Demonstrated")
-    st.warning(
-        """
-        User access records missing from an uploaded access export are recommended for
-        Inactive status review rather than deletion, preserving access history for
-        audit purposes. Actual access changes remain outside this reference
-        implementation.
-        """
-    )
 
 def render_my_record_tab():
     """Render the self-service individual user record tab."""
@@ -1291,8 +1307,14 @@ TAB_RENDERERS = {
 }
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]
-tab_objects = st.tabs(active_tabs)
 
-for tab_name, tab_object in zip(active_tabs, tab_objects):
-    with tab_object:
-        TAB_RENDERERS[tab_name]()
+selected_section = st.radio(
+    "Application section",
+    active_tabs,
+    horizontal=True,
+    key="active_application_section",
+)
+
+render_sidebar_guidance(selected_section)
+
+TAB_RENDERERS[selected_section]()

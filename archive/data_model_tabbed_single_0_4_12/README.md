@@ -56,7 +56,7 @@ Unavailable sections are not shown in the tab bar. This keeps the demo interface
 
 - User: My Record self-service tab only
 - Manager: review-oriented views for reconciling reporting employee accounts
-- System Administrator: administered-system views plus filered User view limited to administered systems records
+- System Administrator: administered-system views plus filtered User view limited to administered systems records
 - Super Administrator: full application
 
 This is still simulated UI behavior only; production applications should enforce authorization on the backend as well as in the interface.
@@ -105,6 +105,19 @@ Supported actions include:
 - **Update** records when access status differs between AccessAtlas and the uploaded export
 
 These actions update only the in-session demo dataset. They do not modify the source CSV files. In production, this workflow would write to an approved database table and should include authorization checks, audit logging, and approval controls.
+
+---
+
+## Direct User Access Management
+
+The **User Access Management** section allows Super Administrator and System Administrator demo users to add or edit a single access assignment without uploading a reconciliation file.
+
+Role scope is enforced in the demo interface:
+
+- Super Administrators can manage access assignments for all systems.
+- System Administrators can manage access assignments only for systems they administer and users visible within that administered-system scope.
+
+Changes are written to the session-state-backed access assignment table and do not modify the source CSV files.
 
 ---
 
@@ -176,6 +189,10 @@ Provides compliance monitoring and follow-up reporting, including:
 - filters by compliance status, department, and user type
 - follow-up queue
 - compliance summaries by department and user type
+
+### User Access Management
+
+Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
 
 ### Access Reconciliation
 

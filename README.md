@@ -55,8 +55,8 @@ AccessAtlas only renders tabs available to the selected Demo Mode role.
 Unavailable sections are not shown in the tab bar. This keeps the demo interface closer to the intended user experience for each persona:
 
 - User: My Record self-service tab only
-- Manager: review-oriented views for reconciling reporting employee accounts
-- System Administrator: administered-system views plus filered User view limited to administered systems records
+- Manager: review-oriented views
+- System Administrator: administered-system views plus scoped Users tab
 - Super Administrator: full application
 
 This is still simulated UI behavior only; production applications should enforce authorization on the backend as well as in the interface.
@@ -108,6 +108,35 @@ These actions update only the in-session demo dataset. They do not modify the so
 
 ---
 
+## Direct User Access Management
+
+The **User Access Management** section allows Super Administrator and System Administrator demo users to add or edit a single access assignment without uploading a reconciliation file.
+
+Role scope is enforced in the demo interface:
+
+- Super Administrators can manage access assignments for all systems.
+- System Administrators can manage access assignments only for systems they administer and users visible within that administered-system scope.
+
+Changes are written to the session-state-backed access assignment table and do not modify the source CSV files.
+
+---
+
+## Streamlined Task-Based Interface
+
+AccessAtlas now organizes the demo around day-to-day workflows rather than database entities.
+
+Primary sections are:
+
+- **Dashboard** — role-aware summary and key indicators
+- **My Access** — individual user profile, compliance dates, and access assignments
+- **Manage Access** — user and system review workflows, with manual single-record add/edit where permitted
+- **Review Changes** — reconciliation workflow and action queue
+- **Administration** — compliance monitoring and system administrator coverage for Super Administrators
+
+Detailed tables are available, but many are grouped under expanders so the main interface stays focused.
+
+---
+
 ## Application Tabs
 
 The application includes a dedicated **My Record** tab for individual self-service access review. The broader **Users** tab remains available only to roles that need registry or review functionality.
@@ -131,7 +160,11 @@ Provides a dashboard-style summary of the governance dataset, including:
 
 Provides an individual self-service view of the selected user's governance record, including profile information, compliance dates, access assignments, and administrative assignments.
 
-### Users
+### Manage Access
+
+The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments. 
+
+#### Users In Scope
 
 Provides a user-centered governance profile including:
 
@@ -145,7 +178,7 @@ Provides a user-centered governance profile including:
 - detailed access records
 - systems administered by the selected user
 
-### Systems
+#### Systems In Scope 
 
 Provides a system-centered governance profile including:
 
@@ -157,17 +190,35 @@ Provides a system-centered governance profile including:
 - system administrators
 - resources and permissions assigned within the system
 
-### System Admins
+#### User Access Management
 
-Shows administrative responsibility across systems, including:
+Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
 
-- administrator assignment metrics
-- filters by admin role, status, system type, and system category
-- administrator-centered view
-- system-centered view
-- admin coverage by system
+### Review Changes Tab
 
-### Compliance
+#### Access Reconciliation
+
+Demonstrates upload-based reconciliation of external access exports against current access assignment records, including:
+
+- expected upload schema
+- upload validation
+- reconciliation scope selection
+- uploaded export preview
+- summary by change type
+- summary by resource type
+- action queue
+- source record traceability
+- audit-friendly inactive status recommendations
+
+
+
+
+### Administration Tab
+
+Allows Super Admins users to review Compliance monitorinig metrics and details and manage system administrator roles.
+
+
+#### Compliance
 
 Provides compliance monitoring and follow-up reporting, including:
 
@@ -177,7 +228,21 @@ Provides compliance monitoring and follow-up reporting, including:
 - follow-up queue
 - compliance summaries by department and user type
 
-### Access Reconciliation
+#### System Admins
+
+Shows administrative responsibility across systems, including:
+
+- administrator assignment metrics
+- filters by admin role, status, system type, and system category
+- administrator-centered view
+- system-centered view
+- admin coverage by system
+
+### Review Changes
+
+Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the reconciliation Action Queue.
+
+#### Access Reconciliation
 
 Demonstrates upload-based reconciliation of external access exports against current access assignment records, including:
 

@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS accessatlas.systems (
 );
 ```
 
-### System Notes
+### Systems Table Notes
 
 - `system_type` describes the technical type of system.
 - `system_category` describes the governance pattern.

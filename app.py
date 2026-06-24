@@ -44,6 +44,7 @@ ROLE_VISIBLE_TABS = {
         "Users",
         "Systems",
         "System Admins",
+        "User Access Management",
         "Access Reconciliation",
     ],
     "Super Administrator": [
@@ -53,6 +54,7 @@ ROLE_VISIBLE_TABS = {
         "Systems",
         "System Admins",
         "Compliance",
+        "User Access Management",
         "Access Reconciliation",
     ],
 }
@@ -63,9 +65,11 @@ TAB_LABELS = [
     "Systems",
     "System Admins",
     "Compliance",
+    "User Access Management",
     "Access Reconciliation",
     "My Record",
 ]
+
 
 USER_DISPLAY_COLUMNS = [
     "user_id",
@@ -534,6 +538,16 @@ def render_sidebar_guidance(selected_section):
 
             In production, notifications would use an approved organizational email,
             workflow, or orchestration service.
+            """,
+        },
+        "User Access Management": {
+            "title": "Direct Access Management",
+            "body": """
+            Use this section to add or edit one access assignment without an
+            uploaded reconciliation file.
+
+            Super Administrators can manage all systems. System Administrators
+            are limited to their administered systems and users within that scope.
             """,
         },
         "Access Reconciliation": {
@@ -1277,6 +1291,314 @@ def render_compliance_tab():
 
 
 
+
+def get_allowed_management_systems():
+    """Return systems available for direct access management for the current role."""
+    if current_user["application_role"] == "Super Administrator":
+        return systems.copy()
+
+    if current_user["application_role"] == "System Administrator":
+        return systems.copy()
+
+    return systems.iloc[0:0].copy()
+
+
+def get_user_options_for_access_management():
+    """Return user records available for access management for the current role."""
+    if current_user["application_role"] == "Super Administrator":
+        return all_users.copy()
+
+    if current_user["application_role"] == "System Administrator":
+        return users.copy()
+
+    return users.iloc[0:0].copy()
+
+
+def apply_single_access_record_change(
+    mode,
+    access_id,
+    user_id,
+    system_id,
+    resource_type,
+    resource_name,
+    permission_name,
+    access_status,
+    granted_date,
+    revoked_date,
+    source,
+):
+    """Add or update one access assignment record in session state."""
+    current_access = st.session_state["editable_access_assignments"].copy()
+
+    record = {
+        "access_id": access_id,
+        "user_id": user_id,
+        "system_id": system_id,
+        "resource_type": resource_type,
+        "resource_name": resource_name,
+        "permission_name": permission_name,
+        "access_status": access_status,
+        "granted_date": pd.Timestamp(granted_date) if granted_date else pd.NaT,
+        "revoked_date": pd.Timestamp(revoked_date) if revoked_date else pd.NaT,
+        "source": source,
+    }
+
+    if mode == "Add new access record":
+        st.session_state["editable_access_assignments"] = pd.concat(
+            [current_access, pd.DataFrame([record])],
+            ignore_index=True,
+        )
+        return "added"
+
+    match = current_access["access_id"] == access_id
+    if not match.any():
+        return "not_found"
+
+    for column_name, value in record.items():
+        current_access.loc[match, column_name] = value
+
+    st.session_state["editable_access_assignments"] = current_access
+    return "updated"
+
+
+def render_user_access_management_tab():
+    """Render direct single-record add/edit access management workflow."""
+    st.subheader("User Access Management")
+    st.caption(
+        "Add or edit one user access assignment without uploading a reconciliation file. "
+        "Super Administrators can manage all systems. System Administrators can manage "
+        "only users and systems within their scoped administered systems."
+    )
+
+    allowed_systems = get_allowed_management_systems()
+    allowed_users = get_user_options_for_access_management()
+
+    if allowed_systems.empty or allowed_users.empty:
+        st.warning("No users or systems are available for management in the current role scope.")
+        return
+
+    mode = st.radio(
+        "Management action",
+        ["Add new access record", "Edit existing access record"],
+        horizontal=True,
+        key="direct_access_management_mode",
+    )
+
+    current_access = st.session_state["editable_access_assignments"].copy()
+    scoped_current_access = current_access[
+        current_access["system_id"].isin(allowed_systems["system_id"])
+    ].copy()
+
+    if current_user["application_role"] == "System Administrator":
+        scoped_current_access = scoped_current_access[
+            scoped_current_access["user_id"].isin(allowed_users["user_id"])
+        ]
+
+    st.markdown("### Current Manageable Access Records")
+    if scoped_current_access.empty:
+        st.info("No existing access records are currently available in this management scope.")
+    else:
+        st.dataframe(
+            scoped_current_access.merge(
+                allowed_systems[["system_id", "system_name"]],
+                on="system_id",
+                how="left",
+            ).merge(
+                all_users[["user_id", "display_name", "email"]],
+                on="user_id",
+                how="left",
+            ),
+            width="stretch",
+        )
+
+    selected_existing = None
+    if mode == "Edit existing access record":
+        if scoped_current_access.empty:
+            st.warning("There are no existing records available to edit in this scope.")
+            return
+
+        access_options = scoped_current_access.copy()
+        access_options["access_label"] = (
+            access_options["access_id"].astype(str)
+            + " — "
+            + access_options["user_id"].astype(str)
+            + " / "
+            + access_options["system_id"].astype(str)
+            + " / "
+            + access_options["resource_name"].astype(str)
+            + " / "
+            + access_options["permission_name"].astype(str)
+        )
+
+        selected_access_label = st.selectbox(
+            "Select access record to edit",
+            access_options["access_label"].tolist(),
+            key="direct_access_record_select",
+        )
+        selected_access_id = access_options[
+            access_options["access_label"] == selected_access_label
+        ].iloc[0]["access_id"]
+        selected_existing = scoped_current_access[
+            scoped_current_access["access_id"] == selected_access_id
+        ].iloc[0]
+        default_access_id = selected_existing["access_id"]
+    else:
+        default_access_id = generate_next_access_id(current_access)
+
+    user_options = allowed_users.copy()
+    user_options["user_label"] = (
+        user_options["display_name"].astype(str)
+        + " ("
+        + user_options["user_id"].astype(str)
+        + ")"
+    )
+    system_options = allowed_systems.copy()
+    system_options["system_label"] = (
+        system_options["system_name"].astype(str)
+        + " ("
+        + system_options["system_id"].astype(str)
+        + ")"
+    )
+
+    default_user_index = 0
+    default_system_index = 0
+    default_resource_type = "Application"
+    default_resource_name = ""
+    default_permission_name = ""
+    default_access_status = "Active"
+    default_granted_date = date.today()
+    default_revoked_date = None
+    default_source = "Direct Entry"
+
+    if selected_existing is not None:
+        if selected_existing["user_id"] in user_options["user_id"].tolist():
+            default_user_index = user_options["user_id"].tolist().index(selected_existing["user_id"])
+        if selected_existing["system_id"] in system_options["system_id"].tolist():
+            default_system_index = system_options["system_id"].tolist().index(selected_existing["system_id"])
+        default_resource_type = selected_existing["resource_type"]
+        default_resource_name = selected_existing["resource_name"]
+        default_permission_name = selected_existing["permission_name"]
+        default_access_status = selected_existing["access_status"]
+        default_granted_date = pd.to_datetime(selected_existing["granted_date"]).date()
+        if pd.notna(selected_existing["revoked_date"]):
+            default_revoked_date = pd.to_datetime(selected_existing["revoked_date"]).date()
+        default_source = selected_existing["source"]
+
+    with st.form("direct_user_access_management_form"):
+        st.text_input(
+            "Access ID",
+            value=default_access_id,
+            key="direct_access_id",
+            disabled=True,
+        )
+
+        selected_user_label = st.selectbox(
+            "User",
+            user_options["user_label"].tolist(),
+            index=default_user_index,
+            key="direct_access_user",
+        )
+        selected_system_label = st.selectbox(
+            "System",
+            system_options["system_label"].tolist(),
+            index=default_system_index,
+            key="direct_access_system",
+        )
+
+        resource_type = st.selectbox(
+            "Resource type",
+            ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"],
+            index=(
+                ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"]
+                .index(default_resource_type)
+                if default_resource_type in ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"]
+                else 7
+            ),
+            key="direct_resource_type",
+        )
+        resource_name = st.text_input(
+            "Resource name",
+            value=default_resource_name,
+            key="direct_resource_name",
+        )
+        permission_name = st.text_input(
+            "Permission name",
+            value=default_permission_name,
+            key="direct_permission_name",
+        )
+        access_status = st.selectbox(
+            "Access status",
+            ["Active", "Inactive", "Pending Review"],
+            index=(
+                ["Active", "Inactive", "Pending Review"].index(default_access_status)
+                if default_access_status in ["Active", "Inactive", "Pending Review"]
+                else 0
+            ),
+            key="direct_access_status",
+        )
+        granted_date = st.date_input(
+            "Granted date",
+            value=default_granted_date,
+            key="direct_granted_date",
+        )
+
+        revoked_date_enabled = st.checkbox(
+            "Set revoked date",
+            value=default_revoked_date is not None,
+            key="direct_revoked_date_enabled",
+        )
+        revoked_date = None
+        if revoked_date_enabled:
+            revoked_date = st.date_input(
+                "Revoked date",
+                value=default_revoked_date or date.today(),
+                key="direct_revoked_date",
+            )
+
+        source = st.text_input(
+            "Source",
+            value=default_source,
+            key="direct_source",
+        )
+
+        submitted = st.form_submit_button(
+            "Save Access Record",
+            type="primary",
+        )
+
+    if submitted:
+        selected_user_id = user_options[
+            user_options["user_label"] == selected_user_label
+        ].iloc[0]["user_id"]
+        selected_system_id = system_options[
+            system_options["system_label"] == selected_system_label
+        ].iloc[0]["system_id"]
+
+        if not resource_name or not permission_name:
+            st.error("Resource name and permission name are required.")
+            return
+
+        outcome = apply_single_access_record_change(
+            mode,
+            default_access_id,
+            selected_user_id,
+            selected_system_id,
+            resource_type,
+            resource_name,
+            permission_name,
+            access_status,
+            granted_date,
+            revoked_date,
+            source,
+        )
+
+        if outcome == "not_found":
+            st.error("The selected access record could not be found.")
+        else:
+            st.success(f"Access record {outcome} for this demo session.")
+            st.rerun()
+
+
 def render_access_reconciliation_tab():
     st.subheader("Access Reconciliation")
     st.write(
@@ -1451,6 +1773,7 @@ TAB_RENDERERS = {
     "Systems": render_systems_tab,
     "System Admins": render_system_admins_tab,
     "Compliance": render_compliance_tab,
+    "User Access Management": render_user_access_management_tab,
     "Access Reconciliation": render_access_reconciliation_tab,
     "My Record": render_my_record_tab,
 }

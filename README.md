@@ -162,7 +162,7 @@ Provides an individual self-service view of the selected user's governance recor
 
 ### Manage Access
 
-The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments. 
+The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments.
 
 #### Users In Scope
 
@@ -178,7 +178,7 @@ Provides a user-centered governance profile including:
 - detailed access records
 - systems administered by the selected user
 
-#### Systems In Scope 
+#### Systems In Scope
 
 Provides a system-centered governance profile including:
 
@@ -210,13 +210,9 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - source record traceability
 - audit-friendly inactive status recommendations
 
-
-
-
 ### Administration Tab
 
 Allows Super Admins users to review Compliance monitorinig metrics and details and manage system administrator roles.
-
 
 #### Compliance
 
@@ -242,7 +238,7 @@ Shows administrative responsibility across systems, including:
 
 Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the reconciliation Action Queue.
 
-#### Access Reconciliation
+#### Access Reconciliation Section
 
 Demonstrates upload-based reconciliation of external access exports against current access assignment records, including:
 

@@ -32,3 +32,9 @@ A030,USR00019,SYS006,Dashboard,Management Dashboard,Viewer,Active,2026-06-16,,Da
 A031,USR00019,SYS004,Role,ROLE_DATA_READER,Data Reader,Active,2026-06-16,,Platform Metadata
 A032,USR00020,SYS001,Application,Legacy Business Application,Standard User,Active,2026-06-16,,Manual Upload
 A033,USR00020,SYS002,Role,Standard User Role,Standard User,Active,2026-06-16,,System Export
+A034,USR00015,SYS002,Role,Standard User Role,Standard User,Active,2026-06-13,,System Export
+A035,USR00013,SYS006,Dashboard,Management Dashboard,Viewer,Active,2026-06-12,,Dashboard Inventory
+A036,USR00013,SYS006,Dashboard,Management Dashboard,Administrator,Active,2026-06-12,,Dashboard Inventory
+A037,USR00017,SYS004,Role,ROLE_DATA_READER,Data Reader,Active,2026-06-15,,Platform Metadata
+A037,USR00018,SYS004,Role,ROLE_CONTRACTOR,Contractor,Active,2026-06-16,,Platform Metadata
+A038,USR00020,SYS004,Role,ROLE_OPERATIONS_USER,Operations User,Active,2026-06-16,,Platform Metadata

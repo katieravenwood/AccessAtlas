@@ -5,3 +5,5 @@ ADM003,USR00005,SYS004,Platform Administrator,Active,2026-05-07,,USR00005,Govern
 ADM004,USR00005,SYS006,Dashboard Administrator,Active,2026-05-07,,USR00005,Governance Review,Oversees dashboard access governance
 ADM005,USR00002,SYS005,Database Access Manager,Active,2025-11-23,,USR00005,Manual Entry,Reviews database access requests
 ADM006,USR00011,SYS005,System Administrator,Active,2026-06-10,,USR00005,System Inventory,Administers analytics database system
+ADM007,USR00010,SYS002,Access Manager,Active,2026-06-05,,USR00005,Governance Review,Approves access for finance users on the data management system
+ADM008,USR00013,SYS006,System Administrator,Active,2026-06-12,,USR00005,System Inventory,Secondary dashboard system administrator for technology team

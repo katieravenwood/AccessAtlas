@@ -36,29 +36,38 @@ RECONCILIATION_KEY_COLUMNS = [
 RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
 
 ROLE_VISIBLE_TABS = {
-    "User": ["My Access"],
-    "Manager": ["Dashboard", "My Access", "Manage Access", "Review Changes"],
+    "User": ["My Record"],
+    "Manager": ["Overview", "My Record", "Users", "Compliance", "Access Reconciliation"],
     "System Administrator": [
-        "Dashboard",
-        "My Access",
-        "Manage Access",
-        "Review Changes",
+        "Overview",
+        "My Record",
+        "Users",
+        "Systems",
+        "System Admins",
+        "User Access Management",
+        "Access Reconciliation",
     ],
     "Super Administrator": [
-        "Dashboard",
-        "My Access",
-        "Manage Access",
-        "Review Changes",
-        "Administration",
+        "Overview",
+        "My Record",
+        "Users",
+        "Systems",
+        "System Admins",
+        "Compliance",
+        "User Access Management",
+        "Access Reconciliation",
     ],
 }
 
 TAB_LABELS = [
-    "Dashboard",
-    "My Access",
-    "Manage Access",
-    "Review Changes",
-    "Administration",
+    "Overview",
+    "Users",
+    "Systems",
+    "System Admins",
+    "Compliance",
+    "User Access Management",
+    "Access Reconciliation",
+    "My Record",
 ]
 
 
@@ -507,47 +516,48 @@ def render_demo_scope_summary(users, systems, access, system_admins):
 def render_sidebar_guidance(selected_section):
     """Render contextual sidebar guidance for selected role-visible sections."""
     guidance = {
-        "Dashboard": {
-            "title": "Dashboard Guidance",
+        "Overview": {
+            "title": "Overview Guidance",
             "body": """
-            The dashboard shows a simplified health summary for your visible scope.
+            AccessAtlas demonstrates a generic access governance pattern for:
 
-            Use it to spot compliance issues, access records, system coverage, and
-            items that may need review.
+            - Central user registry management
+            - Cross-system access cataloging
+            - Resource-level permission tracking
+            - System administrator assignment tracking
+            - Training and agreement compliance monitoring
+            - Upload-based access reconciliation
+            - Audit-friendly inactive record handling
             """,
         },
-        "My Access": {
-            "title": "My Access Guidance",
-            "body": """
-            My Access shows the selected user's own governance record, compliance
-            dates, access assignments, and administrative assignments.
+        "Compliance": {
+            "title": "Compliance Reminder Logic",
+            "body": f"""
+            Reminder logic can be implemented for {EXPIRING_SOON_DAYS} days before
+            expiration, 7 days before expiration, and the date of expiration.
 
-            Individual users see only this section.
+            In production, notifications would use an approved organizational email,
+            workflow, or orchestration service.
             """,
         },
-        "Manage Access": {
-            "title": "Manage Access Guidance",
+        "User Access Management": {
+            "title": "Direct Access Management",
             "body": """
-            Manage Access combines user-centered and system-centered views.
+            Use this section to add or edit one access assignment without an
+            uploaded reconciliation file.
 
-            System Administrators see only users and systems in their administered
-            scope. Super Administrators see all records.
+            Super Administrators can manage all systems. System Administrators
+            are limited to their administered systems and users within that scope.
             """,
         },
-        "Review Changes": {
-            "title": "Review Changes Guidance",
+        "Access Reconciliation": {
+            "title": "Reconciliation Governance Rule",
             "body": """
-            Review Changes contains the reconciliation workflow and Action Queue.
+            User access records missing from an uploaded access export are recommended
+            for Inactive status review rather than deletion.
 
-            Use it to add, update, or inactivate access assignment records based on
-            uploaded access exports.
-            """,
-        },
-        "Administration": {
-            "title": "Administration Guidance",
-            "body": """
-            Administration contains compliance monitoring and administrator coverage
-            views for Super Administrators.
+            This preserves access history for audit purposes. Actual access changes
+            remain outside this reference implementation.
             """,
         },
     }
@@ -559,6 +569,9 @@ def render_sidebar_guidance(selected_section):
     st.sidebar.markdown(f"### {guidance[selected_section]['title']}")
     st.sidebar.info(guidance[selected_section]["body"])
 
+
+
+# Load and prepare data.
 
 def get_demo_user_options(users):
     """Return formatted demo user options for the sidebar selector."""
@@ -1754,118 +1767,15 @@ def render_access_reconciliation_tab():
 
 
 
-
-def render_dashboard_section():
-    """Render a streamlined role-aware dashboard."""
-    st.subheader("Dashboard")
-
-    pending_reconciliation = 0
-    try:
-        uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
-        pending_reconciliation = len(
-            reconcile(access, uploaded_df)[lambda df: df["recommended_action"] != "No action"]
-        )
-    except Exception:
-        pending_reconciliation = 0
-
-    active_follow_up = len(
-        users[
-            (users["compliance_status"] != "Current")
-            & (users["record_status"] == "Active")
-        ]
-    )
-
-    d1, d2, d3, d4 = st.columns(4)
-    d1.metric("Visible Users", len(users))
-    d2.metric("Visible Systems", len(systems))
-    d3.metric("Access Records", len(access))
-    d4.metric("Items Needing Review", pending_reconciliation + active_follow_up)
-
-    if current_user["application_role"] == "User":
-        st.info(
-            "Use My Access to review your profile, access assignments, and compliance dates."
-        )
-    elif current_user["application_role"] == "System Administrator":
-        st.info(
-            "Use Manage Access to review users and systems in your administered scope. "
-            "Use Review Changes to process reconciliation exceptions."
-        )
-    elif current_user["application_role"] == "Manager":
-        st.info(
-            "Use Manage Access to review users in your visible scope and Review Changes "
-            "to inspect access exceptions."
-        )
-    else:
-        st.info(
-            "Use Manage Access for user/system records, Review Changes for reconciliation, "
-            "and Administration for compliance and administrative coverage."
-        )
-
-    with st.expander("View dashboard details"):
-        st.markdown("### User Record Status")
-        st.dataframe(count_by(users, "record_status", "users"), width="stretch")
-
-        st.markdown("### Compliance Status")
-        st.dataframe(count_by(users, "compliance_status", "users"), width="stretch")
-
-        st.markdown("### Access Records by System Type")
-        st.dataframe(count_by(access_with_systems, "system_type"), width="stretch")
-
-        st.markdown("### Access Records by Resource Type")
-        st.dataframe(count_by(access_with_systems, "resource_type"), width="stretch")
-
-        st.markdown("### Access Records by Access Status")
-        st.dataframe(count_by(access, "access_status"), width="stretch")
-
-
-def render_manage_access_section():
-    """Render user/system access workflows in a streamlined task section."""
-    st.subheader("Manage Access")
-    st.caption(
-        "Review users and systems in your visible scope. Direct manual edits are available "
-        "where permitted by the selected demo role."
-    )
-
-    with st.expander("Users in Scope", expanded=True):
-        render_users_tab()
-
-    with st.expander("Systems in Scope"):
-        render_systems_tab()
-
-    if current_user["application_role"] in ["System Administrator", "Super Administrator"]:
-        with st.expander("Manual Single-Record Access Add/Edit"):
-            render_user_access_management_tab()
-
-
-def render_review_changes_section():
-    """Render reconciliation and action queue workflows."""
-    st.subheader("Review Changes")
-    st.caption(
-        "Upload or review access exports, inspect differences, and apply recommended "
-        "session-state updates from the reconciliation action queue."
-    )
-    render_access_reconciliation_tab()
-
-
-def render_administration_section():
-    """Render administrative and compliance workflows for Super Administrators."""
-    st.subheader("Administration")
-    st.caption(
-        "Review administrative coverage and compliance monitoring details."
-    )
-
-    with st.expander("Compliance Monitoring", expanded=True):
-        render_compliance_tab()
-
-    with st.expander("System Administrator Assignments"):
-        render_system_admins_tab()
-
 TAB_RENDERERS = {
-    "Dashboard": render_dashboard_section,
-    "My Access": render_my_record_tab,
-    "Manage Access": render_manage_access_section,
-    "Review Changes": render_review_changes_section,
-    "Administration": render_administration_section,
+    "Overview": render_overview_tab,
+    "Users": render_users_tab,
+    "Systems": render_systems_tab,
+    "System Admins": render_system_admins_tab,
+    "Compliance": render_compliance_tab,
+    "User Access Management": render_user_access_management_tab,
+    "Access Reconciliation": render_access_reconciliation_tab,
+    "My Record": render_my_record_tab,
 }
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]

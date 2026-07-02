@@ -1,0 +1,8 @@
+system_id,system_name,system_type,system_category,resource_scope,access_model,tracking_method,system_owner,admin_group,record_status,notes
+SYS001,Legacy Business Application,Application,Legacy System,Application,External application user list,Manual upload reconciliation,Operations Team,Application Administrators,Active,Legacy application retained for historical governance
+SYS002,Data Management System,Data Management System,Externally Managed,Role,Externally managed user roles,Periodic access export,Operations Team,System Administrators,Active,Operational platform with externally maintained access records
+SYS003,Workflow Management System,Application,Externally Managed,Application,Externally managed user roles,Periodic access export,Operations Team,System Administrators,Active,Workflow platform with periodic access reviews
+SYS004,Enterprise Data Platform,Cloud Data Platform,Cloud Platform,Role,User-to-role assignments,Role metadata,Technology Team,Platform Administrators,Active,Cloud data platform governed through role assignments
+SYS005,Reporting Database,Database,Internally Managed,Schema,Database/schema/table permissions,Administrator inventory,Analytics Team,Database Administrators,Active,Structured database access tracked by schema and permission
+SYS006,Management Dashboard,Dashboard,Reporting Resource,Dashboard,Dashboard permission plus hosting site access,Dashboard and site inventory,Reporting Team,Dashboard Administrators,Active,Embedded dashboard requiring both dashboard and site access
+SYS007,Document Collaboration Site,Site / Folder,Collaboration Resource,Site,Site or group membership,Site permissions inventory,Operations Team,Site Owners,Active,Collaboration space governed through site membership

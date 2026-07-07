@@ -1763,7 +1763,9 @@ def render_dashboard_section():
     try:
         uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
         pending_reconciliation = len(
-            reconcile(access, uploaded_df)[lambda df: df["recommended_action"] != "No action"]
+            reconcile(access, uploaded_df)[
+                lambda df: df["recommended_action"] != "No action"
+            ]
         )
     except Exception:
         pending_reconciliation = 0
@@ -1775,11 +1777,22 @@ def render_dashboard_section():
         ]
     )
 
+    expired_or_expiring = len(
+        users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]
+    )
+
+    st.markdown("### At-a-glance summary")
     d1, d2, d3, d4 = st.columns(4)
     d1.metric("Visible Users", len(users))
     d2.metric("Visible Systems", len(systems))
     d3.metric("Access Records", len(access))
     d4.metric("Items Needing Review", pending_reconciliation + active_follow_up)
+
+    st.markdown("### Governance health")
+    h1, h2, h3 = st.columns(3)
+    h1.metric("Expired / Expiring Compliance", expired_or_expiring)
+    h2.metric("Pending Reconciliation Actions", pending_reconciliation)
+    h3.metric("Active Compliance Follow-Up", active_follow_up)
 
     if current_user["application_role"] == "User":
         st.info(
@@ -1801,21 +1814,67 @@ def render_dashboard_section():
             "and Administration for compliance and administrative coverage."
         )
 
-    with st.expander("View dashboard details"):
-        st.markdown("### User Record Status")
-        st.dataframe(count_by(users, "record_status", "users"), width="stretch")
+    st.markdown("### Visual summary")
 
-        st.markdown("### Compliance Status")
-        st.dataframe(count_by(users, "compliance_status", "users"), width="stretch")
+    chart_col1, chart_col2 = st.columns(2)
 
-        st.markdown("### Access Records by System Type")
+    with chart_col1:
+        st.markdown("#### Compliance status")
+        compliance_summary = count_by(users, "compliance_status", "users")
+        st.bar_chart(
+            compliance_summary,
+            x="compliance_status",
+            y="users",
+        )
+
+    with chart_col2:
+        st.markdown("#### Access by status")
+        access_status_summary = count_by(access, "access_status", "records")
+        st.bar_chart(
+            access_status_summary,
+            x="access_status",
+            y="records",
+        )
+
+    chart_col3, chart_col4 = st.columns(2)
+
+    with chart_col3:
+        st.markdown("#### Users by record status")
+        user_status_summary = count_by(users, "record_status", "users")
+        st.bar_chart(
+            user_status_summary,
+            x="record_status",
+            y="users",
+        )
+
+    with chart_col4:
+        st.markdown("#### Access by resource type")
+        resource_summary = count_by(access_with_systems, "resource_type", "records")
+        st.bar_chart(
+            resource_summary,
+            x="resource_type",
+            y="records",
+        )
+
+    with st.expander("View source summary tables"):
+        st.caption(
+            "These tables show the counts used in the dashboard visualizations."
+        )
+
+        st.markdown("#### User record status")
+        st.dataframe(user_status_summary, width="stretch")
+
+        st.markdown("#### Compliance status")
+        st.dataframe(compliance_summary, width="stretch")
+
+        st.markdown("#### Access records by system type")
         st.dataframe(count_by(access_with_systems, "system_type"), width="stretch")
 
-        st.markdown("### Access Records by Resource Type")
-        st.dataframe(count_by(access_with_systems, "resource_type"), width="stretch")
+        st.markdown("#### Access records by resource type")
+        st.dataframe(resource_summary, width="stretch")
 
-        st.markdown("### Access Records by Access Status")
-        st.dataframe(count_by(access, "access_status"), width="stretch")
+        st.markdown("#### Access records by access status")
+        st.dataframe(access_status_summary, width="stretch")
 
 
 def render_manage_access_section():

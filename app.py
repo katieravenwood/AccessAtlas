@@ -92,6 +92,38 @@ COMPLIANCE_COLUMNS = [
 st.set_page_config(page_title="AccessAtlas", layout="wide")
 
 
+st.markdown(
+    """
+    <style>
+    div[role="radiogroup"] {
+        gap: 0.35rem;
+    }
+
+    div[role="radiogroup"] label {
+        border: 1px solid rgba(49, 51, 63, 0.2);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        background-color: rgba(49, 51, 63, 0.03);
+        transition: all 0.15s ease-in-out;
+    }
+
+    div[role="radiogroup"] label:hover {
+        border-color: rgba(49, 51, 63, 0.45);
+        background-color: rgba(49, 51, 63, 0.07);
+    }
+
+    div[role="radiogroup"] label:has(input:checked) {
+        border-color: rgba(255, 75, 75, 0.8);
+        background-color: rgba(255, 75, 75, 0.12);
+        font-weight: 600;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+
 @st.cache_data
 def load_csv(filename, date_columns=None):
     """Load a CSV file from the data directory with optional date parsing."""
@@ -892,10 +924,10 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
 
 def render_my_record_tab():
     """Render the self-service individual user record tab."""
-    st.subheader("My Record")
+    st.subheader("My Access")
     st.caption(
-        "This view shows the selected user's own governance profile, compliance "
-        "dates, access assignments, and administrative assignments."
+        "Review your governance profile, compliance dates, access assignments, "
+        "and administrative assignments."
     )
 
     current_user_id = current_user["user_id"]
@@ -906,10 +938,97 @@ def render_my_record_tab():
         )
         return
 
-    render_selected_user_profile(current_user_id, user_selection_enabled=False)
-
     selected_user = users[users["user_id"] == current_user_id].iloc[0]
-    render_self_service_update_form(selected_user)
+    manager_name = get_display_name(all_users, selected_user["manager_user_id"])
+    selected_access = access[access["user_id"] == current_user_id].merge(
+        systems,
+        on="system_id",
+        how="left",
+    )
+    selected_admin_assignments = (
+        system_admins[system_admins["user_id"] == current_user_id]
+        .merge(
+            systems[["system_id", "system_name", "system_type", "system_category"]],
+            on="system_id",
+            how="left",
+        )
+    )
+
+    details_tab, update_tab = st.tabs(
+        ["Profile, Compliance, Access & Admin Assignments", "Update Certification Dates"]
+    )
+
+    with details_tab:
+        st.markdown(f"#### {selected_user['display_name']}")
+        st.write(user_profile_markdown(selected_user, manager_name))
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Systems Accessed", selected_access["system_id"].nunique())
+        m2.metric("Access Assignments", len(selected_access))
+        m3.metric("Admin Assignments", len(selected_admin_assignments))
+        m4.metric("Compliance", selected_user["compliance_status"])
+
+        profile_tab, compliance_tab, access_tab, admin_tab = st.tabs(
+            ["Profile", "Compliance", "Access", "Admin Assignments"]
+        )
+
+        with profile_tab:
+            st.markdown("### Profile")
+            st.write(user_profile_markdown(selected_user, manager_name))
+
+        with compliance_tab:
+            st.markdown("### Training & Agreement Snapshot")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "requirement": "Annual Training",
+                            "completion_date": selected_user["annual_training_date"],
+                            "expiration_date": selected_user["annual_training_expiration"],
+                        },
+                        {
+                            "requirement": "Biennial Training",
+                            "completion_date": selected_user["biennial_training_date"],
+                            "expiration_date": selected_user["biennial_training_expiration"],
+                        },
+                        {
+                            "requirement": "Access Agreement",
+                            "completion_date": selected_user["access_agreement_date"],
+                            "expiration_date": "",
+                        },
+                    ]
+                ),
+                width="stretch",
+            )
+
+        with access_tab:
+            st.markdown("### Access by System")
+            if selected_access.empty:
+                st.info("This user does not currently have access assignments.")
+            else:
+                st.dataframe(
+                    count_by(
+                        selected_access,
+                        ["system_id", "system_name", "system_type"],
+                        "access_records",
+                    ),
+                    width="stretch",
+                )
+
+            with st.expander("Detailed access assignments", expanded=True):
+                st.dataframe(selected_access, width="stretch")
+
+        with admin_tab:
+            st.markdown("### Administrative Assignments")
+            if selected_admin_assignments.empty:
+                st.info(
+                    "This user is not assigned as an administrator for any tracked systems."
+                )
+            else:
+                st.dataframe(selected_admin_assignments, width="stretch")
+
+    with update_tab:
+        render_self_service_update_form(selected_user)
 
 
 def render_users_tab():
@@ -1929,11 +2048,13 @@ TAB_RENDERERS = {
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]
 
+st.caption("Select a workflow section")
 selected_section = st.radio(
     "Application section",
     active_tabs,
     horizontal=True,
     key="active_application_section",
+    label_visibility="collapsed",
 )
 
 render_sidebar_guidance(selected_section)

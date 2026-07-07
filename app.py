@@ -92,6 +92,38 @@ COMPLIANCE_COLUMNS = [
 st.set_page_config(page_title="AccessAtlas", layout="wide")
 
 
+st.markdown(
+    """
+    <style>
+    div[role="radiogroup"] {
+        gap: 0.35rem;
+    }
+
+    div[role="radiogroup"] label {
+        border: 1px solid rgba(49, 51, 63, 0.2);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        background-color: rgba(49, 51, 63, 0.03);
+        transition: all 0.15s ease-in-out;
+    }
+
+    div[role="radiogroup"] label:hover {
+        border-color: rgba(49, 51, 63, 0.45);
+        background-color: rgba(49, 51, 63, 0.07);
+    }
+
+    div[role="radiogroup"] label:has(input:checked) {
+        border-color: rgba(255, 75, 75, 0.8);
+        background-color: rgba(255, 75, 75, 0.12);
+        font-weight: 600;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+
 @st.cache_data
 def load_csv(filename, date_columns=None):
     """Load a CSV file from the data directory with optional date parsing."""
@@ -892,10 +924,10 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
 
 def render_my_record_tab():
     """Render the self-service individual user record tab."""
-    st.subheader("My Record")
+    st.subheader("My Access")
     st.caption(
-        "This view shows the selected user's own governance profile, compliance "
-        "dates, access assignments, and administrative assignments."
+        "Review your governance profile, compliance dates, access assignments, "
+        "and administrative assignments."
     )
 
     current_user_id = current_user["user_id"]
@@ -906,10 +938,97 @@ def render_my_record_tab():
         )
         return
 
-    render_selected_user_profile(current_user_id, user_selection_enabled=False)
-
     selected_user = users[users["user_id"] == current_user_id].iloc[0]
-    render_self_service_update_form(selected_user)
+    manager_name = get_display_name(all_users, selected_user["manager_user_id"])
+    selected_access = access[access["user_id"] == current_user_id].merge(
+        systems,
+        on="system_id",
+        how="left",
+    )
+    selected_admin_assignments = (
+        system_admins[system_admins["user_id"] == current_user_id]
+        .merge(
+            systems[["system_id", "system_name", "system_type", "system_category"]],
+            on="system_id",
+            how="left",
+        )
+    )
+
+    details_tab, update_tab = st.tabs(
+        ["Profile, Compliance, Access & Admin Assignments", "Update Certification Dates"]
+    )
+
+    with details_tab:
+        st.markdown(f"#### {selected_user['display_name']}")
+        st.write(user_profile_markdown(selected_user, manager_name))
+
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Systems Accessed", selected_access["system_id"].nunique())
+        m2.metric("Access Assignments", len(selected_access))
+        m3.metric("Admin Assignments", len(selected_admin_assignments))
+        m4.metric("Compliance", selected_user["compliance_status"])
+
+        profile_tab, compliance_tab, access_tab, admin_tab = st.tabs(
+            ["Profile", "Compliance", "Access", "Admin Assignments"]
+        )
+
+        with profile_tab:
+            st.markdown("### Profile")
+            st.write(user_profile_markdown(selected_user, manager_name))
+
+        with compliance_tab:
+            st.markdown("### Training & Agreement Snapshot")
+            st.dataframe(
+                pd.DataFrame(
+                    [
+                        {
+                            "requirement": "Annual Training",
+                            "completion_date": selected_user["annual_training_date"],
+                            "expiration_date": selected_user["annual_training_expiration"],
+                        },
+                        {
+                            "requirement": "Biennial Training",
+                            "completion_date": selected_user["biennial_training_date"],
+                            "expiration_date": selected_user["biennial_training_expiration"],
+                        },
+                        {
+                            "requirement": "Access Agreement",
+                            "completion_date": selected_user["access_agreement_date"],
+                            "expiration_date": "",
+                        },
+                    ]
+                ),
+                width="stretch",
+            )
+
+        with access_tab:
+            st.markdown("### Access by System")
+            if selected_access.empty:
+                st.info("This user does not currently have access assignments.")
+            else:
+                st.dataframe(
+                    count_by(
+                        selected_access,
+                        ["system_id", "system_name", "system_type"],
+                        "access_records",
+                    ),
+                    width="stretch",
+                )
+
+            with st.expander("Detailed access assignments", expanded=True):
+                st.dataframe(selected_access, width="stretch")
+
+        with admin_tab:
+            st.markdown("### Administrative Assignments")
+            if selected_admin_assignments.empty:
+                st.info(
+                    "This user is not assigned as an administrator for any tracked systems."
+                )
+            else:
+                st.dataframe(selected_admin_assignments, width="stretch")
+
+    with update_tab:
+        render_self_service_update_form(selected_user)
 
 
 def render_users_tab():
@@ -1763,7 +1882,9 @@ def render_dashboard_section():
     try:
         uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
         pending_reconciliation = len(
-            reconcile(access, uploaded_df)[lambda df: df["recommended_action"] != "No action"]
+            reconcile(access, uploaded_df)[
+                lambda df: df["recommended_action"] != "No action"
+            ]
         )
     except Exception:
         pending_reconciliation = 0
@@ -1775,11 +1896,22 @@ def render_dashboard_section():
         ]
     )
 
+    expired_or_expiring = len(
+        users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]
+    )
+
+    st.markdown("### At-a-glance summary")
     d1, d2, d3, d4 = st.columns(4)
     d1.metric("Visible Users", len(users))
     d2.metric("Visible Systems", len(systems))
     d3.metric("Access Records", len(access))
     d4.metric("Items Needing Review", pending_reconciliation + active_follow_up)
+
+    st.markdown("### Governance health")
+    h1, h2, h3 = st.columns(3)
+    h1.metric("Expired / Expiring Compliance", expired_or_expiring)
+    h2.metric("Pending Reconciliation Actions", pending_reconciliation)
+    h3.metric("Active Compliance Follow-Up", active_follow_up)
 
     if current_user["application_role"] == "User":
         st.info(
@@ -1801,21 +1933,67 @@ def render_dashboard_section():
             "and Administration for compliance and administrative coverage."
         )
 
-    with st.expander("View dashboard details"):
-        st.markdown("### User Record Status")
-        st.dataframe(count_by(users, "record_status", "users"), width="stretch")
+    st.markdown("### Visual summary")
 
-        st.markdown("### Compliance Status")
-        st.dataframe(count_by(users, "compliance_status", "users"), width="stretch")
+    chart_col1, chart_col2 = st.columns(2)
 
-        st.markdown("### Access Records by System Type")
+    with chart_col1:
+        st.markdown("#### Compliance status")
+        compliance_summary = count_by(users, "compliance_status", "users")
+        st.bar_chart(
+            compliance_summary,
+            x="compliance_status",
+            y="users",
+        )
+
+    with chart_col2:
+        st.markdown("#### Access by status")
+        access_status_summary = count_by(access, "access_status", "records")
+        st.bar_chart(
+            access_status_summary,
+            x="access_status",
+            y="records",
+        )
+
+    chart_col3, chart_col4 = st.columns(2)
+
+    with chart_col3:
+        st.markdown("#### Users by record status")
+        user_status_summary = count_by(users, "record_status", "users")
+        st.bar_chart(
+            user_status_summary,
+            x="record_status",
+            y="users",
+        )
+
+    with chart_col4:
+        st.markdown("#### Access by resource type")
+        resource_summary = count_by(access_with_systems, "resource_type", "records")
+        st.bar_chart(
+            resource_summary,
+            x="resource_type",
+            y="records",
+        )
+
+    with st.expander("View source summary tables"):
+        st.caption(
+            "These tables show the counts used in the dashboard visualizations."
+        )
+
+        st.markdown("#### User record status")
+        st.dataframe(user_status_summary, width="stretch")
+
+        st.markdown("#### Compliance status")
+        st.dataframe(compliance_summary, width="stretch")
+
+        st.markdown("#### Access records by system type")
         st.dataframe(count_by(access_with_systems, "system_type"), width="stretch")
 
-        st.markdown("### Access Records by Resource Type")
-        st.dataframe(count_by(access_with_systems, "resource_type"), width="stretch")
+        st.markdown("#### Access records by resource type")
+        st.dataframe(resource_summary, width="stretch")
 
-        st.markdown("### Access Records by Access Status")
-        st.dataframe(count_by(access, "access_status"), width="stretch")
+        st.markdown("#### Access records by access status")
+        st.dataframe(access_status_summary, width="stretch")
 
 
 def render_manage_access_section():
@@ -1870,11 +2048,13 @@ TAB_RENDERERS = {
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]
 
+st.caption("Select a workflow section")
 selected_section = st.radio(
     "Application section",
     active_tabs,
     horizontal=True,
     key="active_application_section",
+    label_visibility="collapsed",
 )
 
 render_sidebar_guidance(selected_section)

@@ -6,6 +6,10 @@ It demonstrates how organizations can maintain a single inventory of users, syst
 
 The project uses synthetic sample data and generic system examples so it can be adapted to different industries, organizations, and technology stacks.
 
+## Demo Deployment
+
+The demo version of the app can be accessed here: [AccessAtlas In Streamlit](https://accessatlas.streamlit.app/)
+
 ---
 
 ## Design Principles
@@ -118,6 +122,19 @@ Role scope is enforced in the demo interface:
 - System Administrators can manage access assignments only for systems they administer and users visible within that administered-system scope.
 
 Changes are written to the session-state-backed access assignment table and do not modify the source CSV files.
+
+---
+
+## Dashboard Layout
+
+The Dashboard is designed as an at-a-glance governance health view.
+
+It includes:
+
+- top-line visible scope metrics
+- governance health metrics
+- compact visual summaries for compliance status, access status, user record status, and resource type
+- source summary tables grouped under an expander for users who need details
 
 ---
 

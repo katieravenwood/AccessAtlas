@@ -815,32 +815,32 @@ def render_overview_tab():
 
     st.markdown("### User Record Status")
     st.dataframe(
-    count_by(users, "record_status", "users"), 
-    width="stretch",
+        count_by(users, "record_status", "users"),
+        use_container_width=True,
     )
 
     st.markdown("### Compliance Status")
     st.dataframe(
-    count_by(users, "compliance_status", "users"), 
-    width="stretch",
+        count_by(users, "compliance_status", "users"),
+        use_container_width=True,
     )
 
     st.markdown("### Access Records by System Type")
     st.dataframe(
-    count_by(access_with_systems, "system_type"), 
-    width="stretch",
+        count_by(access_with_systems, "system_type"),
+        use_container_width=True,
     )
 
     st.markdown("### Access Records by Resource Type")
     st.dataframe(
-    count_by(access_with_systems, "resource_type"), 
-    width="stretch",
+        count_by(access_with_systems, "resource_type"),
+        use_container_width=True,
     )
 
     st.markdown("### Access Records by Access Status")
     st.dataframe(
-    count_by(access, "access_status"), 
-    width="stretch",
+        count_by(access, "access_status"),
+        use_container_width=True,
     )
 
 
@@ -894,7 +894,7 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
                 },
             ]
         ),
-        width="stretch",
+        use_container_width=True,
     )
 
     st.markdown("### Access by System")
@@ -907,19 +907,17 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
                 ["system_id", "system_name", "system_type"],
                 "access_records",
             ),
-            width="stretch",
+            use_container_width=True,
         )
 
     st.markdown("### Detailed Access Assignments")
-    st.dataframe(selected_access, 
-                width="stretch")
+    st.dataframe(selected_access, use_container_width=True)
 
     st.markdown("### Administrative Assignments")
     if selected_admin_assignments.empty:
         st.info("This user is not assigned as an administrator for any tracked systems.")
     else:
-        st.dataframe(selected_admin_assignments, 
-                    width="stretch")
+        st.dataframe(selected_admin_assignments, use_container_width=True)
 
 
 def render_my_record_tab():
@@ -998,7 +996,7 @@ def render_my_record_tab():
                         },
                     ]
                 ),
-                width="stretch",
+                use_container_width=True,
             )
 
         with access_tab:
@@ -1012,11 +1010,11 @@ def render_my_record_tab():
                         ["system_id", "system_name", "system_type"],
                         "access_records",
                     ),
-                    width="stretch",
+                    use_container_width=True,
                 )
 
             with st.expander("Detailed access assignments", expanded=True):
-                st.dataframe(selected_access, width="stretch")
+                st.dataframe(selected_access, use_container_width=True)
 
         with admin_tab:
             st.markdown("### Administrative Assignments")
@@ -1025,7 +1023,7 @@ def render_my_record_tab():
                     "This user is not assigned as an administrator for any tracked systems."
                 )
             else:
-                st.dataframe(selected_admin_assignments, width="stretch")
+                st.dataframe(selected_admin_assignments, use_container_width=True)
 
     with update_tab:
         render_self_service_update_form(selected_user)
@@ -1067,7 +1065,7 @@ def render_users_tab():
 
     st.dataframe(
         user_view[USER_DISPLAY_COLUMNS],
-        width="stretch",
+        use_container_width=True,
     )
 
     st.markdown("### Selected User Governance Profile")
@@ -1107,8 +1105,7 @@ def render_systems_tab():
     )
     system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
 
-    st.dataframe(system_view, 
-                width="stretch")
+    st.dataframe(system_view, use_container_width=True)
 
     st.markdown("### Selected System Governance Profile")
     selected_system_id = st.selectbox(
@@ -1162,15 +1159,14 @@ def render_systems_tab():
                     "source",
                 ]
             ],
-            width="stretch",
+            use_container_width=True,
         )
 
     st.markdown("### System Administrators")
     if selected_system_admins.empty:
         st.info("No system administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(selected_system_admins, 
-                    width="stretch")
+        st.dataframe(selected_system_admins, use_container_width=True)
 
     st.markdown("### Resources and Permissions")
     if selected_system_access.empty:
@@ -1182,7 +1178,7 @@ def render_systems_tab():
                 ["resource_type", "resource_name", "permission_name", "access_status"],
                 "assigned_users",
             ),
-            width="stretch",
+            use_container_width=True,
         )
 
     st.markdown("### Generic Access Model Examples")
@@ -1276,8 +1272,7 @@ def render_system_admins_tab():
     )
 
     st.markdown("### All System Administrator Assignments")
-    st.dataframe(filtered_admin_view, 
-                width="stretch")
+    st.dataframe(filtered_admin_view, use_container_width=True)
 
     st.markdown("### Administrator-Centered View")
     selected_admin = st.selectbox(
@@ -1287,7 +1282,7 @@ def render_system_admins_tab():
     )
     st.dataframe(
         admin_view[admin_view["display_name"] == selected_admin],
-        width="stretch",
+        use_container_width=True,
     )
 
     st.markdown("### System-Centered View")
@@ -1306,8 +1301,7 @@ def render_system_admins_tab():
     if system_admin_detail.empty:
         st.info("No administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(system_admin_detail, 
-                    width="stretch")
+        st.dataframe(system_admin_detail, use_container_width=True)
 
     st.markdown("### Admin Coverage by System")
     coverage = systems[
@@ -1323,8 +1317,7 @@ def render_system_admins_tab():
     coverage["coverage_status"] = coverage["admin_assignment_count"].apply(
         lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
     )
-    st.dataframe(coverage, 
-                width="stretch")
+    st.dataframe(coverage, use_container_width=True)
 
 
 def render_compliance_tab():
@@ -1369,8 +1362,7 @@ def render_compliance_tab():
     comp = apply_multiselect_filter(comp, "user_type", user_type_filter)
 
     st.markdown("### Compliance Detail")
-    st.dataframe(comp[COMPLIANCE_COLUMNS], 
-                width="stretch")
+    st.dataframe(comp[COMPLIANCE_COLUMNS], use_container_width=True)
 
     st.markdown("### Follow-Up Queue")
     follow_up = users[
@@ -1380,19 +1372,18 @@ def render_compliance_tab():
     if follow_up.empty:
         st.success("No active user records currently require compliance follow-up.")
     else:
-        st.dataframe(follow_up[COMPLIANCE_COLUMNS], 
-                    width="stretch")
+        st.dataframe(follow_up[COMPLIANCE_COLUMNS], use_container_width=True)
 
     st.markdown("### Compliance by Department")
     st.dataframe(
         count_by(users, ["department", "compliance_status"], "users"),
-        width="stretch",
+        use_container_width=True,
     )
 
     st.markdown("### Compliance by User Type")
     st.dataframe(
         count_by(users, ["user_type", "compliance_status"], "users"),
-        width="stretch",
+        use_container_width=True,
     )
 
 
@@ -1514,7 +1505,7 @@ def render_user_access_management_tab():
                 on="user_id",
                 how="left",
             ),
-            width="stretch",
+            use_container_width=True,
         )
 
     selected_existing = None
@@ -1734,7 +1725,7 @@ def render_access_reconciliation_tab():
                     ],
                 }
             ),
-            width="stretch",
+            use_container_width=True,
         )
         st.write(
             """
@@ -1777,8 +1768,7 @@ def render_access_reconciliation_tab():
     )
 
     st.markdown("### Uploaded Access Export")
-    st.dataframe(uploaded_df, 
-                width="stretch")
+    st.dataframe(uploaded_df, use_container_width=True)
 
     result = reconcile(access, uploaded_df, selected_system_id=selected_system)
     result_with_system = result.merge(
@@ -1790,13 +1780,13 @@ def render_access_reconciliation_tab():
     st.markdown("### Reconciliation Summary by Change Type")
     st.dataframe(
         count_by(result_with_system, "change_type"),
-        width="stretch",
+        use_container_width=True,
     )
 
     st.markdown("### Reconciliation Summary by Resource Type")
     st.dataframe(
         count_by(result_with_system, "resource_type"),
-        width="stretch",
+        use_container_width=True,
     )
 
     st.markdown("### Action Queue")
@@ -1810,7 +1800,7 @@ def render_access_reconciliation_tab():
         action_queue.insert(0, "apply_action", False)
         editable_action_queue = st.data_editor(
             action_queue,
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             key="reconciliation_action_queue_editor",
             column_config={
@@ -1867,8 +1857,7 @@ def render_access_reconciliation_tab():
         change_type_filter,
     )
 
-    st.dataframe(filtered_results, 
-                width="stretch")
+    st.dataframe(filtered_results, use_container_width=True)
 
 
 
@@ -1981,19 +1970,19 @@ def render_dashboard_section():
         )
 
         st.markdown("#### User record status")
-        st.dataframe(user_status_summary, width="stretch")
+        st.dataframe(user_status_summary, use_container_width=True)
 
         st.markdown("#### Compliance status")
-        st.dataframe(compliance_summary, width="stretch")
+        st.dataframe(compliance_summary, use_container_width=True)
 
         st.markdown("#### Access records by system type")
-        st.dataframe(count_by(access_with_systems, "system_type"), width="stretch")
+        st.dataframe(count_by(access_with_systems, "system_type"), use_container_width=True)
 
         st.markdown("#### Access records by resource type")
-        st.dataframe(resource_summary, width="stretch")
+        st.dataframe(resource_summary, use_container_width=True)
 
         st.markdown("#### Access records by access status")
-        st.dataframe(access_status_summary, width="stretch")
+        st.dataframe(access_status_summary, use_container_width=True)
 
 
 def render_manage_access_section():

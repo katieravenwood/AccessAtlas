@@ -759,8 +759,78 @@ def apply_reconciliation_action(access_df, row):
     return access_df, "skipped"
 
 
+
+def generate_audit_event_id():
+    """Generate a synthetic audit event ID for demo reconciliation actions."""
+    if "audit_event_counter" not in st.session_state:
+        st.session_state["audit_event_counter"] = 1
+
+    audit_event_id = f"AUD-{date.today().year}-{st.session_state['audit_event_counter']:06d}"
+    st.session_state["audit_event_counter"] += 1
+    return audit_event_id
+
+
+def build_reconciliation_change_summary(row, outcome):
+    """Return a human-readable summary of what changed for a reconciliation row."""
+    action = row.get("recommended_action")
+
+    if outcome == "added":
+        return (
+            "Added new access assignment "
+            f"({row.get('resource_type')} / {row.get('resource_name')} / "
+            f"{row.get('permission_name')}) with status "
+            f"{row.get('uploaded_access_status')}."
+        )
+
+    if outcome == "inactivated":
+        return (
+            "Access Status: "
+            f"{row.get('current_access_status')} → Inactive."
+        )
+
+    if outcome == "updated":
+        return (
+            "Access Status: "
+            f"{row.get('current_access_status')} → {row.get('uploaded_access_status')}."
+        )
+
+    if outcome == "skipped":
+        return "No record was changed. The action was skipped."
+
+    return "No change summary available."
+
+
+def build_reconciliation_action_result(row, outcome):
+    """Return a display-friendly action result record for one applied action."""
+    result_labels = {
+        "added": "Success",
+        "inactivated": "Success",
+        "updated": "Success",
+        "skipped": "Skipped",
+    }
+
+    return {
+        "audit_event_id": generate_audit_event_id() if outcome != "skipped" else "",
+        "action_result": result_labels.get(outcome, "Unknown"),
+        "changes_made": build_reconciliation_change_summary(row, outcome),
+        "recommended_action": row.get("recommended_action"),
+        "change_type": row.get("change_type"),
+        "user_id": row.get("user_id"),
+        "first_name": row.get("first_name"),
+        "last_name": row.get("last_name"),
+        "system_id": row.get("system_id"),
+        "system_name": row.get("system_name"),
+        "resource_type": row.get("resource_type"),
+        "resource_name": row.get("resource_name"),
+        "permission_name": row.get("permission_name"),
+        "current_access_status": row.get("current_access_status"),
+        "uploaded_access_status": row.get("uploaded_access_status"),
+        "source_system_record_id": row.get("source_system_record_id"),
+    }
+
+
 def apply_reconciliation_actions(access_df, selected_rows):
-    """Apply selected reconciliation actions and return updated access data plus counts."""
+    """Apply selected reconciliation actions and return updated access data, counts, and result rows."""
     updated_access = access_df.copy()
     counts = {
         "added": 0,
@@ -768,6 +838,7 @@ def apply_reconciliation_actions(access_df, selected_rows):
         "updated": 0,
         "skipped": 0,
     }
+    action_results = []
 
     action_value_map = {
         "Add access record": "Review and add access record",
@@ -779,10 +850,17 @@ def apply_reconciliation_actions(access_df, selected_rows):
         row = row.copy()
         if row.get("recommended_action") in action_value_map:
             row["recommended_action"] = action_value_map[row["recommended_action"]]
+
         updated_access, outcome = apply_reconciliation_action(updated_access, row)
         counts[outcome] += 1
 
-    return updated_access, counts
+        display_row = row.copy()
+        display_row["recommended_action"] = display_recommended_action(
+            row.get("recommended_action")
+        )
+        action_results.append(build_reconciliation_action_result(display_row, outcome))
+
+    return updated_access, counts, pd.DataFrame(action_results)
 
 
 
@@ -798,6 +876,8 @@ system_admins = data["system_admin_assignments"]
 
 initialize_editable_access_state(access)
 access = get_editable_access_assignments(access)
+if "reconciliation_action_results" not in st.session_state:
+    st.session_state["reconciliation_action_results"] = pd.DataFrame()
 
 all_users = users.copy()
 all_systems = systems.copy()
@@ -1967,18 +2047,46 @@ def render_access_reconciliation_tab():
 
     st.success("Uploaded file contains all required reconciliation columns.")
 
-    system_options = ["All Systems"] + systems["system_id"].tolist()
+    system_options = systems["system_id"].tolist()
     selected_system = st.selectbox(
-        "Select reconciliation scope",
+        "Select system for reconciliation",
         system_options,
         key="reconciliation_scope",
     )
+    selected_system_name = systems[
+        systems["system_id"] == selected_system
+    ].iloc[0]["system_name"]
+
+    st.caption(
+        f"Access export uploads are evaluated for one system at a time. "
+        f"This run is scoped to **{selected_system_name} ({selected_system})**."
+    )
+
+    scoped_uploaded_df = uploaded_df[
+        uploaded_df["system_id"] == selected_system
+    ].copy()
+
+    if scoped_uploaded_df.empty:
+        st.warning(
+            "The uploaded export does not contain records for the selected system. "
+            "Choose a different system or upload a file for this system."
+        )
+        st.stop()
+
+    other_system_count = len(uploaded_df[uploaded_df["system_id"] != selected_system])
+    if other_system_count > 0:
+        st.info(
+            f"{other_system_count} uploaded records for other systems are excluded "
+            "from this reconciliation run."
+        )
 
     st.markdown("### Uploaded Access Export")
-    st.dataframe(uploaded_df, 
-                use_container_width=True)
+    st.dataframe(
+        scoped_uploaded_df,
+        use_container_width=True,
+    )
 
-    result = reconcile(access, uploaded_df, selected_system_id=selected_system)
+    result = reconcile(access, scoped_uploaded_df, selected_system_id=selected_system)
     result_with_system = (
         result.merge(
             all_users[["user_id", "first_name", "last_name"]],
@@ -2038,8 +2146,19 @@ def render_access_reconciliation_tab():
         result_with_system["recommended_action"] != "No action"
     ].copy()
 
+    queue_change_type_filter = st.multiselect(
+        "Filter reconciliation queue by change type",
+        sorted(action_queue["change_type"].dropna().unique()),
+        key="reconciliation_queue_change_type_filter",
+    )
+    action_queue = apply_multiselect_filter(
+        action_queue,
+        "change_type",
+        queue_change_type_filter,
+    )
+
     if action_queue.empty:
-        st.success("No reconciliation results currently require follow-up.")
+        st.success("No reconciliation results currently require follow-up for the selected filters.")
     else:
         action_queue.insert(0, "apply_action", False)
         queue_column_order = [
@@ -2095,11 +2214,12 @@ def render_access_reconciliation_tab():
             key="apply_reconciliation_actions_button",
             disabled=selected_actions.empty,
         ):
-            updated_access, action_counts = apply_reconciliation_actions(
+            updated_access, action_counts, action_results = apply_reconciliation_actions(
                 st.session_state["editable_access_assignments"],
                 selected_actions,
             )
             st.session_state["editable_access_assignments"] = updated_access
+            st.session_state["reconciliation_action_results"] = action_results
             st.success(
                 "Applied reconciliation actions: "
                 f"{action_counts['added']} added, "
@@ -2111,50 +2231,50 @@ def render_access_reconciliation_tab():
 
     st.markdown("### Reconciliation Results")
     st.caption(
-        "In a production workflow, this section would ideally display after "
-        "Apply Recommended Actions is pressed and completed. It is included here "
-        "for demo visibility because reconciliation tables are generated automatically."
-    )
-    change_type_filter = st.multiselect(
-        "Filter by change type",
-        sorted(result_with_system["change_type"].dropna().unique()),
-        key="change_type_filter",
+        "After Apply Recommended Actions is pressed, this section shows the action "
+        "outcomes for records changed from the Reconciliation Queue. In production, "
+        "these action results would be displayed after the action completes and "
+        "written to an audit log."
     )
 
-    filtered_results = result_with_system.copy()
-    filtered_results = apply_multiselect_filter(
-        filtered_results,
-        "change_type",
-        change_type_filter,
-    )
-
-    result_column_order = [
-        "recommended_action",
-        "change_type",
-        "user_id",
-        "first_name",
-        "last_name",
-        "system_id",
-        "system_name",
-        "resource_type",
-        "resource_name",
-        "permission_name",
-        "current_access_status",
-        "uploaded_access_status",
-        "source_system_record_id",
-    ]
-    result_columns = [
-        column for column in result_column_order if column in filtered_results.columns
-    ] + [
-        column for column in filtered_results.columns if column not in result_column_order
-    ]
-    st.dataframe(
-        filtered_results[result_columns],
-        use_container_width=True,
-    )
-
-
-
+    action_results = st.session_state.get("reconciliation_action_results", pd.DataFrame())
+    if not action_results.empty:
+        st.markdown("#### Applied Action Results")
+        st.caption(
+            "These rows summarize what changed during the most recent reconciliation "
+            "action run in this demo session."
+        )
+        action_result_columns = [
+            "audit_event_id",
+            "action_result",
+            "changes_made",
+            "recommended_action",
+            "change_type",
+            "user_id",
+            "first_name",
+            "last_name",
+            "system_id",
+            "system_name",
+            "resource_type",
+            "resource_name",
+            "permission_name",
+            "current_access_status",
+            "uploaded_access_status",
+            "source_system_record_id",
+        ]
+        visible_action_result_columns = [
+            column for column in action_result_columns if column in action_results.columns
+        ]
+        st.dataframe(
+            action_results[visible_action_result_columns],
+            use_container_width=True,
+        )
+    else:
+        st.info(
+            "No reconciliation actions have been applied yet in this demo session. "
+            "Select records in the Reconciliation Queue and click Apply Recommended Actions "
+            "to populate action results."
+        )
 
 
 def render_dashboard_section():

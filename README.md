@@ -96,7 +96,7 @@ Because native Streamlit tabs do not expose the active tab to Python, this versi
 
 ---
 
-## Reconciliation Reconciliation Queue Updates
+## Reconciliation Queue Updates
 
 The System Access Export File Upload section includes a selectable Reconciliation Queue.
 
@@ -135,7 +135,7 @@ Primary sections are:
 - **My Access** — individual user profile, compliance dates, and access assignments
 - **Manage Access** — user and system review workflows, with manual single-record add/edit where permitted
 - **Access Reconciliation** — reconciliation workflow and reconciliation queue
-- **Administration** — compliance monitoring and system administrator coverage for Super Administrators
+- **AccessAtlas App Admin** — compliance monitoring and system administrator coverage for Super Administrators
 
 Detailed tables are available, but many are grouped under expanders so the main interface stays focused.
 
@@ -168,7 +168,7 @@ Provides an individual self-service view of the selected user's governance recor
 
 The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments.
 
-#### Managed Users
+#### Users In Scope
 
 Provides a user-centered governance profile including:
 
@@ -182,7 +182,7 @@ Provides a user-centered governance profile including:
 - detailed access records
 - systems administered by the selected user
 
-#### Managed Systems
+#### Systems In Scope
 
 Provides a system-centered governance profile including:
 
@@ -194,7 +194,7 @@ Provides a system-centered governance profile including:
 - system administrators
 - resources and permissions assigned within the system
 
-#### Edit/Add Access
+#### User Access Management
 
 Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
 
@@ -214,7 +214,7 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - source record traceability
 - audit-friendly inactive status recommendations
 
-### Administration Tab
+### AccessAtlas App Admin Tab
 
 Allows Super Admins users to review Compliance monitorinig metrics and details and manage system administrator roles.
 
@@ -240,7 +240,7 @@ Shows administrative responsibility across systems, including:
 
 ### Access Reconciliation
 
-Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the  Reconciliation Queue.
+Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the reconciliation Reconciliation Queue.
 
 #### Access Reconciliation Section
 

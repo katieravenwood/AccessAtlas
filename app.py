@@ -68,6 +68,39 @@ TAB_LABELS = [
     "AccessAtlas App Admin",
 ]
 
+TAB_DISPLAY_LABELS = {
+    "Dashboard": "🏠 Dashboard",
+    "My Access": "👤 My Access",
+    "Manage Access": "🛠️ Manage Access",
+    "Access Reconciliation": "🔄 Access Reconciliation",
+    "AccessAtlas App Admin": "⚙️ AccessAtlas App Admin",
+}
+
+
+def section_label(tab_name):
+    """Return the display label for a top-level section."""
+    return TAB_DISPLAY_LABELS.get(tab_name, tab_name)
+
+
+def section_name_from_label(display_label):
+    """Return the internal section name for a top-level display label."""
+    reverse_labels = {
+        display_value: internal_name
+        for internal_name, display_value in TAB_DISPLAY_LABELS.items()
+    }
+    return reverse_labels.get(display_label, display_label)
+
+
+def section_caption(text):
+    """Render standard section-level instruction text."""
+    st.caption(text)
+
+
+def filter_caption(text):
+    """Render standard filter instruction text."""
+    st.caption(text)
+
+
 
 USER_DISPLAY_COLUMNS = [
     "user_id",
@@ -362,9 +395,8 @@ def display_table(dataframe):
 
 
 def show_dataframe(dataframe, **kwargs):
-    """Render a dataframe with user-friendly column labels."""
-    if "use_container_width" in kwargs:
-        kwargs["width"] = "stretch" if kwargs.pop("use_container_width") else "content"
+    """Render a dataframe with user-friendly column labels and clean defaults."""
+    kwargs.setdefault("hide_index", True)
     kwargs.setdefault("width", "stretch")
     st.dataframe(
         display_table(dataframe),
@@ -652,19 +684,18 @@ def render_sidebar_guidance(selected_section):
             """,
         },
         "Access Reconciliation": {
-            "title": "Review Changes Guidance",
+            "title": "Access Reconciliation Guidance",
             "body": """
-            Access Reconciliation contains the file upload workflow, reconciliation queue, and results review.
+            Access Reconciliation contains system access and training-date reconciliation workflows.
 
             Use it to add, update, or inactivate access assignment records based on
             uploaded access exports.
             """,
         },
         "AccessAtlas App Admin": {
-            "title": "Administration Guidance",
+            "title": "AccessAtlas App Admin Guidance",
             "body": """
-            AccessAtlas App Admin contains compliance monitoring and administrator coverage
-            views for Super Administrators.
+            AccessAtlas App Admin contains compliance monitoring and system administrator assignment views for Super Administrators.
             """,
         },
     }
@@ -993,10 +1024,12 @@ system_admins = data["system_admin_assignments"]
 
 initialize_editable_access_state(access)
 access = get_editable_access_assignments(access)
-if "reconciliation_action_results" not in st.session_state:
-    st.session_state["reconciliation_action_results"] = pd.DataFrame()
-if "training_reconciliation_action_results" not in st.session_state:
-    st.session_state["training_reconciliation_action_results"] = pd.DataFrame()
+for session_key in [
+    "reconciliation_action_results",
+    "training_reconciliation_action_results",
+]:
+    if session_key not in st.session_state:
+        st.session_state[session_key] = pd.DataFrame()
 
 all_users = users.copy()
 all_systems = systems.copy()
@@ -1007,8 +1040,8 @@ access_with_systems = access.merge(systems, on="system_id", how="left")
 
 st.sidebar.title("Demo Mode")
 st.sidebar.warning(
-    "Demo Mode is for simulated role-based visibility demonstration purposes only, not a true " \
-    "authentication method. "
+    "Demo Mode is for simulated role-based visibility demonstration purposes only, "
+    "not a true authentication method."
 )
 st.sidebar.write(
     "Select an example user account to view the application from that role's perspective."
@@ -1170,17 +1203,20 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
                 selected_access,
                 ["system_id", "system_name", "system_type"],
                 "access_records",
-            )
+            ),
+            width='stretch',
         )
 
     st.markdown("### Detailed Access Assignments")
-    show_dataframe(selected_access)
+    show_dataframe(selected_access, 
+                width='stretch')
 
     st.markdown("### Administrative Assignments")
     if selected_admin_assignments.empty:
         st.info("This user is not assigned as an administrator for any tracked systems.")
     else:
-        show_dataframe(selected_admin_assignments)
+        show_dataframe(selected_admin_assignments, 
+                    width='stretch')
 
 
 def render_my_record_tab():
@@ -1294,7 +1330,8 @@ def render_systems_tab():
     )
     system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
 
-    show_dataframe(system_view)
+    show_dataframe(system_view, 
+                width='stretch')
 
     st.markdown("### Selected System Access Profile")
     selected_system_id = st.selectbox(
@@ -1371,19 +1408,6 @@ def render_systems_tab():
             width='stretch',
         )
 
-    st.markdown("### Generic Access Model Examples")
-    st.info(
-        """
-        • Applications can be tracked through periodic user exports.
-        • Data management systems can be tracked through role assignments.
-        • Cloud data platforms can be tracked through user-to-role metadata.
-        • Databases can be tracked through database, schema, and table permissions.
-        • Dashboards may require both dashboard access and hosting site access.
-        • Collaboration sites can be tracked through site or group membership.
-        """
-    )
-
-
 
 def compliance_detail_styler(dataframe):
     """Return a styled compliance dataframe with readable noncompliance highlighting."""
@@ -1457,7 +1481,7 @@ def render_compliance_summary_cards(group_column, title):
         )
 
     if not summary_rows:
-        st.info("No compliance summary records are available.")
+        st.info("No compliance summary records are available for this scope.")
         return
 
     summary_df = display_table(pd.DataFrame(summary_rows))
@@ -1482,7 +1506,7 @@ def render_admin_coverage_cards(coverage):
     st.markdown("### Admin Coverage by System")
 
     if coverage.empty:
-        st.info("No system coverage records are available.")
+        st.info("No system administrator coverage records are available.")
         return
 
     coverage_view = coverage[
@@ -1561,9 +1585,8 @@ def render_system_admin_assignments_overview(admin_view):
     render_admin_coverage_cards(coverage)
 
     st.markdown("### All System Administrator Assignments")
-    st.caption(
-        "Use the filters below to narrow system administrator assignment records by role, "
-        "assignment status, system type, or system category."
+    filter_caption(
+        "Filter the records below by admin role, assignment status, system type, or system category."
     )
 
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
@@ -1614,7 +1637,7 @@ def render_system_admin_assignments_overview(admin_view):
         admin_system_category_filter,
     )
 
-    show_dataframe(filtered_admin_view)
+    show_dataframe(filtered_admin_view, width='stretch')
 
 
 
@@ -1687,15 +1710,20 @@ def render_admin_record_review(admin_view):
     """Render administrator-centered record review."""
     st.subheader("Admin Record Review")
 
+    admin_options = sorted(admin_view["display_name"].dropna().unique())
+    if not admin_options:
+        st.info("No administrator records are available for review.")
+        return
+
     selected_admin = st.selectbox(
         "Select administrator",
-        sorted(admin_view["display_name"].dropna().unique()),
+        admin_options,
         key="selected_administrator",
     )
     admin_detail = admin_view[admin_view["display_name"] == selected_admin]
 
     if admin_detail.empty:
-        st.info("No administrator assignment records found.")
+        st.info("This administrator has no recorded system administrator assignments.")
         return
 
     first_admin_row = admin_detail.iloc[0]
@@ -1722,9 +1750,14 @@ def render_system_record_review(admin_view):
     """Render system-centered administrator assignment review."""
     st.subheader("System Record Review")
 
+    system_options = sorted(systems["system_name"].dropna().unique())
+    if not system_options:
+        st.info("No system records are available for review.")
+        return
+
     selected_admin_system = st.selectbox(
         "Select system",
-        sorted(systems["system_name"].dropna().unique()),
+        system_options,
         key="selected_admin_system",
     )
     selected_admin_system_id = systems[
@@ -1749,7 +1782,7 @@ def render_system_record_review(admin_view):
     )
 
     if system_admin_detail.empty:
-        st.info("No administrator assignments are currently recorded for this system.")
+        st.info("This system has no recorded system administrator assignments.")
     else:
         render_admin_assignment_cards(
             system_admin_detail,
@@ -1806,8 +1839,8 @@ def render_compliance_tab():
         render_compliance_summary_cards("department", "Compliance by Department")
 
     st.markdown("### Compliance Detail")
-    st.caption(
-        "Use the filters below to narrow compliance detail records by status, department, or user type."
+    filter_caption(
+        "Filter the records below by compliance status, department, or user type."
     )
     filter_col1, filter_col2, filter_col3 = st.columns(3)
     with filter_col1:
@@ -2154,7 +2187,7 @@ def render_add_edit_access_form():
 
     with st.expander("Current manageable access records", expanded=False):
         if scoped_current_access.empty:
-            st.info("No existing access records are currently available in this management scope.")
+            st.info("No access records are currently available in this management scope.")
         else:
             st.dataframe(
                 scoped_current_access.merge(
@@ -2751,7 +2784,7 @@ def render_system_access_export_reconciliation_tab():
     )
 
     if action_queue.empty:
-        st.success("No reconciliation results currently require follow-up for the selected filters.")
+        st.success("No reconciliation records require follow-up for the selected filters.")
     else:
         action_queue.insert(0, "apply_action", False)
         queue_column_order = [
@@ -2940,7 +2973,7 @@ def render_training_date_reconciliation_tab():
         )
 
     st.markdown("### Uploaded Training Date Export")
-    show_dataframe(scoped_training_upload_df)
+    show_dataframe(scoped_training_upload_df, width='stretch')
 
     training_result = reconcile_training_dates(users, scoped_training_upload_df)
     training_result = training_result.merge(
@@ -2979,7 +3012,7 @@ def render_training_date_reconciliation_tab():
     )
 
     if training_queue.empty:
-        st.success("No training date reconciliation records currently require follow-up.")
+        st.success("No training date reconciliation records require follow-up for the selected filters.")
     else:
         training_queue.insert(0, "apply_action", False)
         queue_column_order = [
@@ -3057,7 +3090,7 @@ def render_training_date_reconciliation_tab():
             "No training date reconciliation actions have been applied yet in this demo session."
         )
     else:
-        show_dataframe(training_action_results)
+        show_dataframe(training_action_results, width='stretch')
 
 
 def render_access_reconciliation_tab():
@@ -3179,36 +3212,40 @@ def render_dashboard_section():
         with st.expander("View source summary tables"):
             st.markdown("#### User Record Status")
             show_dataframe(
-                count_by(users, "record_status", "users")
+                count_by(users, "record_status", "users"),
+                width='stretch',
             )
 
             st.markdown("#### Compliance Status")
             show_dataframe(
-                count_by(users, "compliance_status", "users")
+                count_by(users, "compliance_status", "users"),
+                width='stretch',
             )
 
             st.markdown("#### Access Records by System Type")
             show_dataframe(
-                count_by(access_with_systems, "system_type")
+                count_by(access_with_systems, "system_type"),
+                width='stretch',
             )
 
             st.markdown("#### Access Records by Resource Type")
             show_dataframe(
-                count_by(access_with_systems, "resource_type")
+                count_by(access_with_systems, "resource_type"),
+                width='stretch',
             )
 
             st.markdown("#### Access Records by Access Status")
             show_dataframe(
-                count_by(access, "access_status")
+                count_by(access, "access_status"),
+                width='stretch',
             )
 
 
 def render_manage_access_section():
     """Render user/system access workflows in a streamlined task section."""
     st.subheader("Manage Access")
-    st.caption(
-        "Review managed users and systems, and perform scoped add/edit workflows "
-        "where permitted by the selected demo role."
+    section_caption(
+        "Review managed users and systems, and perform scoped add/edit workflows where permitted by the selected demo role."
     )
 
     managed_users_tab, managed_systems_tab, edit_access_tab = st.tabs(
@@ -3219,6 +3256,15 @@ def render_manage_access_section():
         render_users_tab()
 
     with managed_systems_tab:
+        st.info(
+            """
+            Managed Systems shows tracked systems within the selected demo role scope.
+
+            Access can be governed through different patterns, including periodic user exports,
+            application roles, data platform roles, database/schema/table permissions,
+            dashboard access, hosting-site access, and collaboration-site membership.
+            """
+        )
         render_systems_tab()
 
     with edit_access_tab:
@@ -3234,9 +3280,8 @@ def render_manage_access_section():
 def render_review_changes_section():
     """Render reconciliation and action queue workflows."""
     st.subheader("Access Reconciliation")
-    st.caption(
-        "Upload or review system access exports, inspect differences, and apply "
-        "recommended session-state updates from the reconciliation queue."
+    section_caption(
+        "Review uploaded access and compliance exports, inspect differences, and apply recommended demo-session updates."
     )
     render_access_reconciliation_tab()
 
@@ -3244,8 +3289,8 @@ def render_review_changes_section():
 def render_administration_section():
     """Render administrative and compliance workflows for Super Administrators."""
     st.subheader("AccessAtlas App Admin")
-    st.caption(
-        "Review compliance monitoring details and system administrator coverage."
+    section_caption(
+        "Review compliance monitoring details and system administrator assignment coverage."
     )
 
     compliance_tab, admins_tab = st.tabs(
@@ -3268,13 +3313,16 @@ TAB_RENDERERS = {
 }
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]
+active_tab_labels = [section_label(tab_name) for tab_name in active_tabs]
 
-selected_section = st.radio(
+selected_section_label = st.radio(
     "Application section",
-    active_tabs,
+    active_tab_labels,
     horizontal=True,
     key="active_application_section",
 )
+
+selected_section = section_name_from_label(selected_section_label)
 
 render_sidebar_guidance(selected_section)
 

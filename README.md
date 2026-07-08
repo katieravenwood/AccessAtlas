@@ -125,19 +125,6 @@ Changes are written to the session-state-backed access assignment table and do n
 
 ---
 
-## Dashboard Layout
-
-The Dashboard is designed as an at-a-glance governance health view.
-
-It includes:
-
-- top-line visible scope metrics
-- governance health metrics
-- compact visual summaries for compliance status, access status, user record status, and resource type
-- source summary tables grouped under an expander for users who need details
-
----
-
 ## Streamlined Task-Based Interface
 
 AccessAtlas now organizes the demo around day-to-day workflows rather than database entities.
@@ -160,56 +147,43 @@ The application includes a dedicated **My Record** tab for individual self-servi
 
 The application is organized into role-aware tabs.
 
-### Overview
+---
 
-Provides a dashboard-style summary of the governance dataset, including:
+## Dashboard Layout
 
-- total users
-- tracked systems
-- access records
-- system administrator assignments
-- expired or expiring compliance records
-- user record status summaries
-- compliance status summaries
-- access records by system type, resource type, and access status
+The Dashboard is designed as an at-a-glance governance health view.
+
+It includes:
+
+- top-line visible scope metrics
+- governance health metrics
+- compact visual summaries for compliance status, access status, user record status, and resource type
+- source summary tables grouped under an expander for users who need details
 
 ### My Record
 
 Provides an individual self-service view of the selected user's governance record, including profile information, compliance dates, access assignments, and administrative assignments.
 
-### Manage Access
+## Manage Access Layout
 
-The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments.
+The **Manage Access** section is organized into internal workflow tabs:
 
-#### Users In Scope
+- **Managed Users** — scoped user review
+- **Managed Systems** — scoped system review
+- **Edit / Add Access** — direct single-record access management and user creation
 
-Provides a user-centered governance profile including:
+System Administrators remain limited to their administered-system scope. Super Administrators can manage all systems and users.
 
-- user registry filters
-- selected user profile
-- manager lookup
-- access assignment metrics
-- administrative assignment metrics
-- training and agreement snapshot
-- access by system
-- detailed access records
-- systems administered by the selected user
+The **Edit / Add Access** workflow supports:
 
-#### Systems In Scope
+- adding a new access assignment for an existing user
+- editing an existing access assignment
+- adding a new synthetic user record
+- optionally creating an initial access assignment for the new user
 
-Provides a system-centered governance profile including:
+For System Administrators, adding a new user requires an initial access assignment so the user remains visible within the administrator's scoped systems.
 
-- system catalog filters
-- selected system details
-- system owner and administrative group
-- resource scope and access model
-- users with access
-- system administrators
-- resources and permissions assigned within the system
-
-#### User Access Management
-
-Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
+---
 
 ### Review Changes Tab
 

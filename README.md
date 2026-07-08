@@ -8,7 +8,11 @@ The project uses synthetic sample data and generic system examples so it can be 
 
 ## Demo Deployment
 
-The demo version of the app can be accessed here: [AccessAtlas In Streamlit](https://accessatlas.streamlit.app/)
+The demo application is available in Streamlit:
+
+[https://accessatlas.streamlit.app/](https://accessatlas.streamlit.app/)
+
+> Demo Mode simulates role-based visibility and workflow behavior. It is not an authentication or production authorization mechanism.
 
 ---
 
@@ -34,239 +38,179 @@ AccessAtlas demonstrates practical patterns for:
 - System administrator assignment tracking
 - Training and agreement compliance monitoring
 - Upload-based access reconciliation
+- Training date and agreement reconciliation
+- Direct single-record access add/edit workflows
 - Audit-friendly inactive record handling
-- Governance reporting summaries
+- Role-aware governance summaries
+- Scoped access review workflows
 
 ---
 
-## Simulated Role-Based Data Scoping
+## Demo Roles and Visible Sections
 
-Demo Mode scopes visible records based on the selected synthetic user's role.
+Demo Mode scopes visible records and top-level application sections based on the selected synthetic user's role.
 
-- **User** accounts see only the Users tab, beginning with their own selected governance profile; the broader registry/filter section and Overview tab are hidden.
-- **Manager** accounts see their own record, direct reports, and systems/access records associated with that group.
-- **System Administrator** accounts can view the Users tab, but it is scoped to users with access to systems they administer. They can also view only information about systems they administer.
-- **Super Administrator** accounts see all synthetic records.
+| Demo Role | Visible Sections | Demonstrated Scope |
+| --- | --- | --- |
+| User | My Access | Own profile, access, administrative assignments, and self-service certification/agreement date updates |
+| Manager | Dashboard, My Access, Manage Access, Access Reconciliation | Own record, visible review scope, associated systems/access, and reconciliation review |
+| System Administrator | Dashboard, My Access, Manage Access, Access Reconciliation | Users and systems within administered-system scope; scoped direct access management |
+| Super Administrator | Dashboard, My Access, Manage Access, Access Reconciliation, AccessAtlas App Admin | Full synthetic dataset and all demo workflows |
 
-This feature is for demonstration only. Production deployments should enforce access control through real authentication, backend authorization, and database-level security.
+Unavailable sections are not rendered in the application selector.
 
----
-
-## Dynamic Role-Based Tabs
-
-AccessAtlas only renders tabs available to the selected Demo Mode role.
-
-Unavailable sections are not shown in the tab bar. This keeps the demo interface closer to the intended user experience for each persona:
-
-- User: My Record self-service tab only
-- Manager: review-oriented views
-- System Administrator: administered-system views plus scoped Users tab
-- Super Administrator: full application
-
-This is still simulated UI behavior only; production applications should enforce authorization on the backend as well as in the interface.
+This behavior demonstrates intended persona-based visibility. Production deployments should enforce access control through real authentication, backend authorization, and database-level security.
 
 ---
 
-## Self-Service Date Updates
+## Application Structure
 
-The **My Record** tab includes a simulated self-service form that allows the selected demo user to update their own training and agreement completion dates.
+AccessAtlas uses task-based top-level navigation.
 
-The app recalculates expiration dates based on the configured validity periods:
+### Dashboard
 
-- annual training: 1 year
-- biennial training: 2 years
+Provides role-aware summary metrics and visual detail for the records visible to the selected demo role, including:
 
-These updates are stored only in Streamlit session state for demonstration purposes. They do not modify the source CSV files. In a production implementation, this workflow would write to an approved database table and may require review, approval, document upload, or audit logging.
-
----
-
-## System Administrator Users Tab Scope
-
-System Administrator demo accounts can access the **Users** tab, but the table and selected user access profile options are filtered to users who have access to systems administered by that System Administrator.
-
-This allows System Administrators to review relevant users without exposing the full user registry.
-
----
-
-## Contextual Sidebar Guidance and Tab Selection Considerations
-
-The Overview, Compliance, and Access Reconciliation explanatory sections are displayed in the Demo Mode sidebar when the corresponding section is selected.
-
-Because native Streamlit tabs do not expose the active tab to Python, this version uses a role-aware horizontal section selector instead of `st.tabs()`. This keeps unavailable sections hidden and allows sidebar guidance to update based on the selected section. In non-demo implementations, use of `st.tabs()` would likely be a more standard implementation.
-
----
-
-## Reconciliation Queue Updates
-
-The System Access Export File Upload section includes a selectable Reconciliation Queue.
-
-Super Administrator and System Administrator demo users can select reconciliation exceptions and apply recommended actions to the session-state-backed access assignment table.
-
-Supported actions include:
-
-- **Add** records for access found in an uploaded export but missing from AccessAtlas
-- **Inactivate** records for access retained in AccessAtlas but missing from the uploaded export
-- **Update** records when access status differs between AccessAtlas and the uploaded export
-
-These actions update only the in-session demo dataset. They do not modify the source CSV files. In production, this workflow would write to an approved database table and should include authorization checks, audit logging, and approval controls.
-
----
-
-## Direct User Access Management
-
-The **User Access Management** section allows Super Administrator and System Administrator demo users to add or edit a single access assignment without uploading a reconciliation file.
-
-Role scope is enforced in the demo interface:
-
-- Super Administrators can manage access assignments for all systems.
-- System Administrators can manage access assignments only for systems they administer and users visible within that administered-system scope.
-
-Changes are written to the session-state-backed access assignment table and do not modify the source CSV files.
-
----
-
-## Streamlined Task-Based Interface
-
-AccessAtlas now organizes the demo around day-to-day workflows rather than database entities.
-
-Primary sections are:
-
-- **Dashboard** — role-aware summary and key indicators
-- **My Access** — individual user profile, compliance dates, and access assignments
-- **Manage Access** — user and system review workflows, with manual single-record add/edit where permitted
-- **Access Reconciliation** — reconciliation workflow and reconciliation queue
-- **AccessAtlas App Admin** — compliance monitoring and system administrator coverage for Super Administrators
-
-Detailed tables are available, but many are grouped under expanders so the main interface stays focused.
-
----
-
-## Application Tabs
-
-The application includes a dedicated **My Record** tab for individual self-service access review. The broader **Users** tab remains available only to roles that need registry or review functionality.
-
-The application is organized into role-aware tabs.
-
-### Overview
-
-Provides a dashboard-style summary of the governance dataset, including:
-
-- total users
-- tracked systems
+- visible users
+- visible systems
 - access records
-- system administrator assignments
-- expired or expiring compliance records
-- user record status summaries
-- compliance status summaries
-- access records by system type, resource type, and access status
+- items needing review
+- expired or expiring compliance
+- pending reconciliation actions
+- active compliance follow-up
+- compliance status
+- user record status
+- access records by system type
+- access records by resource type
+- access records by access status
 
-### My Record
+### My Access
 
-Provides an individual self-service view of the selected user's governance record, including profile information, compliance dates, access assignments, and administrative assignments.
+Provides the selected synthetic user's individual governance record.
+
+The section contains:
+
+- **My Record** — profile, compliance dates, access assignments, and administrative assignments
+- **Update My Certification and Agreement Dates** — simulated self-service date updates
+
+Self-service changes are stored only in Streamlit session state and do not modify source CSV files.
 
 ### Manage Access
 
-The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments.
+Provides scoped user, system, and direct access-management workflows.
 
-#### Users In Scope
+#### Managed Users
 
-Provides a user-centered governance profile including:
+Includes:
 
-- user registry filters
-- selected user access profile
+- User Management Registry
+- role, user type, and record status filters
+- Selected User Access Profile
 - manager lookup
-- access assignment metrics
-- administrative assignment metrics
-- training and agreement snapshot
-- access by system
-- detailed access records
-- systems administered by the selected user
+- access assignment details
+- administrative assignment details
+- training and agreement information
 
-#### Systems In Scope
+System Administrator and Manager demo roles receive scoped user views.
 
-Provides a system-centered governance profile including:
+#### Managed Systems
 
-- system catalog filters
-- selected system access details
-- system owner and administrative group
-- resource scope and access model
+Includes:
+
+- System Catalog
+- system type, category, and status filters
+- Selected System Access Profile
+- system ownership and administrative responsibility
 - users with access
 - system administrators
-- resources and permissions assigned within the system
+- resource and permission details
 
-#### User Access Management
+Managed Systems also explains common governance patterns such as periodic user exports, application roles, data-platform roles, database/schema/table permissions, dashboard access, hosting-site access, and collaboration-site membership.
 
-Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
+#### Edit / Add Access
 
-### Access Reconciliation Tab
+Provides a direct single-record add/edit workflow for access assignments.
 
-#### Access Reconciliation
+- Super Administrators can manage all visible systems.
+- System Administrators can manage only systems and users within their administered-system scope.
+- Manager and User demo roles cannot perform direct add/edit actions.
 
-Demonstrates upload-based reconciliation of external access exports against current access assignment records, including:
-
-- expected upload schema
-- upload validation
-- reconciliation scope selection
-- uploaded export preview
-- summary by change type
-- summary by resource type
-- reconciliation queue
-- source record traceability
-- audit-friendly inactive status recommendations
-
-### AccessAtlas App Admin Tab
-
-Allows Super Admins users to review Compliance monitorinig metrics and details and manage system administrator roles.
-
-#### Compliance
-
-Provides compliance monitoring and follow-up reporting, including:
-
-- current, expiring, and expired compliance counts
-- active records requiring follow-up
-- filters by compliance status, department, and user type
-- follow-up queue
-- compliance summaries by department and user type
-
-#### System Admins
-
-Shows administrative responsibility across systems, including:
-
-- administrator assignment metrics
-- filters by admin role, status, system type, and system category
-- administrator-centered view
-- system-centered view
-- admin coverage by system
+Changes are stored only in Streamlit session state.
 
 ### Access Reconciliation
 
-Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the reconciliation Reconciliation Queue.
+Provides two reconciliation workflows.
 
-#### Access Reconciliation Section
+#### System Access Export File Upload
 
-Demonstrates upload-based reconciliation of external access exports against current access assignment records, including:
+Demonstrates comparison of a single-system access export against current access assignments.
+
+The workflow includes:
 
 - expected upload schema
 - upload validation
-- reconciliation scope selection
+- single-system reconciliation scope
 - uploaded export preview
-- summary by change type
-- summary by resource type
-- reconciliation queue
+- change summaries
+- filterable reconciliation queue
+- recommended actions
+- selectable apply behavior
 - source record traceability
-- audit-friendly inactive status recommendations
+- reconciliation results
+
+Supported demo actions include:
+
+- **Add access record**
+- **Inactivate**
+- **Update**
+
+Inactivation preserves historical governance context rather than deleting access records.
+
+#### Training Certificate Date and Agreement Reconciliation
+
+Demonstrates comparison of external compliance-date records against current user records for:
+
+- annual training date
+- biennial training date
+- access agreement date
+
+The workflow mirrors the queue-and-apply pattern used for system access reconciliation.
+
+### AccessAtlas App Admin
+
+Available only to the Super Administrator demo role.
+
+#### Compliance Monitoring
+
+Provides:
+
+- current, expiring, and expired compliance counts
+- active records requiring follow-up
+- compliance detail filters
+- follow-up records
+- summaries by department and user type
+
+#### System Administrator Assignments
+
+Provides:
+
+- administrator assignment metrics
+- filters by admin role, assignment status, system type, and system category
+- administrator-centered review
+- system-centered review
+- administrative coverage by system
 
 ---
 
 ## Core Data Model
 
-The AccessAtlas reference implementation is built around five primary entities.
+The reference implementation is built around four primary governance entities plus external reconciliation inputs.
 
 ### User Records
 
 Individuals, contractors, vendors, consultants, service accounts, or other identities requiring access to managed resources.
 
-Key attributes include:
+Representative attributes include:
 
 - `user_id`
 - `display_name`
@@ -278,15 +222,15 @@ Key attributes include:
 - `record_status`
 - training and agreement dates
 
-`user_type` describes the user's relationship to the organization, such as Employee, Contractor, Vendor, Consultant, or Service Account.
+`user_type` describes the user's relationship to the organization.
 
 `record_status` describes whether the user record is active for governance purposes.
 
-### Systems Records
+### System Records
 
 Applications, databases, cloud platforms, dashboards, collaboration sites, and other governed resources.
 
-Key attributes include:
+Representative attributes include:
 
 - `system_id`
 - `system_name`
@@ -306,10 +250,10 @@ Relationships between users and systems that define access permissions to specif
 The model supports:
 
 ```text
-User → System → Resource → Permission
+User -> System -> Resource -> Permission
 ```
 
-Key attributes include:
+Representative attributes include:
 
 - `user_id`
 - `system_id`
@@ -328,25 +272,16 @@ Relationships between users and systems that define administrative responsibilit
 The model supports:
 
 ```text
-User → System → Administrative Role
+User -> System -> Administrative Role
 ```
 
-This allows one user to administer multiple systems and one system to have multiple administrators.
+One user may administer multiple systems, and one system may have multiple administrators.
 
-### Access Reconciliation Uploads
+### Reconciliation Inputs
 
-Authoritative access exports used to compare current access records against external systems.
+External access or compliance exports are compared with current session-state-backed governance records.
 
-Uploads may represent:
-
-- application access
-- role-based platform access
-- database permissions
-- dashboard access
-- site membership
-- other governed resources
-
-The recommended reconciliation key is:
+The recommended access reconciliation key is:
 
 ```text
 user_id
@@ -362,28 +297,49 @@ permission_name
 
 ```text
 /
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── archive/
+│   └── data_model_tabbed_single_0_4_12/
+├── data/
+│   ├── access_assignments.csv
+│   ├── sample_access_upload.csv
+│   ├── system_admin_assignments.csv
+│   ├── systems.csv
+│   └── users.csv
+├── docs/
+│   ├── architecture/
+│   │   └── governance_patterns.md
+│   └── user-guides/
+│       ├── access-reviewer-guide.md
+│       ├── super-admin-guide.md
+│       └── system-admin-guide.md
+├── tests/
+│   └── test_reconcile.py
+├── .gitignore
 ├── app.py
+├── LICENSE
+├── POSTGRES_NOTES.md
 ├── README.md
 ├── requirements.txt
-├── SNOWFLAKE_NOTES.md
-└── data/
-    ├── users.csv
-    ├── systems.csv
-    ├── access_assignments.csv
-    ├── system_admin_assignments.csv
-    └── sample_access_upload.csv
+└── SNOWFLAKE_NOTES.md
 ```
+
+The archive contains earlier implementation material retained for historical reference. The current reference application is the root-level `app.py`.
 
 ---
 
 ## Tech Stack
 
-Included in this reference implementation:
+Included in the reference implementation:
 
 - Streamlit
 - Python
 - Pandas
-- CSV data sources
+- CSV-backed synthetic sample data
+- Pytest smoke testing
+- GitHub Actions CI
 
 Common production backends or integrations may include:
 
@@ -412,6 +368,12 @@ Launch the application:
 streamlit run app.py
 ```
 
+Run the current reconciliation smoke test:
+
+```bash
+pytest
+```
+
 ---
 
 ## Sample Data
@@ -420,13 +382,13 @@ All sample data included in this repository is synthetic.
 
 No proprietary information, organizational data, user records, credentials, or production system details are included.
 
-The sample data is intentionally generic and demonstrates access governance patterns across multiple system and resource types.
+The sample data is intentionally generic and demonstrates access-governance patterns across multiple system and resource types.
 
 ---
 
-## Access Reconciliation Upload Schema
+## System Access Reconciliation Upload Schema
 
-The sample upload file uses the following structure:
+The sample access upload file uses the following structure:
 
 ```text
 source_system_record_id
@@ -438,7 +400,7 @@ permission_name
 access_status
 ```
 
-Required fields for reconciliation are:
+Required fields are:
 
 ```text
 user_id
@@ -449,7 +411,9 @@ permission_name
 access_status
 ```
 
-The `source_system_record_id` field is optional but recommended because it preserves traceability back to the source export.
+`source_system_record_id` is optional but recommended because it preserves traceability to the source export.
+
+The current demo reconciles one system at a time so missing-record evaluation is limited to the selected system scope.
 
 ---
 
@@ -458,57 +422,69 @@ The `source_system_record_id` field is optional but recommended because it prese
 A production implementation would typically include:
 
 - Single Sign-On (SSO)
-- Active Directory or identity provider integration
-- Database-backed storage
-- Audit logging
-- Notification services
-- Role-based administration
-- Approval workflows
-- Automated reconciliation processes
-- Monitoring and observability
-- Backup and recovery processes
-- Secure secrets management
+- Active Directory or identity-provider integration
+- database-backed storage
+- backend authorization
+- row- or object-level security where appropriate
+- audit logging
+- notification services
+- approval workflows
+- automated reconciliation
+- monitoring and observability
+- backup and recovery
+- secure secrets management
 
-The architecture is intentionally designed so the CSV-based data layer can be replaced with enterprise databases or identity platforms with limited changes to the application layer.
+The reference implementation intentionally separates governance concepts from any single production platform.
 
 ---
 
 ## Snowflake Migration Path
 
-The included `SNOWFLAKE_NOTES.md` document demonstrates how the same architecture can be migrated from CSV-backed storage to a Snowflake-backed implementation.
+`SNOWFLAKE_NOTES.md` describes a Snowflake-backed implementation path.
 
-The CSV files map naturally to Snowflake tables:
+The CSV data files map naturally to database tables for users, systems, access assignments, system administrator assignments, and reconciliation inputs.
 
-```text
-users.csv → ACCESSATLAS.USERS
-systems.csv → ACCESSATLAS.SYSTEMS
-access_assignments.csv → ACCESSATLAS.ACCESS_ASSIGNMENTS
-system_admin_assignments.csv → ACCESSATLAS.SYSTEM_ADMIN_ASSIGNMENTS
-sample_access_upload.csv → ACCESSATLAS.ACCESS_RECONCILIATION_UPLOADS
-```
-
-Only the data access layer needs to change; the user interface and governance workflows remain largely unchanged.
+A production migration should replace session-state/CSV behavior with approved persistence, authorization, transaction, and audit controls.
 
 ## PostgreSQL Migration Path
 
-The included `POSTGRES_NOTES.md` document provides PostgreSQL table definitions, indexing recommendations, write-back examples, transaction guidance, and production authorization considerations.
+`POSTGRES_NOTES.md` provides PostgreSQL-oriented table definitions, indexing recommendations, write-back patterns, transaction guidance, and production authorization considerations.
 
 ---
 
-## Future Enhancements
+## Documentation
 
-Potential enhancements include:
+Additional documentation is available under `docs/`:
 
-- resource and environment dimension tables
-- notification history
+- `docs/architecture/governance_patterns.md`
+- `docs/user-guides/access-reviewer-guide.md`
+- `docs/user-guides/super-admin-guide.md`
+- `docs/user-guides/system-admin-guide.md`
+
+The current interface vocabulary and layout conventions are documented in `docs/UI_STYLE_GUIDE.md`.
+
+---
+
+## Future Direction
+
+Potential future work includes:
+
+- production authentication and authorization
+- persistent audit event logging
 - approval workflows
 - access review campaigns
-- audit event logging
-- user group management
-- team membership management
+- notification history
+- user group and team membership management
+- automated source-system ingestion
 - Snowflake-native role metadata ingestion
 - API-based access synchronization
-- dashboard visualizations
-- test suite and CI workflow
+- expanded automated test coverage
+- production observability and deployment patterns
 
 AccessAtlas is intended as a foundation that organizations can extend to fit their own governance, compliance, and operational requirements.
+
+---
+
+## License
+
+MIT License. See `LICENSE`.

@@ -34,6 +34,13 @@ RECONCILIATION_KEY_COLUMNS = [
     "permission_name",
 ]
 RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
+TRAINING_RECONCILIATION_DATE_COLUMNS = [
+    "annual_training_date",
+    "biennial_training_date",
+    "access_agreement_date",
+]
+TRAINING_RECONCILIATION_REQUIRED_COLUMNS = ["user_id"] + TRAINING_RECONCILIATION_DATE_COLUMNS
+
 
 ROLE_VISIBLE_TABS = {
     "User": ["My Access"],
@@ -878,6 +885,8 @@ initialize_editable_access_state(access)
 access = get_editable_access_assignments(access)
 if "reconciliation_action_results" not in st.session_state:
     st.session_state["reconciliation_action_results"] = pd.DataFrame()
+if "training_reconciliation_action_results" not in st.session_state:
+    st.session_state["training_reconciliation_action_results"] = pd.DataFrame()
 
 all_users = users.copy()
 all_systems = systems.copy()
@@ -1972,6 +1981,196 @@ def render_user_access_management_tab():
 
 
 
+
+def normalize_date_value(value):
+    """Return a normalized date string for comparison and display."""
+    if pd.isna(value) or value == "":
+        return ""
+    return str(pd.to_datetime(value).date())
+
+
+
+def uploaded_dates_compliance_status(uploaded_values):
+    """Return compliance status based on uploaded training and agreement dates."""
+    today_ts = pd.Timestamp(date.today())
+
+    annual_date = pd.to_datetime(uploaded_values.get("annual_training_date", ""))
+    biennial_date = pd.to_datetime(uploaded_values.get("biennial_training_date", ""))
+
+    if pd.isna(annual_date) or pd.isna(biennial_date):
+        return "Expired"
+
+    annual_exp = annual_date + pd.DateOffset(years=ANNUAL_TRAINING_VALID_YEARS)
+    biennial_exp = biennial_date + pd.DateOffset(years=BIENNIAL_TRAINING_VALID_YEARS)
+
+    if annual_exp < today_ts or biennial_exp < today_ts:
+        return "Expired"
+
+    warning_date = today_ts + pd.Timedelta(days=EXPIRING_SOON_DAYS)
+    if annual_exp <= warning_date or biennial_exp <= warning_date:
+        return "Expiring Soon"
+
+    return "Current"
+
+
+def inactivate_user_record(user_id):
+    """Mark one user record inactive in the session-state user registry."""
+    current_users = st.session_state["editable_users"].copy()
+    user_mask = current_users["user_id"] == user_id
+
+    if not user_mask.any():
+        return "skipped"
+
+    current_users.loc[user_mask, "record_status"] = "Inactive"
+    current_users.loc[user_mask, "updated_date"] = pd.Timestamp(date.today())
+    st.session_state["editable_users"] = current_users
+    return "inactivated"
+
+
+def reconcile_training_dates(current_users, upload_df):
+    """Compare current user compliance dates to an uploaded date export."""
+    current = current_users.copy()
+    upload = upload_df.copy()
+
+    for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
+        current[column] = current[column].apply(normalize_date_value)
+        upload[column] = upload[column].apply(normalize_date_value)
+
+    current_lookup = current.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict("index")
+    upload_lookup = upload.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict("index")
+    current_status_lookup = current.set_index("user_id")["record_status"].to_dict()
+
+    rows = []
+    all_user_ids = sorted(set(current_lookup.keys()) | set(upload_lookup.keys()))
+
+    for user_id in all_user_ids:
+        current_values = current_lookup.get(user_id)
+        uploaded_values = upload_lookup.get(user_id)
+
+        if current_values is None:
+            change_type = "User Not Found in AccessAtlas"
+            recommended_action = "Review user record"
+            changes = "Uploaded user is not present in the current user registry."
+        elif uploaded_values is None:
+            change_type = "User Not Found in Upload"
+            recommended_action = "No action"
+            changes = "No uploaded date record was provided for this user."
+        else:
+            uploaded_compliance = uploaded_dates_compliance_status(uploaded_values)
+            changed_fields = []
+
+            for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
+                current_value = current_values.get(column, "")
+                uploaded_value = uploaded_values.get(column, "")
+                if current_value != uploaded_value:
+                    changed_fields.append(
+                        f"{column}: {current_value or 'Blank'} → {uploaded_value or 'Blank'}"
+                    )
+
+            if uploaded_compliance == "Expired":
+                change_type = "User Remains Out of Compliance"
+                recommended_action = "Inactivate user record"
+                changes = (
+                    "Uploaded dates confirm the user remains out of compliance. "
+                    + ("; ".join(changed_fields) if changed_fields else "No date changes provided.")
+                )
+            elif changed_fields:
+                change_type = "Date Changed"
+                recommended_action = "Update date records"
+                changes = "; ".join(changed_fields)
+            else:
+                change_type = "No Change"
+                recommended_action = "No action"
+                changes = "No date changes detected."
+
+        row = {
+            "user_id": user_id,
+            "current_record_status": current_status_lookup.get(user_id, ""),
+            "change_type": change_type,
+            "recommended_action": recommended_action,
+            "changes_identified": changes,
+        }
+
+        for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
+            row[f"current_{column}"] = (
+                current_values.get(column, "") if current_values else ""
+            )
+            row[f"uploaded_{column}"] = (
+                uploaded_values.get(column, "") if uploaded_values else ""
+            )
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def apply_training_date_actions(selected_rows):
+    """Apply selected training date reconciliation actions to session state."""
+    initialize_user_update_state()
+
+    results = []
+    counts = {"updated": 0, "inactivated": 0, "skipped": 0}
+
+    for _, row in selected_rows.iterrows():
+        if row["recommended_action"] == "Update date records":
+            update_user_compliance_dates(
+                row["user_id"],
+                row["uploaded_annual_training_date"],
+                row["uploaded_biennial_training_date"],
+                row["uploaded_access_agreement_date"],
+            )
+            counts["updated"] += 1
+            results.append(
+                {
+                    "audit_event_id": generate_audit_event_id(),
+                    "action_result": "Success",
+                    "changes_made": row.get("changes_identified", "Date records updated."),
+                    "recommended_action": row["recommended_action"],
+                    "change_type": row["change_type"],
+                    "user_id": row["user_id"],
+                    "first_name": row.get("first_name", ""),
+                    "last_name": row.get("last_name", ""),
+                    "changes_identified": row.get("changes_identified", ""),
+                }
+            )
+            continue
+
+        if row["recommended_action"] == "Inactivate user record":
+            outcome = inactivate_user_record(row["user_id"])
+            counts["inactivated" if outcome == "inactivated" else "skipped"] += 1
+            results.append(
+                {
+                    "audit_event_id": generate_audit_event_id() if outcome == "inactivated" else "",
+                    "action_result": "Success" if outcome == "inactivated" else "Skipped",
+                    "changes_made": "User record status set to Inactive." if outcome == "inactivated" else "User record was not changed.",
+                    "recommended_action": row["recommended_action"],
+                    "change_type": row["change_type"],
+                    "user_id": row["user_id"],
+                    "first_name": row.get("first_name", ""),
+                    "last_name": row.get("last_name", ""),
+                    "changes_identified": row.get("changes_identified", ""),
+                }
+            )
+            continue
+
+        counts["skipped"] += 1
+        results.append(
+            {
+                "audit_event_id": "",
+                "action_result": "Skipped",
+                "changes_made": "No date or user status update was applied.",
+                "recommended_action": row["recommended_action"],
+                "change_type": row["change_type"],
+                "user_id": row["user_id"],
+                "first_name": row.get("first_name", ""),
+                "last_name": row.get("last_name", ""),
+                "changes_identified": row.get("changes_identified", ""),
+            }
+        )
+
+    return counts, pd.DataFrame(results)
+
+
 def display_recommended_action(action):
     """Return a concise display label for a reconciliation recommended action."""
     action_labels = {
@@ -1983,7 +2182,7 @@ def display_recommended_action(action):
     return action_labels.get(action, action)
 
 
-def render_access_reconciliation_tab():
+def render_system_access_export_reconciliation_tab():
     st.subheader("System Access Export File Upload")
     st.write(
         """
@@ -2275,6 +2474,213 @@ def render_access_reconciliation_tab():
             "Select records in the Reconciliation Queue and click Apply Recommended Actions "
             "to populate action results."
         )
+
+
+
+
+
+def render_training_date_reconciliation_tab():
+    """Render training certificate and agreement date reconciliation workflow."""
+    st.subheader("Training Certificate Date and Agreement Reconciliation")
+    st.write(
+        """
+        Upload a training or agreement date export and compare it against the current
+        AccessAtlas user compliance date records.
+        """
+    )
+
+    with st.expander("Expected upload schema"):
+        st.write("Uploaded files should include the following required columns:")
+        st.dataframe(
+            pd.DataFrame(
+                {
+                    "column_name": TRAINING_RECONCILIATION_REQUIRED_COLUMNS,
+                    "description": [
+                        "Unique user identifier",
+                        "Annual training completion date",
+                        "Biennial training completion date",
+                        "Access agreement completion date",
+                    ],
+                }
+            ),
+            use_container_width=True,
+        )
+
+    uploaded_training_file = st.file_uploader(
+        "Upload CSV with user_id, annual_training_date, biennial_training_date, access_agreement_date",
+        type=["csv"],
+        key="training_reconciliation_upload",
+    )
+
+    if uploaded_training_file:
+        training_upload_df = pd.read_csv(
+            uploaded_training_file,
+            parse_dates=TRAINING_RECONCILIATION_DATE_COLUMNS,
+        )
+    else:
+        training_upload_df = pd.read_csv(
+            DATA_DIR / "sample_training_reconciliation_upload.csv",
+            parse_dates=TRAINING_RECONCILIATION_DATE_COLUMNS,
+        )
+        st.caption("Using bundled sample training date reconciliation export.")
+
+    missing_columns = validate_upload(
+        training_upload_df,
+        TRAINING_RECONCILIATION_REQUIRED_COLUMNS,
+    )
+    if missing_columns:
+        st.error(
+            "Uploaded file is missing required columns: "
+            + ", ".join(missing_columns)
+        )
+        st.stop()
+
+    scoped_training_upload_df = training_upload_df[
+        training_upload_df["user_id"].isin(users["user_id"])
+    ].copy()
+    excluded_count = len(training_upload_df) - len(scoped_training_upload_df)
+    if excluded_count > 0:
+        st.info(
+            f"{excluded_count} uploaded records outside the current visible user scope "
+            "are excluded from this reconciliation run."
+        )
+
+    st.markdown("### Uploaded Training Date Export")
+    st.dataframe(scoped_training_upload_df, use_container_width=True)
+
+    training_result = reconcile_training_dates(users, scoped_training_upload_df)
+    training_result = training_result.merge(
+        all_users[["user_id", "first_name", "last_name", "display_name"]],
+        on="user_id",
+        how="left",
+    )
+
+    st.markdown("### Training Date Reconciliation Summary")
+    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+    change_counts = training_result["change_type"].value_counts().to_dict()
+    summary_col1.metric("Date Changes", change_counts.get("Date Changed", 0))
+    summary_col2.metric("Review Inactivation", change_counts.get("User Remains Out of Compliance", 0))
+    summary_col3.metric("No Change", change_counts.get("No Change", 0))
+    summary_col4.metric("Missing in Registry", change_counts.get("User Not Found in AccessAtlas", 0))
+
+    st.markdown("### Training Date Reconciliation Queue")
+    st.caption(
+        "All date changes should be reviewed before applying recommended updates. "
+        "This demo updates only the in-session user compliance date records."
+    )
+
+    training_queue = training_result[
+        training_result["recommended_action"] != "No action"
+    ].copy()
+
+    queue_change_type_filter = st.multiselect(
+        "Filter training reconciliation queue by change type",
+        sorted(training_queue["change_type"].dropna().unique()),
+        key="training_reconciliation_queue_change_type_filter",
+    )
+    training_queue = apply_multiselect_filter(
+        training_queue,
+        "change_type",
+        queue_change_type_filter,
+    )
+
+    if training_queue.empty:
+        st.success("No training date reconciliation records currently require follow-up.")
+    else:
+        training_queue.insert(0, "apply_action", False)
+        queue_column_order = [
+            "apply_action",
+            "recommended_action",
+            "change_type",
+            "user_id",
+            "first_name",
+            "last_name",
+            "current_record_status",
+            "changes_identified",
+            "current_annual_training_date",
+            "uploaded_annual_training_date",
+            "current_biennial_training_date",
+            "uploaded_biennial_training_date",
+            "current_access_agreement_date",
+            "uploaded_access_agreement_date",
+        ]
+        queue_columns = [
+            column for column in queue_column_order if column in training_queue.columns
+        ] + [
+            column for column in training_queue.columns if column not in queue_column_order
+        ]
+
+        editable_training_queue = st.data_editor(
+            training_queue[queue_columns],
+            use_container_width=True,
+            hide_index=True,
+            key="training_reconciliation_queue_editor",
+            column_config={
+                "apply_action": st.column_config.CheckboxColumn(
+                    "Apply?",
+                    help="Select rows to update training and agreement dates.",
+                    default=False,
+                )
+            },
+            disabled=[
+                column for column in queue_columns if column != "apply_action"
+            ],
+        )
+
+        selected_training_actions = editable_training_queue[
+            editable_training_queue["apply_action"] == True
+        ].drop(columns=["apply_action"])
+
+        if st.button(
+            "Apply Training Date Updates",
+            key="apply_training_reconciliation_actions_button",
+            disabled=selected_training_actions.empty,
+        ):
+            action_counts, action_results = apply_training_date_actions(
+                selected_training_actions,
+            )
+            st.session_state["training_reconciliation_action_results"] = action_results
+            st.success(
+                "Applied training date reconciliation actions: "
+                f"{action_counts['updated']} updated, "
+                f"{action_counts['inactivated']} inactivated, "
+                f"{action_counts['skipped']} skipped."
+            )
+            st.rerun()
+
+    st.markdown("### Training Date Reconciliation Results")
+    st.caption(
+        "After Apply Training Date Updates is pressed, this section shows the action "
+        "outcomes for records changed from the Training Date Reconciliation Queue."
+    )
+
+    training_action_results = st.session_state.get(
+        "training_reconciliation_action_results",
+        pd.DataFrame(),
+    )
+    if training_action_results.empty:
+        st.info(
+            "No training date reconciliation actions have been applied yet in this demo session."
+        )
+    else:
+        st.dataframe(training_action_results, use_container_width=True)
+
+
+def render_access_reconciliation_tab():
+    """Render access and training reconciliation workflow tabs."""
+    access_export_tab, training_dates_tab = st.tabs(
+        [
+            "System Access Export File Upload",
+            "Training Certificate Date and Agreement Reconciliation",
+        ]
+    )
+
+    with access_export_tab:
+        render_system_access_export_reconciliation_tab()
+
+    with training_dates_tab:
+        render_training_date_reconciliation_tab()
+
 
 
 def render_dashboard_section():

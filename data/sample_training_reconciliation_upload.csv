@@ -1,0 +1,5 @@
+user_id,annual_training_date,biennial_training_date,access_agreement_date,reconciliation_note
+USR00002,2026-07-01,2026-07-01,2026-07-01,Updated dates bring user into compliance
+USR00003,2026-07-01,2026-07-01,2026-07-01,Updated dates bring user into compliance
+USR00012,2025-04-12,2024-01-01,2025-04-12,Uploaded dates confirm user remains out of compliance; review for inactivation
+USR00014,2024-06-01,2023-06-01,2024-06-01,Uploaded dates confirm user remains out of compliance; review for inactivation

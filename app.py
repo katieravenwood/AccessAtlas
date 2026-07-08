@@ -37,18 +37,18 @@ RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
 
 ROLE_VISIBLE_TABS = {
     "User": ["My Access"],
-    "Manager": ["Dashboard", "My Access", "Manage Access", "Review Changes"],
+    "Manager": ["Dashboard", "My Access", "Manage Access", "Access Reconciliation"],
     "System Administrator": [
         "Dashboard",
         "My Access",
         "Manage Access",
-        "Review Changes",
+        "Access Reconciliation",
     ],
     "Super Administrator": [
         "Dashboard",
         "My Access",
         "Manage Access",
-        "Review Changes",
+        "Access Reconciliation",
         "Administration",
     ],
 }
@@ -57,7 +57,7 @@ TAB_LABELS = [
     "Dashboard",
     "My Access",
     "Manage Access",
-    "Review Changes",
+    "Access Reconciliation",
     "Administration",
 ]
 
@@ -534,10 +534,10 @@ def render_sidebar_guidance(selected_section):
             scope. Super Administrators see all records.
             """,
         },
-        "Review Changes": {
+        "Access Reconciliation": {
             "title": "Review Changes Guidance",
             "body": """
-            Review Changes contains the reconciliation workflow and Action Queue.
+            Access Reconciliation contains the file upload workflow, reconciliation queue, and results review.
 
             Use it to add, update, or inactivate access assignment records based on
             uploaded access exports.
@@ -769,7 +769,16 @@ def apply_reconciliation_actions(access_df, selected_rows):
         "skipped": 0,
     }
 
+    action_value_map = {
+        "Add access record": "Review and add access record",
+        "Inactivate": "Review for inactive status",
+        "Update access status": "Review and update access status",
+    }
+
     for _, row in selected_rows.iterrows():
+        row = row.copy()
+        if row.get("recommended_action") in action_value_map:
+            row["recommended_action"] = action_value_map[row["recommended_action"]]
         updated_access, outcome = apply_reconciliation_action(updated_access, row)
         counts[outcome] += 1
 
@@ -1882,8 +1891,20 @@ def render_user_access_management_tab():
         render_add_user_form(allowed_systems)
 
 
+
+def display_recommended_action(action):
+    """Return a concise display label for a reconciliation recommended action."""
+    action_labels = {
+        "Review and add access record": "Add access record",
+        "Review for inactive status": "Inactivate",
+        "Review and update access status": "Update access status",
+        "No action": "No action",
+    }
+    return action_labels.get(action, action)
+
+
 def render_access_reconciliation_tab():
-    st.subheader("Access Reconciliation")
+    st.subheader("System Access Export File Upload")
     st.write(
         """
         Upload an access export from a tracked system and compare it against the current
@@ -1958,25 +1979,61 @@ def render_access_reconciliation_tab():
                 use_container_width=True)
 
     result = reconcile(access, uploaded_df, selected_system_id=selected_system)
-    result_with_system = result.merge(
-        systems[["system_id", "system_name"]],
-        on="system_id",
-        how="left",
+    result_with_system = (
+        result.merge(
+            all_users[["user_id", "first_name", "last_name"]],
+            on="user_id",
+            how="left",
+        )
+        .merge(
+            systems[["system_id", "system_name"]],
+            on="system_id",
+            how="left",
+        )
+    )
+    result_with_system["recommended_action"] = result_with_system[
+        "recommended_action"
+    ].apply(display_recommended_action)
+
+    st.markdown("### Reconciliation Summary")
+    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+
+    change_counts = result_with_system["change_type"].value_counts().to_dict()
+    summary_col1.metric(
+        "Add Access",
+        change_counts.get("New Access in Upload", 0),
+    )
+    summary_col2.metric(
+        "Inactivate",
+        change_counts.get("Access Not Found in Upload", 0),
+    )
+    summary_col3.metric(
+        "Update Status",
+        change_counts.get("Status Changed", 0),
+    )
+    summary_col4.metric(
+        "No Change",
+        change_counts.get("No Change", 0),
     )
 
-    st.markdown("### Reconciliation Summary by Change Type")
-    st.dataframe(
-        count_by(result_with_system, "change_type"),
-        use_container_width=True,
-    )
+    with st.expander("View reconciliation summary tables"):
+        st.markdown("#### Summary by Change Type")
+        st.dataframe(
+            count_by(result_with_system, "change_type"),
+            use_container_width=True,
+        )
 
-    st.markdown("### Reconciliation Summary by Resource Type")
-    st.dataframe(
-        count_by(result_with_system, "resource_type"),
-        use_container_width=True,
-    )
+        st.markdown("#### Summary by Resource Type")
+        st.dataframe(
+            count_by(result_with_system, "resource_type"),
+            use_container_width=True,
+        )
 
-    st.markdown("### Action Queue")
+    st.markdown("### Reconciliation Queue")
+    st.caption(
+        "All record changes should be reviewed before applying recommended actions. "
+        "This demo updates only the in-session access assignment table."
+    )
     action_queue = result_with_system[
         result_with_system["recommended_action"] != "No action"
     ].copy()
@@ -1985,6 +2042,28 @@ def render_access_reconciliation_tab():
         st.success("No reconciliation results currently require follow-up.")
     else:
         action_queue.insert(0, "apply_action", False)
+        queue_column_order = [
+            "apply_action",
+            "recommended_action",
+            "change_type",
+            "user_id",
+            "first_name",
+            "last_name",
+            "system_id",
+            "system_name",
+            "resource_type",
+            "resource_name",
+            "permission_name",
+            "current_access_status",
+            "uploaded_access_status",
+            "source_system_record_id",
+        ]
+        queue_columns = [
+            column for column in queue_column_order if column in action_queue.columns
+        ] + [
+            column for column in action_queue.columns if column not in queue_column_order
+        ]
+        action_queue = action_queue[queue_columns]
         editable_action_queue = st.data_editor(
             action_queue,
             use_container_width=True,
@@ -2031,6 +2110,11 @@ def render_access_reconciliation_tab():
             st.rerun()
 
     st.markdown("### Reconciliation Results")
+    st.caption(
+        "In a production workflow, this section would ideally display after "
+        "Apply Recommended Actions is pressed and completed. It is included here "
+        "for demo visibility because reconciliation tables are generated automatically."
+    )
     change_type_filter = st.multiselect(
         "Filter by change type",
         sorted(result_with_system["change_type"].dropna().unique()),
@@ -2044,8 +2128,30 @@ def render_access_reconciliation_tab():
         change_type_filter,
     )
 
-    st.dataframe(filtered_results, 
-                use_container_width=True)
+    result_column_order = [
+        "recommended_action",
+        "change_type",
+        "user_id",
+        "first_name",
+        "last_name",
+        "system_id",
+        "system_name",
+        "resource_type",
+        "resource_name",
+        "permission_name",
+        "current_access_status",
+        "uploaded_access_status",
+        "source_system_record_id",
+    ]
+    result_columns = [
+        column for column in result_column_order if column in filtered_results.columns
+    ] + [
+        column for column in filtered_results.columns if column not in result_column_order
+    ]
+    st.dataframe(
+        filtered_results[result_columns],
+        use_container_width=True,
+    )
 
 
 
@@ -2084,7 +2190,7 @@ def render_dashboard_section():
     elif current_user["application_role"] == "System Administrator":
         st.info(
             "Use Manage Access to review users and systems in your administered scope. "
-            "Use Review Changes to process reconciliation exceptions."
+            "Use Access Reconciliation to process reconciliation exceptions."
         )
     elif current_user["application_role"] == "Manager":
         st.info(
@@ -2093,7 +2199,7 @@ def render_dashboard_section():
         )
     else:
         st.info(
-            "Use Manage Access for user/system records, Review Changes for reconciliation, "
+            "Use Manage Access for user/system records, Access Reconciliation for reconciliation, "
             "and Administration for compliance and administrative coverage."
         )
 
@@ -2144,10 +2250,10 @@ def render_manage_access_section():
 
 def render_review_changes_section():
     """Render reconciliation and action queue workflows."""
-    st.subheader("Review Changes")
+    st.subheader("Access Reconciliation")
     st.caption(
-        "Upload or review access exports, inspect differences, and apply recommended "
-        "session-state updates from the reconciliation action queue."
+        "Upload or review system access exports, inspect differences, and apply "
+        "recommended session-state updates from the reconciliation queue."
     )
     render_access_reconciliation_tab()
 
@@ -2169,7 +2275,7 @@ TAB_RENDERERS = {
     "Dashboard": render_dashboard_section,
     "My Access": render_my_record_tab,
     "Manage Access": render_manage_access_section,
-    "Review Changes": render_review_changes_section,
+    "Access Reconciliation": render_review_changes_section,
     "Administration": render_administration_section,
 }
 

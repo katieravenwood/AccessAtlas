@@ -82,7 +82,7 @@ These updates are stored only in Streamlit session state for demonstration purpo
 
 ## System Administrator Users Tab Scope
 
-System Administrator demo accounts can access the **Users** tab, but the table and selected user profile options are filtered to users who have access to systems administered by that System Administrator.
+System Administrator demo accounts can access the **Users** tab, but the table and selected user access profile options are filtered to users who have access to systems administered by that System Administrator.
 
 This allows System Administrators to review relevant users without exposing the full user registry.
 
@@ -96,9 +96,9 @@ Because native Streamlit tabs do not expose the active tab to Python, this versi
 
 ---
 
-## Reconciliation Action Queue Updates
+## Reconciliation Reconciliation Queue Updates
 
-The Access Reconciliation section includes a selectable Action Queue.
+The System Access Export File Upload section includes a selectable Reconciliation Queue.
 
 Super Administrator and System Administrator demo users can select reconciliation exceptions and apply recommended actions to the session-state-backed access assignment table.
 
@@ -134,7 +134,7 @@ Primary sections are:
 - **Dashboard** — role-aware summary and key indicators
 - **My Access** — individual user profile, compliance dates, and access assignments
 - **Manage Access** — user and system review workflows, with manual single-record add/edit where permitted
-- **Review Changes** — reconciliation workflow and action queue
+- **Access Reconciliation** — reconciliation workflow and reconciliation queue
 - **Administration** — compliance monitoring and system administrator coverage for Super Administrators
 
 Detailed tables are available, but many are grouped under expanders so the main interface stays focused.
@@ -147,45 +147,58 @@ The application includes a dedicated **My Record** tab for individual self-servi
 
 The application is organized into role-aware tabs.
 
----
+### Overview
 
-## Dashboard Layout
+Provides a dashboard-style summary of the governance dataset, including:
 
-The Dashboard is designed as an at-a-glance governance health view.
-
-It includes:
-
-- top-line visible scope metrics
-- governance health metrics
-- compact visual summaries for compliance status, access status, user record status, and resource type
-- source summary tables grouped under an expander for users who need details
+- total users
+- tracked systems
+- access records
+- system administrator assignments
+- expired or expiring compliance records
+- user record status summaries
+- compliance status summaries
+- access records by system type, resource type, and access status
 
 ### My Record
 
 Provides an individual self-service view of the selected user's governance record, including profile information, compliance dates, access assignments, and administrative assignments.
 
-## Manage Access Layout
+### Manage Access
 
-The **Manage Access** section is organized into internal workflow tabs:
+The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments.
 
-- **Managed Users** — scoped user review
-- **Managed Systems** — scoped system review
-- **Edit / Add Access** — direct single-record access management and user creation
+#### Managed Users
 
-System Administrators remain limited to their administered-system scope. Super Administrators can manage all systems and users.
+Provides a user-centered governance profile including:
 
-The **Edit / Add Access** workflow supports:
+- user registry filters
+- selected user access profile
+- manager lookup
+- access assignment metrics
+- administrative assignment metrics
+- training and agreement snapshot
+- access by system
+- detailed access records
+- systems administered by the selected user
 
-- adding a new access assignment for an existing user
-- editing an existing access assignment
-- adding a new synthetic user record
-- optionally creating an initial access assignment for the new user
+#### Managed Systems
 
-For System Administrators, adding a new user requires an initial access assignment so the user remains visible within the administrator's scoped systems.
+Provides a system-centered governance profile including:
 
----
+- system catalog filters
+- selected system access details
+- system owner and administrative group
+- resource scope and access model
+- users with access
+- system administrators
+- resources and permissions assigned within the system
 
-### Review Changes Tab
+#### Edit/Add Access
+
+Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
+
+### Access Reconciliation Tab
 
 #### Access Reconciliation
 
@@ -197,7 +210,7 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - uploaded export preview
 - summary by change type
 - summary by resource type
-- action queue
+- reconciliation queue
 - source record traceability
 - audit-friendly inactive status recommendations
 
@@ -225,9 +238,9 @@ Shows administrative responsibility across systems, including:
 - system-centered view
 - admin coverage by system
 
-### Review Changes
+### Access Reconciliation
 
-Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the reconciliation Action Queue.
+Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the  Reconciliation Queue.
 
 #### Access Reconciliation Section
 
@@ -239,7 +252,7 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - uploaded export preview
 - summary by change type
 - summary by resource type
-- action queue
+- reconciliation queue
 - source record traceability
 - audit-friendly inactive status recommendations
 

@@ -82,7 +82,7 @@ These updates are stored only in Streamlit session state for demonstration purpo
 
 ## System Administrator Users Tab Scope
 
-System Administrator demo accounts can access the **Users** tab, but the table and selected user profile options are filtered to users who have access to systems administered by that System Administrator.
+System Administrator demo accounts can access the **Users** tab, but the table and selected user access profile options are filtered to users who have access to systems administered by that System Administrator.
 
 This allows System Administrators to review relevant users without exposing the full user registry.
 
@@ -96,9 +96,9 @@ Because native Streamlit tabs do not expose the active tab to Python, this versi
 
 ---
 
-## Reconciliation Action Queue Updates
+## Reconciliation Reconciliation Queue Updates
 
-The Access Reconciliation section includes a selectable Action Queue.
+The System Access Export File Upload section includes a selectable Reconciliation Queue.
 
 Super Administrator and System Administrator demo users can select reconciliation exceptions and apply recommended actions to the session-state-backed access assignment table.
 
@@ -125,19 +125,6 @@ Changes are written to the session-state-backed access assignment table and do n
 
 ---
 
-## Dashboard Layout
-
-The Dashboard is designed as an at-a-glance governance health view.
-
-It includes:
-
-- top-line visible scope metrics
-- governance health metrics
-- compact visual summaries for compliance status, access status, user record status, and resource type
-- source summary tables grouped under an expander for users who need details
-
----
-
 ## Streamlined Task-Based Interface
 
 AccessAtlas now organizes the demo around day-to-day workflows rather than database entities.
@@ -147,7 +134,7 @@ Primary sections are:
 - **Dashboard** — role-aware summary and key indicators
 - **My Access** — individual user profile, compliance dates, and access assignments
 - **Manage Access** — user and system review workflows, with manual single-record add/edit where permitted
-- **Review Changes** — reconciliation workflow and action queue
+- **Access Reconciliation** — reconciliation workflow and reconciliation queue
 - **Administration** — compliance monitoring and system administrator coverage for Super Administrators
 
 Detailed tables are available, but many are grouped under expanders so the main interface stays focused.
@@ -181,12 +168,12 @@ Provides an individual self-service view of the selected user's governance recor
 
 The Manage Access tab provides collapsible user and system review sections which are filtered by the scope of the current user's administrative assignments.
 
-#### Users In Scope
+#### Managed Users
 
 Provides a user-centered governance profile including:
 
 - user registry filters
-- selected user profile
+- selected user access profile
 - manager lookup
 - access assignment metrics
 - administrative assignment metrics
@@ -195,23 +182,23 @@ Provides a user-centered governance profile including:
 - detailed access records
 - systems administered by the selected user
 
-#### Systems In Scope
+#### Managed Systems
 
 Provides a system-centered governance profile including:
 
 - system catalog filters
-- selected system details
+- selected system access details
 - system owner and administrative group
 - resource scope and access model
 - users with access
 - system administrators
 - resources and permissions assigned within the system
 
-#### User Access Management
+#### Edit/Add Access
 
 Provides a direct single-record add/edit workflow for user access assignments. This section is available to Super Administrator and System Administrator demo roles.
 
-### Review Changes Tab
+### Access Reconciliation Tab
 
 #### Access Reconciliation
 
@@ -223,7 +210,7 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - uploaded export preview
 - summary by change type
 - summary by resource type
-- action queue
+- reconciliation queue
 - source record traceability
 - audit-friendly inactive status recommendations
 
@@ -251,9 +238,9 @@ Shows administrative responsibility across systems, including:
 - system-centered view
 - admin coverage by system
 
-### Review Changes
+### Access Reconciliation
 
-Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the reconciliation Action Queue.
+Allows administrators to Upload or review access list exports from other systems, inspect differences, and apply recommended session-state updates from the  Reconciliation Queue.
 
 #### Access Reconciliation Section
 
@@ -265,7 +252,7 @@ Demonstrates upload-based reconciliation of external access exports against curr
 - uploaded export preview
 - summary by change type
 - summary by resource type
-- action queue
+- reconciliation queue
 - source record traceability
 - audit-friendly inactive status recommendations
 

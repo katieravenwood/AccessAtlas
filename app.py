@@ -34,21 +34,28 @@ RECONCILIATION_KEY_COLUMNS = [
     "permission_name",
 ]
 RECONCILIATION_REQUIRED_COLUMNS = RECONCILIATION_KEY_COLUMNS + ["access_status"]
+TRAINING_RECONCILIATION_DATE_COLUMNS = [
+    "annual_training_date",
+    "biennial_training_date",
+    "access_agreement_date",
+]
+TRAINING_RECONCILIATION_REQUIRED_COLUMNS = ["user_id"] + TRAINING_RECONCILIATION_DATE_COLUMNS
+
 
 ROLE_VISIBLE_TABS = {
     "User": ["My Access"],
-    "Manager": ["Dashboard", "My Access", "Manage Access", "Review Changes"],
+    "Manager": ["Dashboard", "My Access", "Manage Access", "Access Reconciliation"],
     "System Administrator": [
         "Dashboard",
         "My Access",
         "Manage Access",
-        "Review Changes",
+        "Access Reconciliation",
     ],
     "Super Administrator": [
         "Dashboard",
         "My Access",
         "Manage Access",
-        "Review Changes",
+        "Access Reconciliation",
         "Administration",
     ],
 }
@@ -57,7 +64,7 @@ TAB_LABELS = [
     "Dashboard",
     "My Access",
     "Manage Access",
-    "Review Changes",
+    "Access Reconciliation",
     "Administration",
 ]
 
@@ -90,38 +97,6 @@ COMPLIANCE_COLUMNS = [
 ]
 
 st.set_page_config(page_title="AccessAtlas", layout="wide")
-
-
-st.markdown(
-    """
-    <style>
-    div[role="radiogroup"] {
-        gap: 0.35rem;
-    }
-
-    div[role="radiogroup"] label {
-        border: 1px solid rgba(49, 51, 63, 0.2);
-        border-radius: 999px;
-        padding: 0.35rem 0.75rem;
-        background-color: rgba(49, 51, 63, 0.03);
-        transition: all 0.15s ease-in-out;
-    }
-
-    div[role="radiogroup"] label:hover {
-        border-color: rgba(49, 51, 63, 0.45);
-        background-color: rgba(49, 51, 63, 0.07);
-    }
-
-    div[role="radiogroup"] label:has(input:checked) {
-        border-color: rgba(255, 75, 75, 0.8);
-        background-color: rgba(255, 75, 75, 0.12);
-        font-weight: 600;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
 
 
 @st.cache_data
@@ -560,16 +535,16 @@ def render_sidebar_guidance(selected_section):
         "Manage Access": {
             "title": "Manage Access Guidance",
             "body": """
-            Manage Access combines user-centered and system-centered views.
+            Manage Access combines managed-user review, managed-system review, and scoped edit/add workflows.
 
             System Administrators see only users and systems in their administered
             scope. Super Administrators see all records.
             """,
         },
-        "Review Changes": {
+        "Access Reconciliation": {
             "title": "Review Changes Guidance",
             "body": """
-            Review Changes contains the reconciliation workflow and Action Queue.
+            Access Reconciliation contains the file upload workflow, reconciliation queue, and results review.
 
             Use it to add, update, or inactivate access assignment records based on
             uploaded access exports.
@@ -633,6 +608,82 @@ def render_hidden_tab_message(tab_name, current_user):
         "from the sidebar to view this functionality."
     )
 
+
+
+
+def initialize_editable_user_state(users):
+    """Initialize session-state backed user records for demo user management."""
+    if "editable_users" not in st.session_state:
+        st.session_state["editable_users"] = users.copy()
+
+
+def get_editable_users(users):
+    """Return session-state user records, initializing them if needed."""
+    initialize_editable_user_state(users)
+    return st.session_state["editable_users"].copy()
+
+
+def generate_next_user_id(users_df):
+    """Generate the next synthetic user ID."""
+    existing_numbers = (
+        users_df["user_id"]
+        .dropna()
+        .astype(str)
+        .str.extract(r"(\d+)$")[0]
+        .dropna()
+        .astype(int)
+    )
+
+    next_number = 1 if existing_numbers.empty else existing_numbers.max() + 1
+    return f"USR{next_number:05d}"
+
+
+def add_user_record(
+    user_id,
+    first_name,
+    last_name,
+    email,
+    application_role,
+    manager_user_id,
+    department,
+    user_type,
+    record_status,
+    annual_training_date,
+    biennial_training_date,
+    access_agreement_date,
+):
+    """Add one synthetic user record to the session-state user registry."""
+    current_users = st.session_state["editable_users"].copy()
+
+    if user_id in current_users["user_id"].tolist():
+        return "duplicate"
+
+    display_name = f"{first_name} {last_name}".strip()
+    today = pd.Timestamp(date.today())
+
+    new_user = {
+        "user_id": user_id,
+        "display_name": display_name,
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "application_role": application_role,
+        "manager_user_id": manager_user_id,
+        "department": department,
+        "user_type": user_type,
+        "record_status": record_status,
+        "annual_training_date": pd.Timestamp(annual_training_date),
+        "biennial_training_date": pd.Timestamp(biennial_training_date),
+        "access_agreement_date": pd.Timestamp(access_agreement_date),
+        "created_date": today,
+        "updated_date": today,
+    }
+
+    st.session_state["editable_users"] = pd.concat(
+        [current_users, pd.DataFrame([new_user])],
+        ignore_index=True,
+    )
+    return "added"
 
 
 def initialize_editable_access_state(access):
@@ -715,8 +766,78 @@ def apply_reconciliation_action(access_df, row):
     return access_df, "skipped"
 
 
+
+def generate_audit_event_id():
+    """Generate a synthetic audit event ID for demo reconciliation actions."""
+    if "audit_event_counter" not in st.session_state:
+        st.session_state["audit_event_counter"] = 1
+
+    audit_event_id = f"AUD-{date.today().year}-{st.session_state['audit_event_counter']:06d}"
+    st.session_state["audit_event_counter"] += 1
+    return audit_event_id
+
+
+def build_reconciliation_change_summary(row, outcome):
+    """Return a human-readable summary of what changed for a reconciliation row."""
+    action = row.get("recommended_action")
+
+    if outcome == "added":
+        return (
+            "Added new access assignment "
+            f"({row.get('resource_type')} / {row.get('resource_name')} / "
+            f"{row.get('permission_name')}) with status "
+            f"{row.get('uploaded_access_status')}."
+        )
+
+    if outcome == "inactivated":
+        return (
+            "Access Status: "
+            f"{row.get('current_access_status')} → Inactive."
+        )
+
+    if outcome == "updated":
+        return (
+            "Access Status: "
+            f"{row.get('current_access_status')} → {row.get('uploaded_access_status')}."
+        )
+
+    if outcome == "skipped":
+        return "No record was changed. The action was skipped."
+
+    return "No change summary available."
+
+
+def build_reconciliation_action_result(row, outcome):
+    """Return a display-friendly action result record for one applied action."""
+    result_labels = {
+        "added": "Success",
+        "inactivated": "Success",
+        "updated": "Success",
+        "skipped": "Skipped",
+    }
+
+    return {
+        "audit_event_id": generate_audit_event_id() if outcome != "skipped" else "",
+        "action_result": result_labels.get(outcome, "Unknown"),
+        "changes_made": build_reconciliation_change_summary(row, outcome),
+        "recommended_action": row.get("recommended_action"),
+        "change_type": row.get("change_type"),
+        "user_id": row.get("user_id"),
+        "first_name": row.get("first_name"),
+        "last_name": row.get("last_name"),
+        "system_id": row.get("system_id"),
+        "system_name": row.get("system_name"),
+        "resource_type": row.get("resource_type"),
+        "resource_name": row.get("resource_name"),
+        "permission_name": row.get("permission_name"),
+        "current_access_status": row.get("current_access_status"),
+        "uploaded_access_status": row.get("uploaded_access_status"),
+        "source_system_record_id": row.get("source_system_record_id"),
+    }
+
+
 def apply_reconciliation_actions(access_df, selected_rows):
-    """Apply selected reconciliation actions and return updated access data plus counts."""
+    """Apply selected reconciliation actions and return updated access data, counts, and result rows."""
     updated_access = access_df.copy()
     counts = {
         "added": 0,
@@ -724,18 +845,37 @@ def apply_reconciliation_actions(access_df, selected_rows):
         "updated": 0,
         "skipped": 0,
     }
+    action_results = []
+
+    action_value_map = {
+        "Add access record": "Review and add access record",
+        "Inactivate": "Review for inactive status",
+        "Update access status": "Review and update access status",
+    }
 
     for _, row in selected_rows.iterrows():
+        row = row.copy()
+        if row.get("recommended_action") in action_value_map:
+            row["recommended_action"] = action_value_map[row["recommended_action"]]
+
         updated_access, outcome = apply_reconciliation_action(updated_access, row)
         counts[outcome] += 1
 
-    return updated_access, counts
+        display_row = row.copy()
+        display_row["recommended_action"] = display_recommended_action(
+            row.get("recommended_action")
+        )
+        action_results.append(build_reconciliation_action_result(display_row, outcome))
+
+    return updated_access, counts, pd.DataFrame(action_results)
 
 
 
 data = load_data()
 initialize_user_update_state()
-users = apply_user_compliance_updates(data["users"])
+initialize_editable_user_state(data["users"])
+users = get_editable_users(data["users"])
+users = apply_user_compliance_updates(users)
 users = add_expirations(users)
 systems = data["systems"]
 access = data["access_assignments"]
@@ -743,6 +883,10 @@ system_admins = data["system_admin_assignments"]
 
 initialize_editable_access_state(access)
 access = get_editable_access_assignments(access)
+if "reconciliation_action_results" not in st.session_state:
+    st.session_state["reconciliation_action_results"] = pd.DataFrame()
+if "training_reconciliation_action_results" not in st.session_state:
+    st.session_state["training_reconciliation_action_results"] = pd.DataFrame()
 
 all_users = users.copy()
 all_systems = systems.copy()
@@ -815,32 +959,32 @@ def render_overview_tab():
 
     st.markdown("### User Record Status")
     st.dataframe(
-        count_by(users, "record_status", "users"),
-        use_container_width=True,
+    count_by(users, "record_status", "users"), 
+    use_container_width=True,
     )
 
     st.markdown("### Compliance Status")
     st.dataframe(
-        count_by(users, "compliance_status", "users"),
-        use_container_width=True,
+    count_by(users, "compliance_status", "users"), 
+    use_container_width=True,
     )
 
     st.markdown("### Access Records by System Type")
     st.dataframe(
-        count_by(access_with_systems, "system_type"),
-        use_container_width=True,
+    count_by(access_with_systems, "system_type"), 
+    use_container_width=True,
     )
 
     st.markdown("### Access Records by Resource Type")
     st.dataframe(
-        count_by(access_with_systems, "resource_type"),
-        use_container_width=True,
+    count_by(access_with_systems, "resource_type"), 
+    use_container_width=True,
     )
 
     st.markdown("### Access Records by Access Status")
     st.dataframe(
-        count_by(access, "access_status"),
-        use_container_width=True,
+    count_by(access, "access_status"), 
+    use_container_width=True,
     )
 
 
@@ -911,21 +1055,23 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
         )
 
     st.markdown("### Detailed Access Assignments")
-    st.dataframe(selected_access, use_container_width=True)
+    st.dataframe(selected_access, 
+                use_container_width=True)
 
     st.markdown("### Administrative Assignments")
     if selected_admin_assignments.empty:
         st.info("This user is not assigned as an administrator for any tracked systems.")
     else:
-        st.dataframe(selected_admin_assignments, use_container_width=True)
+        st.dataframe(selected_admin_assignments, 
+                    use_container_width=True)
 
 
 def render_my_record_tab():
     """Render the self-service individual user record tab."""
-    st.subheader("My Access")
+    st.subheader("My Record")
     st.caption(
-        "Review your governance profile, compliance dates, access assignments, "
-        "and administrative assignments."
+        "This view shows the selected user's own governance profile, compliance "
+        "dates, access assignments, and administrative assignments."
     )
 
     current_user_id = current_user["user_id"]
@@ -936,101 +1082,14 @@ def render_my_record_tab():
         )
         return
 
+    render_selected_user_profile(current_user_id, user_selection_enabled=False)
+
     selected_user = users[users["user_id"] == current_user_id].iloc[0]
-    manager_name = get_display_name(all_users, selected_user["manager_user_id"])
-    selected_access = access[access["user_id"] == current_user_id].merge(
-        systems,
-        on="system_id",
-        how="left",
-    )
-    selected_admin_assignments = (
-        system_admins[system_admins["user_id"] == current_user_id]
-        .merge(
-            systems[["system_id", "system_name", "system_type", "system_category"]],
-            on="system_id",
-            how="left",
-        )
-    )
-
-    details_tab, update_tab = st.tabs(
-        ["Profile, Compliance, Access & Admin Assignments", "Update Certification Dates"]
-    )
-
-    with details_tab:
-        st.markdown(f"#### {selected_user['display_name']}")
-        st.write(user_profile_markdown(selected_user, manager_name))
-
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Systems Accessed", selected_access["system_id"].nunique())
-        m2.metric("Access Assignments", len(selected_access))
-        m3.metric("Admin Assignments", len(selected_admin_assignments))
-        m4.metric("Compliance", selected_user["compliance_status"])
-
-        profile_tab, compliance_tab, access_tab, admin_tab = st.tabs(
-            ["Profile", "Compliance", "Access", "Admin Assignments"]
-        )
-
-        with profile_tab:
-            st.markdown("### Profile")
-            st.write(user_profile_markdown(selected_user, manager_name))
-
-        with compliance_tab:
-            st.markdown("### Training & Agreement Snapshot")
-            st.dataframe(
-                pd.DataFrame(
-                    [
-                        {
-                            "requirement": "Annual Training",
-                            "completion_date": selected_user["annual_training_date"],
-                            "expiration_date": selected_user["annual_training_expiration"],
-                        },
-                        {
-                            "requirement": "Biennial Training",
-                            "completion_date": selected_user["biennial_training_date"],
-                            "expiration_date": selected_user["biennial_training_expiration"],
-                        },
-                        {
-                            "requirement": "Access Agreement",
-                            "completion_date": selected_user["access_agreement_date"],
-                            "expiration_date": "",
-                        },
-                    ]
-                ),
-                use_container_width=True,
-            )
-
-        with access_tab:
-            st.markdown("### Access by System")
-            if selected_access.empty:
-                st.info("This user does not currently have access assignments.")
-            else:
-                st.dataframe(
-                    count_by(
-                        selected_access,
-                        ["system_id", "system_name", "system_type"],
-                        "access_records",
-                    ),
-                    use_container_width=True,
-                )
-
-            with st.expander("Detailed access assignments", expanded=True):
-                st.dataframe(selected_access, use_container_width=True)
-
-        with admin_tab:
-            st.markdown("### Administrative Assignments")
-            if selected_admin_assignments.empty:
-                st.info(
-                    "This user is not assigned as an administrator for any tracked systems."
-                )
-            else:
-                st.dataframe(selected_admin_assignments, use_container_width=True)
-
-    with update_tab:
-        render_self_service_update_form(selected_user)
+    render_self_service_update_form(selected_user)
 
 
 def render_users_tab():
-    st.subheader("Central User Registry")
+    st.subheader("User Management Registry")
 
     if current_user["application_role"] == "System Administrator":
         st.caption(
@@ -1042,21 +1101,25 @@ def render_users_tab():
             "Showing users within the selected Manager demo account's visible review scope."
         )
 
-    role_filter = st.multiselect(
-        "Filter by application role",
-        sorted(users["application_role"].dropna().unique()),
-        key="role_filter",
-    )
-    type_filter = st.multiselect(
-        "Filter by user type",
-        sorted(users["user_type"].unique()),
-        key="type_filter",
-    )
-    status_filter = st.multiselect(
-        "Filter by record status",
-        sorted(users["record_status"].dropna().unique()),
-        key="status_filter",
-    )
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    with filter_col1:
+        role_filter = st.multiselect(
+            "Filter by application role",
+            sorted(users["application_role"].dropna().unique()),
+            key="role_filter",
+        )
+    with filter_col2:
+        type_filter = st.multiselect(
+            "Filter by user type",
+            sorted(users["user_type"].unique()),
+            key="type_filter",
+        )
+    with filter_col3:
+        status_filter = st.multiselect(
+            "Filter by record status",
+            sorted(users["record_status"].dropna().unique()),
+            key="status_filter",
+        )
 
     user_view = users.copy()
     user_view = apply_multiselect_filter(user_view, "application_role", role_filter)
@@ -1068,7 +1131,7 @@ def render_users_tab():
         use_container_width=True,
     )
 
-    st.markdown("### Selected User Governance Profile")
+    st.markdown("### Selected User Access Profile")
     selected_user_id = st.selectbox(
         "Select user ID",
         users["user_id"],
@@ -1080,21 +1143,25 @@ def render_users_tab():
 def render_systems_tab():
     st.subheader("System Catalog")
 
-    system_type_filter = st.multiselect(
-        "Filter by system type",
-        sorted(systems["system_type"].dropna().unique()),
-        key="system_type_filter",
-    )
-    system_category_filter = st.multiselect(
-        "Filter by system category",
-        sorted(systems["system_category"].dropna().unique()),
-        key="system_category_filter",
-    )
-    system_status_filter = st.multiselect(
-        "Filter by system record status",
-        sorted(systems["record_status"].dropna().unique()),
-        key="system_status_filter",
-    )
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    with filter_col1:
+        system_type_filter = st.multiselect(
+            "Filter by system type",
+            sorted(systems["system_type"].dropna().unique()),
+            key="system_type_filter",
+        )
+    with filter_col2:
+        system_category_filter = st.multiselect(
+            "Filter by system category",
+            sorted(systems["system_category"].dropna().unique()),
+            key="system_category_filter",
+        )
+    with filter_col3:
+        system_status_filter = st.multiselect(
+            "Filter by system record status",
+            sorted(systems["record_status"].dropna().unique()),
+            key="system_status_filter",
+        )
 
     system_view = systems.copy()
     system_view = apply_multiselect_filter(system_view, "system_type", system_type_filter)
@@ -1105,9 +1172,10 @@ def render_systems_tab():
     )
     system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
 
-    st.dataframe(system_view, use_container_width=True)
+    st.dataframe(system_view, 
+                use_container_width=True)
 
-    st.markdown("### Selected System Governance Profile")
+    st.markdown("### Selected System Access Profile")
     selected_system_id = st.selectbox(
         "Select system ID", 
         systems["system_id"],
@@ -1166,7 +1234,8 @@ def render_systems_tab():
     if selected_system_admins.empty:
         st.info("No system administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(selected_system_admins, use_container_width=True)
+        st.dataframe(selected_system_admins, 
+                    use_container_width=True)
 
     st.markdown("### Resources and Permissions")
     if selected_system_access.empty:
@@ -1272,7 +1341,8 @@ def render_system_admins_tab():
     )
 
     st.markdown("### All System Administrator Assignments")
-    st.dataframe(filtered_admin_view, use_container_width=True)
+    st.dataframe(filtered_admin_view, 
+                use_container_width=True)
 
     st.markdown("### Administrator-Centered View")
     selected_admin = st.selectbox(
@@ -1301,7 +1371,8 @@ def render_system_admins_tab():
     if system_admin_detail.empty:
         st.info("No administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(system_admin_detail, use_container_width=True)
+        st.dataframe(system_admin_detail, 
+                    use_container_width=True)
 
     st.markdown("### Admin Coverage by System")
     coverage = systems[
@@ -1317,7 +1388,8 @@ def render_system_admins_tab():
     coverage["coverage_status"] = coverage["admin_assignment_count"].apply(
         lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
     )
-    st.dataframe(coverage, use_container_width=True)
+    st.dataframe(coverage, 
+                use_container_width=True)
 
 
 def render_compliance_tab():
@@ -1362,7 +1434,8 @@ def render_compliance_tab():
     comp = apply_multiselect_filter(comp, "user_type", user_type_filter)
 
     st.markdown("### Compliance Detail")
-    st.dataframe(comp[COMPLIANCE_COLUMNS], use_container_width=True)
+    st.dataframe(comp[COMPLIANCE_COLUMNS], 
+                use_container_width=True)
 
     st.markdown("### Follow-Up Queue")
     follow_up = users[
@@ -1372,7 +1445,8 @@ def render_compliance_tab():
     if follow_up.empty:
         st.success("No active user records currently require compliance follow-up.")
     else:
-        st.dataframe(follow_up[COMPLIANCE_COLUMNS], use_container_width=True)
+        st.dataframe(follow_up[COMPLIANCE_COLUMNS], 
+                    use_container_width=True)
 
     st.markdown("### Compliance by Department")
     st.dataframe(
@@ -1458,9 +1532,202 @@ def apply_single_access_record_change(
     return "updated"
 
 
-def render_user_access_management_tab():
+def render_add_user_form(allowed_systems):
+    """Render a demo form for adding one user and optional initial access."""
+    st.subheader("Add User")
+    st.caption(
+        "Add one synthetic user record to the in-session demo user registry. "
+        "For System Administrators, an initial access assignment is required so "
+        "the new user remains inside the administered-system scope."
+    )
+
+    next_user_id = generate_next_user_id(st.session_state["editable_users"])
+    manager_options = all_users.copy()
+    manager_options["manager_label"] = (
+        manager_options["display_name"].astype(str)
+        + " ("
+        + manager_options["user_id"].astype(str)
+        + ")"
+    )
+    manager_labels = ["Not assigned"] + manager_options["manager_label"].tolist()
+
+    system_options = allowed_systems.copy()
+    system_options["system_label"] = (
+        system_options["system_name"].astype(str)
+        + " ("
+        + system_options["system_id"].astype(str)
+        + ")"
+    )
+
+    with st.form("direct_add_user_form"):
+        st.text_input(
+            "User ID",
+            value=next_user_id,
+            key="add_user_id",
+            disabled=True,
+        )
+
+        first_name = st.text_input("First name", key="add_user_first_name")
+        last_name = st.text_input("Last name", key="add_user_last_name")
+        email = st.text_input("Email", key="add_user_email")
+
+        application_role = st.selectbox(
+            "Application role",
+            ["User", "Manager", "System Administrator", "Super Administrator"],
+            index=0,
+            key="add_user_application_role",
+        )
+        manager_label = st.selectbox(
+            "Manager",
+            manager_labels,
+            key="add_user_manager",
+        )
+        department = st.text_input("Department", value="General Operations", key="add_user_department")
+        user_type = st.selectbox(
+            "User type",
+            ["Employee", "Contractor", "Vendor", "Consultant", "Service Account"],
+            key="add_user_type",
+        )
+        record_status = st.selectbox(
+            "Record status",
+            ["Active", "Leave", "Inactive"],
+            key="add_user_record_status",
+        )
+
+        annual_training_date = st.date_input(
+            "Annual training completion date",
+            value=date.today(),
+            key="add_user_annual_training_date",
+        )
+        biennial_training_date = st.date_input(
+            "Biennial training completion date",
+            value=date.today(),
+            key="add_user_biennial_training_date",
+        )
+        access_agreement_date = st.date_input(
+            "Access agreement completion date",
+            value=date.today(),
+            key="add_user_access_agreement_date",
+        )
+
+        st.markdown("### Initial Access Assignment")
+        require_initial_access = current_user["application_role"] == "System Administrator"
+        add_initial_access = st.checkbox(
+            "Create initial access assignment",
+            value=require_initial_access,
+            disabled=require_initial_access,
+            key="add_user_create_initial_access",
+        )
+
+        selected_system_label = None
+        resource_type = "Application"
+        resource_name = ""
+        permission_name = ""
+        access_status = "Active"
+        granted_date = date.today()
+        source = "Direct User Entry"
+
+        if add_initial_access:
+            selected_system_label = st.selectbox(
+                "System",
+                system_options["system_label"].tolist(),
+                key="add_user_initial_system",
+            )
+            resource_type = st.selectbox(
+                "Resource type",
+                ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"],
+                key="add_user_initial_resource_type",
+            )
+            resource_name = st.text_input(
+                "Resource name",
+                value="General Access",
+                key="add_user_initial_resource_name",
+            )
+            permission_name = st.text_input(
+                "Permission name",
+                value="Viewer",
+                key="add_user_initial_permission_name",
+            )
+            access_status = st.selectbox(
+                "Access status",
+                ["Active", "Inactive", "Pending Review"],
+                key="add_user_initial_access_status",
+            )
+            granted_date = st.date_input(
+                "Granted date",
+                value=date.today(),
+                key="add_user_initial_granted_date",
+            )
+            source = st.text_input(
+                "Source",
+                value="Direct User Entry",
+                key="add_user_initial_source",
+            )
+
+        submitted = st.form_submit_button("Add User", type="primary")
+
+    if not submitted:
+        return
+
+    if not first_name or not last_name or not email:
+        st.error("First name, last name, and email are required.")
+        return
+
+    if add_initial_access and (not resource_name or not permission_name):
+        st.error("Resource name and permission name are required for the initial access assignment.")
+        return
+
+    manager_user_id = ""
+    if manager_label != "Not assigned":
+        manager_user_id = manager_options[
+            manager_options["manager_label"] == manager_label
+        ].iloc[0]["user_id"]
+
+    user_outcome = add_user_record(
+        next_user_id,
+        first_name,
+        last_name,
+        email,
+        application_role,
+        manager_user_id,
+        department,
+        user_type,
+        record_status,
+        annual_training_date,
+        biennial_training_date,
+        access_agreement_date,
+    )
+
+    if user_outcome == "duplicate":
+        st.error("A user with this generated ID already exists.")
+        return
+
+    if add_initial_access:
+        selected_system_id = system_options[
+            system_options["system_label"] == selected_system_label
+        ].iloc[0]["system_id"]
+
+        apply_single_access_record_change(
+            "Add new access record",
+            generate_next_access_id(st.session_state["editable_access_assignments"]),
+            next_user_id,
+            selected_system_id,
+            resource_type,
+            resource_name,
+            permission_name,
+            access_status,
+            granted_date,
+            None,
+            source,
+        )
+
+    st.success("User added for this demo session.")
+    st.rerun()
+
+
+def render_add_edit_access_form():
     """Render direct single-record add/edit access management workflow."""
-    st.subheader("User Access Management")
+    st.subheader("Add / Edit Access")
     st.caption(
         "Add or edit one user access assignment without uploading a reconciliation file. "
         "Super Administrators can manage all systems. System Administrators can manage "
@@ -1491,22 +1758,22 @@ def render_user_access_management_tab():
             scoped_current_access["user_id"].isin(allowed_users["user_id"])
         ]
 
-    st.markdown("### Current Manageable Access Records")
-    if scoped_current_access.empty:
-        st.info("No existing access records are currently available in this management scope.")
-    else:
-        st.dataframe(
-            scoped_current_access.merge(
-                allowed_systems[["system_id", "system_name"]],
-                on="system_id",
-                how="left",
-            ).merge(
-                all_users[["user_id", "display_name", "email"]],
-                on="user_id",
-                how="left",
-            ),
-            use_container_width=True,
-        )
+    with st.expander("Current manageable access records", expanded=False):
+        if scoped_current_access.empty:
+            st.info("No existing access records are currently available in this management scope.")
+        else:
+            st.dataframe(
+                scoped_current_access.merge(
+                    allowed_systems[["system_id", "system_name"]],
+                    on="system_id",
+                    how="left",
+                ).merge(
+                    all_users[["user_id", "display_name", "email"]],
+                    on="user_id",
+                    how="left",
+                ),
+                use_container_width=True,
+            )
 
     selected_existing = None
     if mode == "Edit existing access record":
@@ -1696,8 +1963,227 @@ def render_user_access_management_tab():
             st.rerun()
 
 
-def render_access_reconciliation_tab():
-    st.subheader("Access Reconciliation")
+def render_user_access_management_tab():
+    """Render direct add/edit workflows for users and access assignments."""
+    st.subheader("Edit / Add Access")
+    st.caption(
+        "Add users and manage individual access assignments without uploading a reconciliation file."
+    )
+
+    allowed_systems = get_allowed_management_systems()
+
+    access_tab, user_tab = st.tabs(["Add / Edit Access", "Add User"])
+    with access_tab:
+        render_add_edit_access_form()
+
+    with user_tab:
+        render_add_user_form(allowed_systems)
+
+
+
+
+def normalize_date_value(value):
+    """Return a normalized date string for comparison and display."""
+    if pd.isna(value) or value == "":
+        return ""
+    return str(pd.to_datetime(value).date())
+
+
+
+def uploaded_dates_compliance_status(uploaded_values):
+    """Return compliance status based on uploaded training and agreement dates."""
+    today_ts = pd.Timestamp(date.today())
+
+    annual_date = pd.to_datetime(uploaded_values.get("annual_training_date", ""))
+    biennial_date = pd.to_datetime(uploaded_values.get("biennial_training_date", ""))
+
+    if pd.isna(annual_date) or pd.isna(biennial_date):
+        return "Expired"
+
+    annual_exp = annual_date + pd.DateOffset(years=ANNUAL_TRAINING_VALID_YEARS)
+    biennial_exp = biennial_date + pd.DateOffset(years=BIENNIAL_TRAINING_VALID_YEARS)
+
+    if annual_exp < today_ts or biennial_exp < today_ts:
+        return "Expired"
+
+    warning_date = today_ts + pd.Timedelta(days=EXPIRING_SOON_DAYS)
+    if annual_exp <= warning_date or biennial_exp <= warning_date:
+        return "Expiring Soon"
+
+    return "Current"
+
+
+def inactivate_user_record(user_id):
+    """Mark one user record inactive in the session-state user registry."""
+    current_users = st.session_state["editable_users"].copy()
+    user_mask = current_users["user_id"] == user_id
+
+    if not user_mask.any():
+        return "skipped"
+
+    current_users.loc[user_mask, "record_status"] = "Inactive"
+    current_users.loc[user_mask, "updated_date"] = pd.Timestamp(date.today())
+    st.session_state["editable_users"] = current_users
+    return "inactivated"
+
+
+def reconcile_training_dates(current_users, upload_df):
+    """Compare current user compliance dates to an uploaded date export."""
+    current = current_users.copy()
+    upload = upload_df.copy()
+
+    for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
+        current[column] = current[column].apply(normalize_date_value)
+        upload[column] = upload[column].apply(normalize_date_value)
+
+    current_lookup = current.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict("index")
+    upload_lookup = upload.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict("index")
+    current_status_lookup = current.set_index("user_id")["record_status"].to_dict()
+
+    rows = []
+    all_user_ids = sorted(set(current_lookup.keys()) | set(upload_lookup.keys()))
+
+    for user_id in all_user_ids:
+        current_values = current_lookup.get(user_id)
+        uploaded_values = upload_lookup.get(user_id)
+
+        if current_values is None:
+            change_type = "User Not Found in AccessAtlas"
+            recommended_action = "Review user record"
+            changes = "Uploaded user is not present in the current user registry."
+        elif uploaded_values is None:
+            change_type = "User Not Found in Upload"
+            recommended_action = "No action"
+            changes = "No uploaded date record was provided for this user."
+        else:
+            uploaded_compliance = uploaded_dates_compliance_status(uploaded_values)
+            changed_fields = []
+
+            for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
+                current_value = current_values.get(column, "")
+                uploaded_value = uploaded_values.get(column, "")
+                if current_value != uploaded_value:
+                    changed_fields.append(
+                        f"{column}: {current_value or 'Blank'} → {uploaded_value or 'Blank'}"
+                    )
+
+            if uploaded_compliance == "Expired":
+                change_type = "User Remains Out of Compliance"
+                recommended_action = "Inactivate user record"
+                changes = (
+                    "Uploaded dates confirm the user remains out of compliance. "
+                    + ("; ".join(changed_fields) if changed_fields else "No date changes provided.")
+                )
+            elif changed_fields:
+                change_type = "Date Changed"
+                recommended_action = "Update date records"
+                changes = "; ".join(changed_fields)
+            else:
+                change_type = "No Change"
+                recommended_action = "No action"
+                changes = "No date changes detected."
+
+        row = {
+            "user_id": user_id,
+            "current_record_status": current_status_lookup.get(user_id, ""),
+            "change_type": change_type,
+            "recommended_action": recommended_action,
+            "changes_identified": changes,
+        }
+
+        for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
+            row[f"current_{column}"] = (
+                current_values.get(column, "") if current_values else ""
+            )
+            row[f"uploaded_{column}"] = (
+                uploaded_values.get(column, "") if uploaded_values else ""
+            )
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+
+def apply_training_date_actions(selected_rows):
+    """Apply selected training date reconciliation actions to session state."""
+    initialize_user_update_state()
+
+    results = []
+    counts = {"updated": 0, "inactivated": 0, "skipped": 0}
+
+    for _, row in selected_rows.iterrows():
+        if row["recommended_action"] == "Update date records":
+            update_user_compliance_dates(
+                row["user_id"],
+                row["uploaded_annual_training_date"],
+                row["uploaded_biennial_training_date"],
+                row["uploaded_access_agreement_date"],
+            )
+            counts["updated"] += 1
+            results.append(
+                {
+                    "audit_event_id": generate_audit_event_id(),
+                    "action_result": "Success",
+                    "changes_made": row.get("changes_identified", "Date records updated."),
+                    "recommended_action": row["recommended_action"],
+                    "change_type": row["change_type"],
+                    "user_id": row["user_id"],
+                    "first_name": row.get("first_name", ""),
+                    "last_name": row.get("last_name", ""),
+                    "changes_identified": row.get("changes_identified", ""),
+                }
+            )
+            continue
+
+        if row["recommended_action"] == "Inactivate user record":
+            outcome = inactivate_user_record(row["user_id"])
+            counts["inactivated" if outcome == "inactivated" else "skipped"] += 1
+            results.append(
+                {
+                    "audit_event_id": generate_audit_event_id() if outcome == "inactivated" else "",
+                    "action_result": "Success" if outcome == "inactivated" else "Skipped",
+                    "changes_made": "User record status set to Inactive." if outcome == "inactivated" else "User record was not changed.",
+                    "recommended_action": row["recommended_action"],
+                    "change_type": row["change_type"],
+                    "user_id": row["user_id"],
+                    "first_name": row.get("first_name", ""),
+                    "last_name": row.get("last_name", ""),
+                    "changes_identified": row.get("changes_identified", ""),
+                }
+            )
+            continue
+
+        counts["skipped"] += 1
+        results.append(
+            {
+                "audit_event_id": "",
+                "action_result": "Skipped",
+                "changes_made": "No date or user status update was applied.",
+                "recommended_action": row["recommended_action"],
+                "change_type": row["change_type"],
+                "user_id": row["user_id"],
+                "first_name": row.get("first_name", ""),
+                "last_name": row.get("last_name", ""),
+                "changes_identified": row.get("changes_identified", ""),
+            }
+        )
+
+    return counts, pd.DataFrame(results)
+
+
+def display_recommended_action(action):
+    """Return a concise display label for a reconciliation recommended action."""
+    action_labels = {
+        "Review and add access record": "Add access record",
+        "Review for inactive status": "Inactivate",
+        "Review and update access status": "Update access status",
+        "No action": "No action",
+    }
+    return action_labels.get(action, action)
+
+
+def render_system_access_export_reconciliation_tab():
+    st.subheader("System Access Export File Upload")
     st.write(
         """
         Upload an access export from a tracked system and compare it against the current
@@ -1760,44 +2246,142 @@ def render_access_reconciliation_tab():
 
     st.success("Uploaded file contains all required reconciliation columns.")
 
-    system_options = ["All Systems"] + systems["system_id"].tolist()
+    system_options = systems["system_id"].tolist()
     selected_system = st.selectbox(
-        "Select reconciliation scope",
+        "Select system for reconciliation",
         system_options,
         key="reconciliation_scope",
     )
+    selected_system_name = systems[
+        systems["system_id"] == selected_system
+    ].iloc[0]["system_name"]
+
+    st.caption(
+        f"Access export uploads are evaluated for one system at a time. "
+        f"This run is scoped to **{selected_system_name} ({selected_system})**."
+    )
+
+    scoped_uploaded_df = uploaded_df[
+        uploaded_df["system_id"] == selected_system
+    ].copy()
+
+    if scoped_uploaded_df.empty:
+        st.warning(
+            "The uploaded export does not contain records for the selected system. "
+            "Choose a different system or upload a file for this system."
+        )
+        st.stop()
+
+    other_system_count = len(uploaded_df[uploaded_df["system_id"] != selected_system])
+    if other_system_count > 0:
+        st.info(
+            f"{other_system_count} uploaded records for other systems are excluded "
+            "from this reconciliation run."
+        )
 
     st.markdown("### Uploaded Access Export")
-    st.dataframe(uploaded_df, use_container_width=True)
-
-    result = reconcile(access, uploaded_df, selected_system_id=selected_system)
-    result_with_system = result.merge(
-        systems[["system_id", "system_name"]],
-        on="system_id",
-        how="left",
-    )
-
-    st.markdown("### Reconciliation Summary by Change Type")
     st.dataframe(
-        count_by(result_with_system, "change_type"),
+        scoped_uploaded_df,
         use_container_width=True,
     )
 
-    st.markdown("### Reconciliation Summary by Resource Type")
-    st.dataframe(
-        count_by(result_with_system, "resource_type"),
-        use_container_width=True,
+    result = reconcile(access, scoped_uploaded_df, selected_system_id=selected_system)
+    result_with_system = (
+        result.merge(
+            all_users[["user_id", "first_name", "last_name"]],
+            on="user_id",
+            how="left",
+        )
+        .merge(
+            systems[["system_id", "system_name"]],
+            on="system_id",
+            how="left",
+        )
+    )
+    result_with_system["recommended_action"] = result_with_system[
+        "recommended_action"
+    ].apply(display_recommended_action)
+
+    st.markdown("### Reconciliation Summary")
+    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+
+    change_counts = result_with_system["change_type"].value_counts().to_dict()
+    summary_col1.metric(
+        "Add Access",
+        change_counts.get("New Access in Upload", 0),
+    )
+    summary_col2.metric(
+        "Inactivate",
+        change_counts.get("Access Not Found in Upload", 0),
+    )
+    summary_col3.metric(
+        "Update Status",
+        change_counts.get("Status Changed", 0),
+    )
+    summary_col4.metric(
+        "No Change",
+        change_counts.get("No Change", 0),
     )
 
-    st.markdown("### Action Queue")
+    with st.expander("View reconciliation summary tables"):
+        st.markdown("#### Summary by Change Type")
+        st.dataframe(
+            count_by(result_with_system, "change_type"),
+            use_container_width=True,
+        )
+
+        st.markdown("#### Summary by Resource Type")
+        st.dataframe(
+            count_by(result_with_system, "resource_type"),
+            use_container_width=True,
+        )
+
+    st.markdown("### Reconciliation Queue")
+    st.caption(
+        "All record changes should be reviewed before applying recommended actions. "
+        "This demo updates only the in-session access assignment table."
+    )
     action_queue = result_with_system[
         result_with_system["recommended_action"] != "No action"
     ].copy()
 
+    queue_change_type_filter = st.multiselect(
+        "Filter reconciliation queue by change type",
+        sorted(action_queue["change_type"].dropna().unique()),
+        key="reconciliation_queue_change_type_filter",
+    )
+    action_queue = apply_multiselect_filter(
+        action_queue,
+        "change_type",
+        queue_change_type_filter,
+    )
+
     if action_queue.empty:
-        st.success("No reconciliation results currently require follow-up.")
+        st.success("No reconciliation results currently require follow-up for the selected filters.")
     else:
         action_queue.insert(0, "apply_action", False)
+        queue_column_order = [
+            "apply_action",
+            "recommended_action",
+            "change_type",
+            "user_id",
+            "first_name",
+            "last_name",
+            "system_id",
+            "system_name",
+            "resource_type",
+            "resource_name",
+            "permission_name",
+            "current_access_status",
+            "uploaded_access_status",
+            "source_system_record_id",
+        ]
+        queue_columns = [
+            column for column in queue_column_order if column in action_queue.columns
+        ] + [
+            column for column in action_queue.columns if column not in queue_column_order
+        ]
+        action_queue = action_queue[queue_columns]
         editable_action_queue = st.data_editor(
             action_queue,
             use_container_width=True,
@@ -1829,11 +2413,12 @@ def render_access_reconciliation_tab():
             key="apply_reconciliation_actions_button",
             disabled=selected_actions.empty,
         ):
-            updated_access, action_counts = apply_reconciliation_actions(
+            updated_access, action_counts, action_results = apply_reconciliation_actions(
                 st.session_state["editable_access_assignments"],
                 selected_actions,
             )
             st.session_state["editable_access_assignments"] = updated_access
+            st.session_state["reconciliation_action_results"] = action_results
             st.success(
                 "Applied reconciliation actions: "
                 f"{action_counts['added']} added, "
@@ -1844,22 +2429,257 @@ def render_access_reconciliation_tab():
             st.rerun()
 
     st.markdown("### Reconciliation Results")
-    change_type_filter = st.multiselect(
-        "Filter by change type",
-        sorted(result_with_system["change_type"].dropna().unique()),
-        key="change_type_filter",
+    st.caption(
+        "After Apply Recommended Actions is pressed, this section shows the action "
+        "outcomes for records changed from the Reconciliation Queue. In production, "
+        "these action results would be displayed after the action completes and "
+        "written to an audit log."
     )
 
-    filtered_results = result_with_system.copy()
-    filtered_results = apply_multiselect_filter(
-        filtered_results,
+    action_results = st.session_state.get("reconciliation_action_results", pd.DataFrame())
+    if not action_results.empty:
+        st.markdown("#### Applied Action Results")
+        st.caption(
+            "These rows summarize what changed during the most recent reconciliation "
+            "action run in this demo session."
+        )
+        action_result_columns = [
+            "audit_event_id",
+            "action_result",
+            "changes_made",
+            "recommended_action",
+            "change_type",
+            "user_id",
+            "first_name",
+            "last_name",
+            "system_id",
+            "system_name",
+            "resource_type",
+            "resource_name",
+            "permission_name",
+            "current_access_status",
+            "uploaded_access_status",
+            "source_system_record_id",
+        ]
+        visible_action_result_columns = [
+            column for column in action_result_columns if column in action_results.columns
+        ]
+        st.dataframe(
+            action_results[visible_action_result_columns],
+            use_container_width=True,
+        )
+    else:
+        st.info(
+            "No reconciliation actions have been applied yet in this demo session. "
+            "Select records in the Reconciliation Queue and click Apply Recommended Actions "
+            "to populate action results."
+        )
+
+
+
+
+
+def render_training_date_reconciliation_tab():
+    """Render training certificate and agreement date reconciliation workflow."""
+    st.subheader("Training Certificate Date and Agreement Reconciliation")
+    st.write(
+        """
+        Upload a training or agreement date export and compare it against the current
+        AccessAtlas user compliance date records.
+        """
+    )
+
+    with st.expander("Expected upload schema"):
+        st.write("Uploaded files should include the following required columns:")
+        st.dataframe(
+            pd.DataFrame(
+                {
+                    "column_name": TRAINING_RECONCILIATION_REQUIRED_COLUMNS,
+                    "description": [
+                        "Unique user identifier",
+                        "Annual training completion date",
+                        "Biennial training completion date",
+                        "Access agreement completion date",
+                    ],
+                }
+            ),
+            use_container_width=True,
+        )
+
+    uploaded_training_file = st.file_uploader(
+        "Upload CSV with user_id, annual_training_date, biennial_training_date, access_agreement_date",
+        type=["csv"],
+        key="training_reconciliation_upload",
+    )
+
+    if uploaded_training_file:
+        training_upload_df = pd.read_csv(
+            uploaded_training_file,
+            parse_dates=TRAINING_RECONCILIATION_DATE_COLUMNS,
+        )
+    else:
+        training_upload_df = pd.read_csv(
+            DATA_DIR / "sample_training_reconciliation_upload.csv",
+            parse_dates=TRAINING_RECONCILIATION_DATE_COLUMNS,
+        )
+        st.caption("Using bundled sample training date reconciliation export.")
+
+    missing_columns = validate_upload(
+        training_upload_df,
+        TRAINING_RECONCILIATION_REQUIRED_COLUMNS,
+    )
+    if missing_columns:
+        st.error(
+            "Uploaded file is missing required columns: "
+            + ", ".join(missing_columns)
+        )
+        st.stop()
+
+    scoped_training_upload_df = training_upload_df[
+        training_upload_df["user_id"].isin(users["user_id"])
+    ].copy()
+    excluded_count = len(training_upload_df) - len(scoped_training_upload_df)
+    if excluded_count > 0:
+        st.info(
+            f"{excluded_count} uploaded records outside the current visible user scope "
+            "are excluded from this reconciliation run."
+        )
+
+    st.markdown("### Uploaded Training Date Export")
+    st.dataframe(scoped_training_upload_df, use_container_width=True)
+
+    training_result = reconcile_training_dates(users, scoped_training_upload_df)
+    training_result = training_result.merge(
+        all_users[["user_id", "first_name", "last_name", "display_name"]],
+        on="user_id",
+        how="left",
+    )
+
+    st.markdown("### Training Date Reconciliation Summary")
+    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+    change_counts = training_result["change_type"].value_counts().to_dict()
+    summary_col1.metric("Date Changes", change_counts.get("Date Changed", 0))
+    summary_col2.metric("Review Inactivation", change_counts.get("User Remains Out of Compliance", 0))
+    summary_col3.metric("No Change", change_counts.get("No Change", 0))
+    summary_col4.metric("Missing in Registry", change_counts.get("User Not Found in AccessAtlas", 0))
+
+    st.markdown("### Training Date Reconciliation Queue")
+    st.caption(
+        "All date changes should be reviewed before applying recommended updates. "
+        "This demo updates only the in-session user compliance date records."
+    )
+
+    training_queue = training_result[
+        training_result["recommended_action"] != "No action"
+    ].copy()
+
+    queue_change_type_filter = st.multiselect(
+        "Filter training reconciliation queue by change type",
+        sorted(training_queue["change_type"].dropna().unique()),
+        key="training_reconciliation_queue_change_type_filter",
+    )
+    training_queue = apply_multiselect_filter(
+        training_queue,
         "change_type",
-        change_type_filter,
+        queue_change_type_filter,
     )
 
-    st.dataframe(filtered_results, use_container_width=True)
+    if training_queue.empty:
+        st.success("No training date reconciliation records currently require follow-up.")
+    else:
+        training_queue.insert(0, "apply_action", False)
+        queue_column_order = [
+            "apply_action",
+            "recommended_action",
+            "change_type",
+            "user_id",
+            "first_name",
+            "last_name",
+            "current_record_status",
+            "changes_identified",
+            "current_annual_training_date",
+            "uploaded_annual_training_date",
+            "current_biennial_training_date",
+            "uploaded_biennial_training_date",
+            "current_access_agreement_date",
+            "uploaded_access_agreement_date",
+        ]
+        queue_columns = [
+            column for column in queue_column_order if column in training_queue.columns
+        ] + [
+            column for column in training_queue.columns if column not in queue_column_order
+        ]
+
+        editable_training_queue = st.data_editor(
+            training_queue[queue_columns],
+            use_container_width=True,
+            hide_index=True,
+            key="training_reconciliation_queue_editor",
+            column_config={
+                "apply_action": st.column_config.CheckboxColumn(
+                    "Apply?",
+                    help="Select rows to update training and agreement dates.",
+                    default=False,
+                )
+            },
+            disabled=[
+                column for column in queue_columns if column != "apply_action"
+            ],
+        )
+
+        selected_training_actions = editable_training_queue[
+            editable_training_queue["apply_action"] == True
+        ].drop(columns=["apply_action"])
+
+        if st.button(
+            "Apply Training Date Updates",
+            key="apply_training_reconciliation_actions_button",
+            disabled=selected_training_actions.empty,
+        ):
+            action_counts, action_results = apply_training_date_actions(
+                selected_training_actions,
+            )
+            st.session_state["training_reconciliation_action_results"] = action_results
+            st.success(
+                "Applied training date reconciliation actions: "
+                f"{action_counts['updated']} updated, "
+                f"{action_counts['inactivated']} inactivated, "
+                f"{action_counts['skipped']} skipped."
+            )
+            st.rerun()
+
+    st.markdown("### Training Date Reconciliation Results")
+    st.caption(
+        "After Apply Training Date Updates is pressed, this section shows the action "
+        "outcomes for records changed from the Training Date Reconciliation Queue."
+    )
+
+    training_action_results = st.session_state.get(
+        "training_reconciliation_action_results",
+        pd.DataFrame(),
+    )
+    if training_action_results.empty:
+        st.info(
+            "No training date reconciliation actions have been applied yet in this demo session."
+        )
+    else:
+        st.dataframe(training_action_results, use_container_width=True)
 
 
+def render_access_reconciliation_tab():
+    """Render access and training reconciliation workflow tabs."""
+    access_export_tab, training_dates_tab = st.tabs(
+        [
+            "System Access Export File Upload",
+            "Training Certificate Date and Agreement Reconciliation",
+        ]
+    )
+
+    with access_export_tab:
+        render_system_access_export_reconciliation_tab()
+
+    with training_dates_tab:
+        render_training_date_reconciliation_tab()
 
 
 
@@ -1871,9 +2691,7 @@ def render_dashboard_section():
     try:
         uploaded_df = pd.read_csv(DATA_DIR / "sample_access_upload.csv")
         pending_reconciliation = len(
-            reconcile(access, uploaded_df)[
-                lambda df: df["recommended_action"] != "No action"
-            ]
+            reconcile(access, uploaded_df)[lambda df: df["recommended_action"] != "No action"]
         )
     except Exception:
         pending_reconciliation = 0
@@ -1885,22 +2703,11 @@ def render_dashboard_section():
         ]
     )
 
-    expired_or_expiring = len(
-        users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]
-    )
-
-    st.markdown("### At-a-glance summary")
     d1, d2, d3, d4 = st.columns(4)
     d1.metric("Visible Users", len(users))
     d2.metric("Visible Systems", len(systems))
     d3.metric("Access Records", len(access))
     d4.metric("Items Needing Review", pending_reconciliation + active_follow_up)
-
-    st.markdown("### Governance health")
-    h1, h2, h3 = st.columns(3)
-    h1.metric("Expired / Expiring Compliance", expired_or_expiring)
-    h2.metric("Pending Reconciliation Actions", pending_reconciliation)
-    h3.metric("Active Compliance Follow-Up", active_follow_up)
 
     if current_user["application_role"] == "User":
         st.info(
@@ -1909,7 +2716,7 @@ def render_dashboard_section():
     elif current_user["application_role"] == "System Administrator":
         st.info(
             "Use Manage Access to review users and systems in your administered scope. "
-            "Use Review Changes to process reconciliation exceptions."
+            "Use Access Reconciliation to process reconciliation exceptions."
         )
     elif current_user["application_role"] == "Manager":
         st.info(
@@ -1918,98 +2725,61 @@ def render_dashboard_section():
         )
     else:
         st.info(
-            "Use Manage Access for user/system records, Review Changes for reconciliation, "
+            "Use Manage Access for user/system records, Access Reconciliation for reconciliation, "
             "and Administration for compliance and administrative coverage."
         )
 
-    st.markdown("### Visual summary")
+    with st.expander("View dashboard details"):
+        st.markdown("### User Record Status")
+        st.dataframe(count_by(users, "record_status", "users"), use_container_width=True)
 
-    chart_col1, chart_col2 = st.columns(2)
+        st.markdown("### Compliance Status")
+        st.dataframe(count_by(users, "compliance_status", "users"), use_container_width=True)
 
-    with chart_col1:
-        st.markdown("#### Compliance status")
-        compliance_summary = count_by(users, "compliance_status", "users")
-        st.bar_chart(
-            compliance_summary,
-            x="compliance_status",
-            y="users",
-        )
-
-    with chart_col2:
-        st.markdown("#### Access by status")
-        access_status_summary = count_by(access, "access_status", "records")
-        st.bar_chart(
-            access_status_summary,
-            x="access_status",
-            y="records",
-        )
-
-    chart_col3, chart_col4 = st.columns(2)
-
-    with chart_col3:
-        st.markdown("#### Users by record status")
-        user_status_summary = count_by(users, "record_status", "users")
-        st.bar_chart(
-            user_status_summary,
-            x="record_status",
-            y="users",
-        )
-
-    with chart_col4:
-        st.markdown("#### Access by resource type")
-        resource_summary = count_by(access_with_systems, "resource_type", "records")
-        st.bar_chart(
-            resource_summary,
-            x="resource_type",
-            y="records",
-        )
-
-    with st.expander("View source summary tables"):
-        st.caption(
-            "These tables show the counts used in the dashboard visualizations."
-        )
-
-        st.markdown("#### User record status")
-        st.dataframe(user_status_summary, use_container_width=True)
-
-        st.markdown("#### Compliance status")
-        st.dataframe(compliance_summary, use_container_width=True)
-
-        st.markdown("#### Access records by system type")
+        st.markdown("### Access Records by System Type")
         st.dataframe(count_by(access_with_systems, "system_type"), use_container_width=True)
 
-        st.markdown("#### Access records by resource type")
-        st.dataframe(resource_summary, use_container_width=True)
+        st.markdown("### Access Records by Resource Type")
+        st.dataframe(count_by(access_with_systems, "resource_type"), use_container_width=True)
 
-        st.markdown("#### Access records by access status")
-        st.dataframe(access_status_summary, use_container_width=True)
+        st.markdown("### Access Records by Access Status")
+        st.dataframe(count_by(access, "access_status"), use_container_width=True)
 
 
 def render_manage_access_section():
     """Render user/system access workflows in a streamlined task section."""
     st.subheader("Manage Access")
     st.caption(
-        "Review users and systems in your visible scope. Direct manual edits are available "
+        "Review managed users and systems, and perform scoped add/edit workflows "
         "where permitted by the selected demo role."
     )
 
-    with st.expander("Users in Scope", expanded=True):
+    managed_users_tab, managed_systems_tab, edit_access_tab = st.tabs(
+        ["Managed Users", "Managed Systems", "Edit / Add Access"]
+    )
+
+    with managed_users_tab:
         render_users_tab()
 
-    with st.expander("Systems in Scope"):
+    with managed_systems_tab:
         render_systems_tab()
 
-    if current_user["application_role"] in ["System Administrator", "Super Administrator"]:
-        with st.expander("Manual Single-Record Access Add/Edit"):
+    with edit_access_tab:
+        if current_user["application_role"] in ["System Administrator", "Super Administrator"]:
             render_user_access_management_tab()
+        else:
+            st.info(
+                "Direct add/edit access management is available to System Administrator "
+                "and Super Administrator demo roles."
+            )
 
 
 def render_review_changes_section():
     """Render reconciliation and action queue workflows."""
-    st.subheader("Review Changes")
+    st.subheader("Access Reconciliation")
     st.caption(
-        "Upload or review access exports, inspect differences, and apply recommended "
-        "session-state updates from the reconciliation action queue."
+        "Upload or review system access exports, inspect differences, and apply "
+        "recommended session-state updates from the reconciliation queue."
     )
     render_access_reconciliation_tab()
 
@@ -2031,19 +2801,17 @@ TAB_RENDERERS = {
     "Dashboard": render_dashboard_section,
     "My Access": render_my_record_tab,
     "Manage Access": render_manage_access_section,
-    "Review Changes": render_review_changes_section,
+    "Access Reconciliation": render_review_changes_section,
     "Administration": render_administration_section,
 }
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]
 
-st.caption("Select a workflow section")
 selected_section = st.radio(
     "Application section",
     active_tabs,
     horizontal=True,
     key="active_application_section",
-    label_visibility="collapsed",
 )
 
 render_sidebar_guidance(selected_section)

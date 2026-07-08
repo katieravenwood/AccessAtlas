@@ -56,7 +56,7 @@ ROLE_VISIBLE_TABS = {
         "My Access",
         "Manage Access",
         "Access Reconciliation",
-        "Administration",
+        "AccessAtlas App Admin",
     ],
 }
 
@@ -65,7 +65,7 @@ TAB_LABELS = [
     "My Access",
     "Manage Access",
     "Access Reconciliation",
-    "Administration",
+    "AccessAtlas App Admin",
 ]
 
 
@@ -290,6 +290,116 @@ def count_by(dataframe, columns, count_name="records"):
         columns = [columns]
     return dataframe.groupby(columns).size().reset_index(name=count_name)
 
+
+
+COLUMN_LABELS = {
+    "access_agreement_date": "Access Agreement Date",
+    "access_id": "Access ID",
+    "access_model": "Access Model",
+    "access_records": "Access Records",
+    "access_status": "Access Status",
+    "admin_assignment_count": "Admin Assignments",
+    "admin_group": "Admin Group",
+    "admin_role": "Admin Role",
+    "annual_training_date": "Annual Training Date",
+    "annual_training_expiration": "Annual Training Expiration",
+    "application_role": "Application Role",
+    "assignment_source": "Assignment Source",
+    "assignment_status": "Assignment Status",
+    "assigned_by": "Assigned By",
+    "assigned_users": "Assigned Users",
+    "audit_event_id": "Audit Event ID",
+    "biennial_training_date": "Biennial Training Date",
+    "biennial_training_expiration": "Biennial Training Expiration",
+    "change_type": "Change Type",
+    "changes_identified": "Changes Identified",
+    "changes_made": "Changes Made",
+    "compliance_status": "Compliance Status",
+    "current_access_agreement_date": "Current Access Agreement Date",
+    "current_access_status": "Current Access Status",
+    "current_annual_training_date": "Current Annual Training Date",
+    "current_biennial_training_date": "Current Biennial Training Date",
+    "current_record_status": "Current Record Status",
+    "department": "Department",
+    "display_name": "Display Name",
+    "email": "Email",
+    "expiration_date": "Expiration Date",
+    "expiration_status": "Expiration Status",
+    "first_name": "First Name",
+    "granted_date": "Granted Date",
+    "last_name": "Last Name",
+    "manager_user_id": "Manager User ID",
+    "notes": "Notes",
+    "permission_name": "Permission",
+    "record_status": "Record Status",
+    "record_type": "Record Type",
+    "recommended_action": "Recommended Action",
+    "resource_name": "Resource Name",
+    "resource_scope": "Resource Scope",
+    "resource_type": "Resource Type",
+    "revoked_date": "Revoked Date",
+    "source": "Source",
+    "source_system_record_id": "Source Record ID",
+    "system_category": "System Category",
+    "system_id": "System ID",
+    "system_name": "System Name",
+    "system_owner": "System Owner",
+    "system_type": "System Type",
+    "tracking_method": "Tracking Method",
+    "uploaded_access_agreement_date": "Uploaded Access Agreement Date",
+    "uploaded_access_status": "Uploaded Access Status",
+    "uploaded_annual_training_date": "Uploaded Annual Training Date",
+    "uploaded_biennial_training_date": "Uploaded Biennial Training Date",
+    "user_id": "User ID",
+    "user_type": "User Type",
+    "users": "Users",
+}
+
+
+def display_table(dataframe):
+    """Return a copy of a dataframe with user-friendly column labels."""
+    return dataframe.rename(columns=COLUMN_LABELS)
+
+
+def show_dataframe(dataframe, **kwargs):
+    """Render a dataframe with user-friendly column labels."""
+    if "use_container_width" in kwargs:
+        kwargs["width"] = "stretch" if kwargs.pop("use_container_width") else "content"
+    kwargs.setdefault("width", "stretch")
+    st.dataframe(
+        display_table(dataframe),
+        **kwargs,
+    )
+
+
+def get_expired_follow_up_records(user_records):
+    """Return individual expired compliance records needing follow-up."""
+    follow_up_rows = []
+    today_ts = pd.Timestamp(date.today())
+
+    for _, user_row in user_records.iterrows():
+        checks = [
+            ("Annual Training", user_row.get("annual_training_expiration")),
+            ("Biennial Training", user_row.get("biennial_training_expiration")),
+        ]
+
+        for record_type, expiration_date in checks:
+            if pd.isna(expiration_date):
+                continue
+            expiration_ts = pd.to_datetime(expiration_date)
+            if expiration_ts < today_ts:
+                follow_up_rows.append(
+                    {
+                        "user_id": user_row.get("user_id"),
+                        "display_name": user_row.get("display_name"),
+                        "email": user_row.get("email"),
+                        "record_type": record_type,
+                        "expiration_date": expiration_ts.date(),
+                        "expiration_status": "Expired",
+                    }
+                )
+
+    return pd.DataFrame(follow_up_rows)
 
 def get_display_name(users, user_id):
     """Return a display name for a user ID when available."""
@@ -550,10 +660,10 @@ def render_sidebar_guidance(selected_section):
             uploaded access exports.
             """,
         },
-        "Administration": {
+        "AccessAtlas App Admin": {
             "title": "Administration Guidance",
             "body": """
-            Administration contains compliance monitoring and administrator coverage
+            AccessAtlas App Admin contains compliance monitoring and administrator coverage
             views for Super Administrators.
             """,
         },
@@ -905,9 +1015,19 @@ st.sidebar.write(
 )
 
 demo_options = get_demo_user_options(users)
+demo_labels = demo_options["demo_label"].tolist()
+default_demo_index = next(
+    (
+        index
+        for index, label in enumerate(demo_labels)
+        if label.startswith("Casey Rivera")
+    ),
+    0,
+)
 selected_demo_label = st.sidebar.selectbox(
     "View app as",
-    demo_options["demo_label"].tolist(),
+    demo_labels,
+    index=default_demo_index,
 )
 current_user = get_current_demo_user(users, selected_demo_label)
 visible_tabs = get_visible_tabs(current_user["application_role"])
@@ -960,31 +1080,31 @@ def render_overview_tab():
     st.markdown("### User Record Status")
     st.dataframe(
     count_by(users, "record_status", "users"), 
-    use_container_width=True,
+    width='stretch',
     )
 
     st.markdown("### Compliance Status")
     st.dataframe(
     count_by(users, "compliance_status", "users"), 
-    use_container_width=True,
+    width='stretch',
     )
 
     st.markdown("### Access Records by System Type")
     st.dataframe(
     count_by(access_with_systems, "system_type"), 
-    use_container_width=True,
+    width='stretch',
     )
 
     st.markdown("### Access Records by Resource Type")
     st.dataframe(
     count_by(access_with_systems, "resource_type"), 
-    use_container_width=True,
+    width='stretch',
     )
 
     st.markdown("### Access Records by Access Status")
     st.dataframe(
     count_by(access, "access_status"), 
-    use_container_width=True,
+    width='stretch',
     )
 
 
@@ -1038,40 +1158,36 @@ def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
                 },
             ]
         ),
-        use_container_width=True,
+        width='stretch',
     )
 
     st.markdown("### Access by System")
     if selected_access.empty:
         st.info("This user does not currently have access assignments.")
     else:
-        st.dataframe(
+        show_dataframe(
             count_by(
                 selected_access,
                 ["system_id", "system_name", "system_type"],
                 "access_records",
-            ),
-            use_container_width=True,
+            )
         )
 
     st.markdown("### Detailed Access Assignments")
-    st.dataframe(selected_access, 
-                use_container_width=True)
+    show_dataframe(selected_access)
 
     st.markdown("### Administrative Assignments")
     if selected_admin_assignments.empty:
         st.info("This user is not assigned as an administrator for any tracked systems.")
     else:
-        st.dataframe(selected_admin_assignments, 
-                    use_container_width=True)
+        show_dataframe(selected_admin_assignments)
 
 
 def render_my_record_tab():
     """Render the self-service individual user record tab."""
-    st.subheader("My Record")
+    st.subheader("My Access")
     st.caption(
-        "This view shows the selected user's own governance profile, compliance "
-        "dates, access assignments, and administrative assignments."
+        "Review your access record and update your own certification and agreement dates."
     )
 
     current_user_id = current_user["user_id"]
@@ -1082,10 +1198,16 @@ def render_my_record_tab():
         )
         return
 
-    render_selected_user_profile(current_user_id, user_selection_enabled=False)
+    my_record_tab, update_dates_tab = st.tabs(
+        ["My Record", "Update My Certification and Agreement Dates"]
+    )
 
-    selected_user = users[users["user_id"] == current_user_id].iloc[0]
-    render_self_service_update_form(selected_user)
+    with my_record_tab:
+        render_selected_user_profile(current_user_id, user_selection_enabled=False)
+
+    with update_dates_tab:
+        selected_user = users[users["user_id"] == current_user_id].iloc[0]
+        render_self_service_update_form(selected_user)
 
 
 def render_users_tab():
@@ -1128,7 +1250,7 @@ def render_users_tab():
 
     st.dataframe(
         user_view[USER_DISPLAY_COLUMNS],
-        use_container_width=True,
+        width='stretch',
     )
 
     st.markdown("### Selected User Access Profile")
@@ -1172,8 +1294,7 @@ def render_systems_tab():
     )
     system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
 
-    st.dataframe(system_view, 
-                use_container_width=True)
+    show_dataframe(system_view)
 
     st.markdown("### Selected System Access Profile")
     selected_system_id = st.selectbox(
@@ -1227,7 +1348,7 @@ def render_systems_tab():
                     "source",
                 ]
             ],
-            use_container_width=True,
+            width='stretch',
         )
 
     st.markdown("### System Administrators")
@@ -1235,19 +1356,19 @@ def render_systems_tab():
         st.info("No system administrator assignments are currently recorded for this system.")
     else:
         st.dataframe(selected_system_admins, 
-                    use_container_width=True)
+                    width='stretch')
 
     st.markdown("### Resources and Permissions")
     if selected_system_access.empty:
         st.info("No resources or permissions are currently recorded for this system.")
     else:
-        st.dataframe(
+        show_dataframe(
             count_by(
                 selected_system_access,
                 ["resource_type", "resource_name", "permission_name", "access_status"],
                 "assigned_users",
             ),
-            use_container_width=True,
+            width='stretch',
         )
 
     st.markdown("### Generic Access Model Examples")
@@ -1263,10 +1384,134 @@ def render_systems_tab():
     )
 
 
-def render_system_admins_tab():
-    st.subheader("System Administrator Assignments")
 
-    admin_view = (
+def compliance_detail_styler(dataframe):
+    """Return a styled compliance dataframe with readable noncompliance highlighting."""
+    def style_row(row):
+        status = row.get("Compliance Status", row.get("compliance_status"))
+        if status in ["Expired", "Expiring Soon"]:
+            return [
+                "background-color: #fff7bf; color: #111111;"
+                for _ in row
+            ]
+        return ["" for _ in row]
+
+    def style_date(value):
+        if pd.isna(value) or value == "":
+            return ""
+        try:
+            date_value = pd.to_datetime(value)
+        except Exception:
+            return ""
+
+        today_ts = pd.Timestamp(date.today())
+        if date_value < today_ts:
+            return "background-color: #fff7bf; color: #b3261e; font-weight: 800;"
+        return ""
+
+    date_columns = [
+        column
+        for column in [
+            "Annual Training Expiration",
+            "Biennial Training Expiration",
+            "annual_training_expiration",
+            "biennial_training_expiration",
+        ]
+        if column in dataframe.columns
+    ]
+
+    return (
+        dataframe.style
+        .apply(style_row, axis=1)
+        .map(style_date, subset=date_columns)
+    )
+
+
+def render_labeled_metric_card(title, subtitle=None, metric_label=None, metric_value=None, detail_rows=None):
+    """Render a compact card using Streamlit-native bordered containers."""
+    with st.container(border=True):
+        st.markdown(f"### {title}")
+        if subtitle:
+            st.caption(str(subtitle))
+        if metric_label is not None and metric_value is not None:
+            st.metric(metric_label, metric_value)
+        if detail_rows:
+            for label, value in detail_rows:
+                st.write(f"**{label}:** {value}")
+
+
+def render_compliance_summary_cards(group_column, title):
+    """Render compact compliance summaries by department or user type."""
+    st.markdown(f"### {title}")
+
+    summary_rows = []
+    for group_value, group_df in users.groupby(group_column):
+        compliant_count = len(group_df[group_df["compliance_status"] == "Current"])
+        noncompliant_count = len(group_df[group_df["compliance_status"] != "Current"])
+        summary_rows.append(
+            {
+                group_column: group_value,
+                "compliant": compliant_count,
+                "noncompliant": noncompliant_count,
+            }
+        )
+
+    if not summary_rows:
+        st.info("No compliance summary records are available.")
+        return
+
+    summary_df = display_table(pd.DataFrame(summary_rows))
+
+    def style_summary(dataframe):
+        styles = pd.DataFrame("", index=dataframe.index, columns=dataframe.columns)
+        if "Compliant" in dataframe.columns:
+            styles["Compliant"] = "color: #137333; font-weight: 800;"
+        if "Noncompliant" in dataframe.columns:
+            styles["Noncompliant"] = "color: #b3261e; font-weight: 800;"
+        return styles
+
+    st.dataframe(
+        summary_df.style.apply(style_summary, axis=None),
+        hide_index=True,
+        width='stretch',
+    )
+
+
+def render_admin_coverage_cards(coverage):
+    """Render admin coverage by system as a compact summary table."""
+    st.markdown("### Admin Coverage by System")
+
+    if coverage.empty:
+        st.info("No system coverage records are available.")
+        return
+
+    coverage_view = coverage[
+        ["system_id", "system_name", "admin_assignment_count"]
+    ].rename(
+        columns={
+            "admin_assignment_count": "active_admin_assignments",
+        }
+    )
+
+    st.dataframe(
+        display_table(coverage_view),
+        hide_index=True,
+        width='stretch',
+    )
+
+
+def render_record_summary_card(title, subtitle, rows):
+    """Render a compact single-record style summary card using native containers."""
+    render_labeled_metric_card(
+        title=title,
+        subtitle=subtitle,
+        detail_rows=rows,
+    )
+
+
+def build_system_admin_view():
+    """Return the joined system administrator assignment view."""
+    return (
         system_admins.merge(
             all_users[["user_id", "display_name", "email", "department"]],
             on="user_id",
@@ -1287,6 +1532,9 @@ def render_system_admins_tab():
         )
     )
 
+
+def render_system_admin_assignments_overview(admin_view):
+    """Render assignment overview, coverage cards, filters, and assignment table."""
     a1, a2, a3, a4 = st.columns(4)
     a1.metric("Admin Assignments", len(admin_view))
     a2.metric("Unique Administrators", admin_view["user_id"].nunique())
@@ -1296,27 +1544,53 @@ def render_system_admins_tab():
         len(admin_view[admin_view["assignment_status"] == "Active"]),
     )
 
-    st.markdown("### Filters")
-    admin_role_filter = st.multiselect(
-        "Filter by admin role",
-        sorted(admin_view["admin_role"].dropna().unique()),
-        key="admin_role_filter",
+    coverage = systems[
+        ["system_id", "system_name", "system_type", "system_category", "record_status"]
+    ].merge(
+        count_by(
+            admin_view[admin_view["assignment_status"] == "Active"],
+            "system_id",
+            "admin_assignment_count",
+        ),
+        on="system_id",
+        how="left",
     )
-    assignment_status_filter = st.multiselect(
-        "Filter by assignment status",
-        sorted(admin_view["assignment_status"].dropna().unique()),
-        key="assignment_status_filter",
+    coverage["admin_assignment_count"] = (
+        coverage["admin_assignment_count"].fillna(0).astype(int)
     )
-    admin_system_type_filter = st.multiselect(
-        "Filter by system type",
-        sorted(admin_view["system_type"].dropna().unique()),
-        key="admin_system_type_filter",
+    render_admin_coverage_cards(coverage)
+
+    st.markdown("### All System Administrator Assignments")
+    st.caption(
+        "Use the filters below to narrow system administrator assignment records by role, "
+        "assignment status, system type, or system category."
     )
-    admin_system_category_filter = st.multiselect(
-        "Filter by system category",
-        sorted(admin_view["system_category"].dropna().unique()),
-        key="admin_system_category_filter",
-    )
+
+    filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
+    with filter_col1:
+        admin_role_filter = st.multiselect(
+            "Filter by admin role",
+            sorted(admin_view["admin_role"].dropna().unique()),
+            key="admin_role_filter",
+        )
+    with filter_col2:
+        assignment_status_filter = st.multiselect(
+            "Filter by assignment status",
+            sorted(admin_view["assignment_status"].dropna().unique()),
+            key="assignment_status_filter",
+        )
+    with filter_col3:
+        admin_system_type_filter = st.multiselect(
+            "Filter by system type",
+            sorted(admin_view["system_type"].dropna().unique()),
+            key="admin_system_type_filter",
+        )
+    with filter_col4:
+        admin_system_category_filter = st.multiselect(
+            "Filter by system category",
+            sorted(admin_view["system_category"].dropna().unique()),
+            key="admin_system_category_filter",
+        )
 
     filtered_admin_view = admin_view.copy()
     filtered_admin_view = apply_multiselect_filter(
@@ -1340,22 +1614,114 @@ def render_system_admins_tab():
         admin_system_category_filter,
     )
 
-    st.markdown("### All System Administrator Assignments")
-    st.dataframe(filtered_admin_view, 
-                use_container_width=True)
+    show_dataframe(filtered_admin_view)
 
-    st.markdown("### Administrator-Centered View")
+
+
+def render_admin_assignment_cards(records, card_title_field):
+    """Render administrator assignment records as stacked cards."""
+    if records.empty:
+        st.info("No assignment records are available.")
+        return
+
+    display_columns = [
+        "admin_role",
+        "assignment_status",
+        "system_id",
+        "system_name",
+        "system_type",
+        "system_category",
+        "user_id",
+        "display_name",
+        "email",
+        "department",
+        "granted_date",
+        "revoked_date",
+        "assigned_by",
+        "assignment_source",
+        "notes",
+    ]
+
+    label_map = {
+        "admin_role": "Admin Role",
+        "assignment_status": "Assignment Status",
+        "system_id": "System ID",
+        "system_name": "System Name",
+        "system_type": "System Type",
+        "system_category": "System Category",
+        "user_id": "User ID",
+        "display_name": "Administrator",
+        "email": "Email",
+        "department": "Department",
+        "granted_date": "Granted Date",
+        "revoked_date": "Revoked Date",
+        "assigned_by": "Assigned By",
+        "assignment_source": "Assignment Source",
+        "notes": "Notes",
+    }
+
+    for index, (_, record) in enumerate(records.iterrows(), start=1):
+        title = record.get(card_title_field, f"Assignment {index}")
+        with st.container(border=True):
+            st.markdown(f"#### {title}")
+            field_col1, field_col2 = st.columns(2)
+
+            visible_fields = [
+                column
+                for column in display_columns
+                if column in records.columns
+                and column != card_title_field
+                and pd.notna(record.get(column))
+                and str(record.get(column)) != ""
+                and str(record.get(column)) != "NaT"
+            ]
+
+            midpoint = (len(visible_fields) + 1) // 2
+            for column in visible_fields[:midpoint]:
+                field_col1.write(f"**{label_map.get(column, column)}:** {record.get(column)}")
+            for column in visible_fields[midpoint:]:
+                field_col2.write(f"**{label_map.get(column, column)}:** {record.get(column)}")
+
+
+def render_admin_record_review(admin_view):
+    """Render administrator-centered record review."""
+    st.subheader("Admin Record Review")
+
     selected_admin = st.selectbox(
         "Select administrator",
         sorted(admin_view["display_name"].dropna().unique()),
         key="selected_administrator",
     )
-    st.dataframe(
-        admin_view[admin_view["display_name"] == selected_admin],
-        use_container_width=True,
+    admin_detail = admin_view[admin_view["display_name"] == selected_admin]
+
+    if admin_detail.empty:
+        st.info("No administrator assignment records found.")
+        return
+
+    first_admin_row = admin_detail.iloc[0]
+    render_record_summary_card(
+        selected_admin,
+        first_admin_row.get("email", ""),
+        [
+            ("Department", first_admin_row.get("department", "")),
+            ("Assignments", len(admin_detail)),
+            (
+                "Active Assignments",
+                len(admin_detail[admin_detail["assignment_status"] == "Active"]),
+            ),
+            ("Systems Administered", admin_detail["system_id"].nunique()),
+        ],
+    )
+    render_admin_assignment_cards(
+        admin_detail,
+        card_title_field="system_name",
     )
 
-    st.markdown("### System-Centered View")
+
+def render_system_record_review(admin_view):
+    """Render system-centered administrator assignment review."""
+    st.subheader("System Record Review")
+
     selected_admin_system = st.selectbox(
         "Select system",
         sorted(systems["system_name"].dropna().unique()),
@@ -1368,28 +1734,50 @@ def render_system_admins_tab():
         admin_view["system_id"] == selected_admin_system_id
     ]
 
+    selected_system_record = systems[
+        systems["system_id"] == selected_admin_system_id
+    ].iloc[0]
+    render_record_summary_card(
+        selected_system_record["system_name"],
+        selected_system_record["system_id"],
+        [
+            ("System Type", selected_system_record.get("system_type", "")),
+            ("System Category", selected_system_record.get("system_category", "")),
+            ("Record Status", selected_system_record.get("record_status", "")),
+            ("Admin Assignments", len(system_admin_detail)),
+        ],
+    )
+
     if system_admin_detail.empty:
         st.info("No administrator assignments are currently recorded for this system.")
     else:
-        st.dataframe(system_admin_detail, 
-                    use_container_width=True)
+        render_admin_assignment_cards(
+            system_admin_detail,
+            card_title_field="display_name",
+        )
 
-    st.markdown("### Admin Coverage by System")
-    coverage = systems[
-        ["system_id", "system_name", "system_type", "system_category", "record_status"]
-    ].merge(
-        count_by(admin_view, "system_id", "admin_assignment_count"),
-        on="system_id",
-        how="left",
+
+def render_system_admins_tab():
+    st.subheader("System Administrator Assignments")
+
+    admin_view = build_system_admin_view()
+
+    assignments_tab, admin_record_tab, system_record_tab = st.tabs(
+        [
+            "System Administrator Assignments",
+            "Admin Record Review",
+            "System Record Review",
+        ]
     )
-    coverage["admin_assignment_count"] = (
-        coverage["admin_assignment_count"].fillna(0).astype(int)
-    )
-    coverage["coverage_status"] = coverage["admin_assignment_count"].apply(
-        lambda count: "Has Administrator" if count > 0 else "No Administrator Recorded"
-    )
-    st.dataframe(coverage, 
-                use_container_width=True)
+
+    with assignments_tab:
+        render_system_admin_assignments_overview(admin_view)
+
+    with admin_record_tab:
+        render_admin_record_review(admin_view)
+
+    with system_record_tab:
+        render_system_record_review(admin_view)
 
 
 def render_compliance_tab():
@@ -1411,55 +1799,61 @@ def render_compliance_tab():
     cm3.metric("Expired", expired_count)
     cm4.metric("Active Records Requiring Follow-Up", follow_up_count)
 
-    st.markdown("### Filters")
-    compliance_filter = st.multiselect(
-        "Filter by compliance status",
-        sorted(users["compliance_status"].dropna().unique()),
-        key="compliance_filter",
+    summary_col1, summary_col2 = st.columns(2)
+    with summary_col1:
+        render_compliance_summary_cards("user_type", "Compliance by User Type")
+    with summary_col2:
+        render_compliance_summary_cards("department", "Compliance by Department")
+
+    st.markdown("### Compliance Detail")
+    st.caption(
+        "Use the filters below to narrow compliance detail records by status, department, or user type."
     )
-    department_filter = st.multiselect(
-        "Filter by department",
-        sorted(users["department"].dropna().unique()),
-        key="department_filter",
-    )
-    user_type_filter = st.multiselect(
-        "Filter by user type",
-        sorted(users["user_type"].dropna().unique()),
-        key="compliance_user_type_filter",
-    )
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    with filter_col1:
+        compliance_filter = st.multiselect(
+            "Filter by compliance status",
+            sorted(users["compliance_status"].dropna().unique()),
+            key="compliance_filter",
+        )
+    with filter_col2:
+        department_filter = st.multiselect(
+            "Filter by department",
+            sorted(users["department"].dropna().unique()),
+            key="department_filter",
+        )
+    with filter_col3:
+        user_type_filter = st.multiselect(
+            "Filter by user type",
+            sorted(users["user_type"].dropna().unique()),
+            key="compliance_user_type_filter",
+        )
 
     comp = users.copy()
     comp = apply_multiselect_filter(comp, "compliance_status", compliance_filter)
     comp = apply_multiselect_filter(comp, "department", department_filter)
     comp = apply_multiselect_filter(comp, "user_type", user_type_filter)
 
-    st.markdown("### Compliance Detail")
-    st.dataframe(comp[COMPLIANCE_COLUMNS], 
-                use_container_width=True)
+    st.dataframe(
+        compliance_detail_styler(display_table(comp[COMPLIANCE_COLUMNS])),
+        width='stretch',
+    )
 
-    st.markdown("### Follow-Up Queue")
-    follow_up = users[
-        (users["compliance_status"] != "Current")
-        & (users["record_status"] == "Active")
-    ]
+    st.markdown("### Compliance Follow-Up Queue")
+    st.caption(
+        "This queue lists each expired compliance item separately so follow-up is tied to the specific record requiring action."
+    )
+    follow_up = get_expired_follow_up_records(
+        users[users["record_status"] == "Active"]
+    )
     if follow_up.empty:
-        st.success("No active user records currently require compliance follow-up.")
+        st.success("No expired active user compliance records currently require follow-up.")
     else:
-        st.dataframe(follow_up[COMPLIANCE_COLUMNS], 
-                    use_container_width=True)
-
-    st.markdown("### Compliance by Department")
-    st.dataframe(
-        count_by(users, ["department", "compliance_status"], "users"),
-        use_container_width=True,
-    )
-
-    st.markdown("### Compliance by User Type")
-    st.dataframe(
-        count_by(users, ["user_type", "compliance_status"], "users"),
-        use_container_width=True,
-    )
-
+        st.dataframe(
+            display_table(follow_up),
+            hide_index=True,
+            width='stretch',
+        )
 
 
 
@@ -1772,7 +2166,7 @@ def render_add_edit_access_form():
                     on="user_id",
                     how="left",
                 ),
-                use_container_width=True,
+                width='stretch',
             )
 
     selected_existing = None
@@ -2211,7 +2605,7 @@ def render_system_access_export_reconciliation_tab():
                     ],
                 }
             ),
-            use_container_width=True,
+            width='stretch',
         )
         st.write(
             """
@@ -2282,7 +2676,7 @@ def render_system_access_export_reconciliation_tab():
     st.markdown("### Uploaded Access Export")
     st.dataframe(
         scoped_uploaded_df,
-        use_container_width=True,
+        width='stretch',
     )
 
     result = reconcile(access, scoped_uploaded_df, selected_system_id=selected_system)
@@ -2325,15 +2719,15 @@ def render_system_access_export_reconciliation_tab():
 
     with st.expander("View reconciliation summary tables"):
         st.markdown("#### Summary by Change Type")
-        st.dataframe(
+        show_dataframe(
             count_by(result_with_system, "change_type"),
-            use_container_width=True,
+            width='stretch',
         )
 
         st.markdown("#### Summary by Resource Type")
-        st.dataframe(
+        show_dataframe(
             count_by(result_with_system, "resource_type"),
-            use_container_width=True,
+            width='stretch',
         )
 
     st.markdown("### Reconciliation Queue")
@@ -2384,7 +2778,7 @@ def render_system_access_export_reconciliation_tab():
         action_queue = action_queue[queue_columns]
         editable_action_queue = st.data_editor(
             action_queue,
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             key="reconciliation_action_queue_editor",
             column_config={
@@ -2466,7 +2860,7 @@ def render_system_access_export_reconciliation_tab():
         ]
         st.dataframe(
             action_results[visible_action_result_columns],
-            use_container_width=True,
+            width='stretch',
         )
     else:
         st.info(
@@ -2503,7 +2897,7 @@ def render_training_date_reconciliation_tab():
                     ],
                 }
             ),
-            use_container_width=True,
+            width='stretch',
         )
 
     uploaded_training_file = st.file_uploader(
@@ -2546,7 +2940,7 @@ def render_training_date_reconciliation_tab():
         )
 
     st.markdown("### Uploaded Training Date Export")
-    st.dataframe(scoped_training_upload_df, use_container_width=True)
+    show_dataframe(scoped_training_upload_df)
 
     training_result = reconcile_training_dates(users, scoped_training_upload_df)
     training_result = training_result.merge(
@@ -2612,7 +3006,7 @@ def render_training_date_reconciliation_tab():
 
         editable_training_queue = st.data_editor(
             training_queue[queue_columns],
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
             key="training_reconciliation_queue_editor",
             column_config={
@@ -2663,7 +3057,7 @@ def render_training_date_reconciliation_tab():
             "No training date reconciliation actions have been applied yet in this demo session."
         )
     else:
-        st.dataframe(training_action_results, use_container_width=True)
+        show_dataframe(training_action_results)
 
 
 def render_access_reconciliation_tab():
@@ -2703,11 +3097,20 @@ def render_dashboard_section():
         ]
     )
 
+    expired_or_expiring = len(
+        users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]
+    )
+
     d1, d2, d3, d4 = st.columns(4)
     d1.metric("Visible Users", len(users))
     d2.metric("Visible Systems", len(systems))
     d3.metric("Access Records", len(access))
     d4.metric("Items Needing Review", pending_reconciliation + active_follow_up)
+
+    h1, h2, h3 = st.columns(3)
+    h1.metric("Expired / Expiring Compliance", expired_or_expiring)
+    h2.metric("Pending Reconciliation Actions", pending_reconciliation)
+    h3.metric("Active Compliance Follow-Up", active_follow_up)
 
     if current_user["application_role"] == "User":
         st.info(
@@ -2720,30 +3123,84 @@ def render_dashboard_section():
         )
     elif current_user["application_role"] == "Manager":
         st.info(
-            "Use Manage Access to review users in your visible scope and Review Changes "
+            "Use Manage Access to review users in your visible scope and Access Reconciliation "
             "to inspect access exceptions."
         )
     else:
         st.info(
             "Use Manage Access for user/system records, Access Reconciliation for reconciliation, "
-            "and Administration for compliance and administrative coverage."
+            "and AccessAtlas App Admin for compliance and administrative coverage."
         )
 
-    with st.expander("View dashboard details"):
-        st.markdown("### User Record Status")
-        st.dataframe(count_by(users, "record_status", "users"), use_container_width=True)
+    with st.expander("View dashboard details", expanded=True):
+        st.caption("Visual summaries for the records visible to the selected demo role.")
 
-        st.markdown("### Compliance Status")
-        st.dataframe(count_by(users, "compliance_status", "users"), use_container_width=True)
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.markdown("### Compliance Status")
+            st.bar_chart(
+                count_by(users, "compliance_status", "users"),
+                x="compliance_status",
+                y="users",
+            )
 
-        st.markdown("### Access Records by System Type")
-        st.dataframe(count_by(access_with_systems, "system_type"), use_container_width=True)
+        with chart_col2:
+            st.markdown("### User Record Status")
+            st.bar_chart(
+                count_by(users, "record_status", "users"),
+                x="record_status",
+                y="users",
+            )
 
-        st.markdown("### Access Records by Resource Type")
-        st.dataframe(count_by(access_with_systems, "resource_type"), use_container_width=True)
+        chart_col3, chart_col4 = st.columns(2)
+        with chart_col3:
+            st.markdown("### Access Records by System Type")
+            st.bar_chart(
+                count_by(access_with_systems, "system_type", "records"),
+                x="system_type",
+                y="records",
+            )
+
+        with chart_col4:
+            st.markdown("### Access Records by Resource Type")
+            st.bar_chart(
+                count_by(access_with_systems, "resource_type", "records"),
+                x="resource_type",
+                y="records",
+            )
 
         st.markdown("### Access Records by Access Status")
-        st.dataframe(count_by(access, "access_status"), use_container_width=True)
+        st.bar_chart(
+            count_by(access, "access_status", "records"),
+            x="access_status",
+            y="records",
+        )
+
+        with st.expander("View source summary tables"):
+            st.markdown("#### User Record Status")
+            show_dataframe(
+                count_by(users, "record_status", "users")
+            )
+
+            st.markdown("#### Compliance Status")
+            show_dataframe(
+                count_by(users, "compliance_status", "users")
+            )
+
+            st.markdown("#### Access Records by System Type")
+            show_dataframe(
+                count_by(access_with_systems, "system_type")
+            )
+
+            st.markdown("#### Access Records by Resource Type")
+            show_dataframe(
+                count_by(access_with_systems, "resource_type")
+            )
+
+            st.markdown("#### Access Records by Access Status")
+            show_dataframe(
+                count_by(access, "access_status")
+            )
 
 
 def render_manage_access_section():
@@ -2786,23 +3243,28 @@ def render_review_changes_section():
 
 def render_administration_section():
     """Render administrative and compliance workflows for Super Administrators."""
-    st.subheader("Administration")
+    st.subheader("AccessAtlas App Admin")
     st.caption(
-        "Review administrative coverage and compliance monitoring details."
+        "Review compliance monitoring details and system administrator coverage."
     )
 
-    with st.expander("Compliance Monitoring", expanded=True):
+    compliance_tab, admins_tab = st.tabs(
+        ["Compliance Monitoring", "System Administrator Assignments"]
+    )
+
+    with compliance_tab:
         render_compliance_tab()
 
-    with st.expander("System Administrator Assignments"):
+    with admins_tab:
         render_system_admins_tab()
+
 
 TAB_RENDERERS = {
     "Dashboard": render_dashboard_section,
     "My Access": render_my_record_tab,
     "Manage Access": render_manage_access_section,
     "Access Reconciliation": render_review_changes_section,
-    "Administration": render_administration_section,
+    "AccessAtlas App Admin": render_administration_section,
 }
 
 active_tabs = [tab_name for tab_name in TAB_LABELS if tab_name in visible_tabs]

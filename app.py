@@ -991,7 +991,7 @@ def render_my_record_tab():
 
 
 def render_users_tab():
-    st.subheader("Central User Registry")
+    st.subheader("User Management Registry")
 
     if current_user["application_role"] == "System Administrator":
         st.caption(
@@ -1003,21 +1003,25 @@ def render_users_tab():
             "Showing users within the selected Manager demo account's visible review scope."
         )
 
-    role_filter = st.multiselect(
-        "Filter by application role",
-        sorted(users["application_role"].dropna().unique()),
-        key="role_filter",
-    )
-    type_filter = st.multiselect(
-        "Filter by user type",
-        sorted(users["user_type"].unique()),
-        key="type_filter",
-    )
-    status_filter = st.multiselect(
-        "Filter by record status",
-        sorted(users["record_status"].dropna().unique()),
-        key="status_filter",
-    )
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    with filter_col1:
+        role_filter = st.multiselect(
+            "Filter by application role",
+            sorted(users["application_role"].dropna().unique()),
+            key="role_filter",
+        )
+    with filter_col2:
+        type_filter = st.multiselect(
+            "Filter by user type",
+            sorted(users["user_type"].unique()),
+            key="type_filter",
+        )
+    with filter_col3:
+        status_filter = st.multiselect(
+            "Filter by record status",
+            sorted(users["record_status"].dropna().unique()),
+            key="status_filter",
+        )
 
     user_view = users.copy()
     user_view = apply_multiselect_filter(user_view, "application_role", role_filter)
@@ -1029,7 +1033,7 @@ def render_users_tab():
         use_container_width=True,
     )
 
-    st.markdown("### Selected User Governance Profile")
+    st.markdown("### Selected User Access Profile")
     selected_user_id = st.selectbox(
         "Select user ID",
         users["user_id"],
@@ -1041,21 +1045,25 @@ def render_users_tab():
 def render_systems_tab():
     st.subheader("System Catalog")
 
-    system_type_filter = st.multiselect(
-        "Filter by system type",
-        sorted(systems["system_type"].dropna().unique()),
-        key="system_type_filter",
-    )
-    system_category_filter = st.multiselect(
-        "Filter by system category",
-        sorted(systems["system_category"].dropna().unique()),
-        key="system_category_filter",
-    )
-    system_status_filter = st.multiselect(
-        "Filter by system record status",
-        sorted(systems["record_status"].dropna().unique()),
-        key="system_status_filter",
-    )
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+    with filter_col1:
+        system_type_filter = st.multiselect(
+            "Filter by system type",
+            sorted(systems["system_type"].dropna().unique()),
+            key="system_type_filter",
+        )
+    with filter_col2:
+        system_category_filter = st.multiselect(
+            "Filter by system category",
+            sorted(systems["system_category"].dropna().unique()),
+            key="system_category_filter",
+        )
+    with filter_col3:
+        system_status_filter = st.multiselect(
+            "Filter by system record status",
+            sorted(systems["record_status"].dropna().unique()),
+            key="system_status_filter",
+        )
 
     system_view = systems.copy()
     system_view = apply_multiselect_filter(system_view, "system_type", system_type_filter)
@@ -1069,7 +1077,7 @@ def render_systems_tab():
     st.dataframe(system_view, 
                 use_container_width=True)
 
-    st.markdown("### Selected System Governance Profile")
+    st.markdown("### Selected System Access Profile")
     selected_system_id = st.selectbox(
         "Select system ID", 
         systems["system_id"],

@@ -11,7 +11,7 @@ AccessAtlas is published in two forms from one canonical modular codebase:
 
 A separate hosted demo runtime preserves the synthetic role-preview experience. All reference data is synthetic, and demo changes remain session-backed rather than persistent.
 
-**Live demo:** [https://accessatlas.streamlit.app/](https://accessatlas.streamlit.app/)
+**Live demo:** [https://accessatlas-demo.streamlit.app/](https://accessatlas-demo.streamlit.app/)
 
 > **The hosted Demo Mode simulates role-based visibility and workflow behavior. It is not authentication or a production authorization mechanism.**
 

@@ -33,63 +33,78 @@ Access approval remains outside the core application for now.
 
 # Now
 
-## Goal: Prepare the 1.0.0 Deployable Starter Application
+## Goal: Complete the 1.0.0 Deployable Starter Foundation
 
-The current Streamlit application already demonstrates the core AccessAtlas governance model and principal workflows. The immediate roadmap focuses on turning that implementation into a clean starter application that can be evaluated, understood, and adapted without inheriting demo-specific structure.
+The current application already demonstrates the core AccessAtlas governance model and principal workflows.
 
-### Modularize the application
+The 1.0.0 engineering backlog is focused on making the repository easy to adopt for small and mid-sized organizations while giving data engineering teams clean extension points for broader implementation.
 
-Refactor the current root-level `app.py` into a maintainable application structure.
+### 1. Dual-distribution modular architecture — Completed
 
-The target should separate concerns such as:
+AccessAtlas now maintains one canonical modular source under `modular/` and publishes a generated single-file starter at root `app.py`.
 
-- application entry point
+The root application remains the low-friction adoption path.
+
+The modular implementation separates:
+
+- application core
 - configuration
-- data loading and repository behavior
+- data loading
 - role and scope logic
 - compliance calculations
 - reconciliation logic
-- audit logging
-- exports
-- reusable UI components
-- page or workflow rendering
+- temporary state
+- reusable presentation behavior
+- runtime identity and guidance behavior
 
-The modularized structure should remain approachable to developers evaluating the repository. The goal is not to create a framework inside the framework.
+`tools/build_single_file.py` publishes the root starter from modular source.
 
-### Separate the public demo from the starter application
+CI and automated tests verify that the generated file remains synchronized.
 
-Retain the current Demo Mode experience for the hosted preview.
+### 2. Separate the public demo from the starter application — Completed
 
-Create a clean starter version that removes:
+The shared application core now supports distinct runtime factories.
 
-- synthetic persona selection
-- demo-specific sidebar content
-- Demo Mode warnings and explanatory controls
-- assumptions that a selected synthetic user represents the authenticated user
+The clean starter:
 
-The starter implementation should be placed in a clearly named repository location and be easy to copy or adapt.
+- does not render the synthetic persona selector
+- does not render demo-specific sidebar content
+- does not display Demo Mode warnings
+- resolves a current application identity through a replaceable starter runtime
 
-The demo and starter versions should share core business logic wherever practical so they do not evolve into two unrelated applications.
+The hosted demo retains:
 
-### Add data exports
+- synthetic role/persona selection
+- current demo-user details
+- visible demo-scope summaries
+- contextual demo sidebar guidance
+- disposable session-backed changes
 
-Provide export capability for key governance datasets and review results.
+The hosted preview should run from:
 
-Initial export targets should include:
+```text
+modular/demo_app.py
+```
 
-- users
-- systems
-- access assignments
-- system administrator assignments
-- compliance follow-up records
-- reconciliation results
-- audit history, when available
+The root `app.py` and `modular/app.py` remain clean starter paths.
 
-CSV should remain the baseline export format for portability.
+### 3. Add structured application logging — Next implementation step
 
-### Add audit logging
+Introduce structured operational logging for application behavior and troubleshooting.
 
-Introduce a modular audit-event model capable of recording governance actions.
+Application logs should capture technical events such as:
+
+- application startup and runtime selection
+- data loading and validation outcomes
+- reconciliation processing errors
+- export failures
+- unexpected workflow exceptions
+
+Application logs must remain distinct from governance audit events.
+
+### 4. Add audit logging and an audit-event model — Planned for 1.0.0
+
+Introduce a modular governance audit-event model capable of recording meaningful actions.
 
 Initial event types should include:
 
@@ -101,15 +116,31 @@ Initial event types should include:
 - administrator assignment changes
 - system catalog changes, as those workflows are introduced
 
-The reference implementation may keep audit events in session-backed or file-backed demo storage, but the model should be designed for migration to a persistent append-oriented event store.
+The reference implementation may keep audit events in session-backed or file-backed nonproduction storage, but the model should support migration to a persistent append-oriented event store.
 
 Audit history should support periodic access review and semiannual audit workflows.
 
-### Expand automated tests
+### 5. Add data exports — Planned for 1.0.0
 
-Broaden test coverage beyond the current reconciliation smoke tests.
+Provide CSV export capability for key governance datasets and review results.
 
-Priority coverage should include:
+Initial export targets should include:
+
+- users
+- systems
+- access assignments
+- system administrator assignments
+- compliance follow-up records
+- reconciliation results
+- audit history
+
+CSV remains the baseline export format for portability.
+
+### 6. Expand automated tests — Planned for 1.0.0
+
+Current automated coverage includes reconciliation behavior, modular/source synchronization, source compilation, and starter/demo runtime-separation contracts.
+
+Broaden coverage for:
 
 - reconciliation matching and action classification
 - single-system reconciliation scope
@@ -118,10 +149,11 @@ Priority coverage should include:
 - audit-event generation
 - export preparation
 - data normalization and validation
+- starter identity resolution
 
-Tests should focus first on business logic that can be exercised independently of Streamlit rendering.
+Tests should continue to focus first on business logic that can be exercised independently of Streamlit rendering.
 
-### Add linting and formatting
+### 7. Add linting and formatting — Planned for 1.0.0
 
 Introduce a lightweight, documented code-quality baseline.
 
@@ -129,26 +161,12 @@ The repository should include automated checks for:
 
 - formatting
 - linting
-- existing tests
+- tests
+- single-file distribution synchronization
 
 The same checks should run in CI.
 
-### Add structured logging
-
-Replace ad hoc operational logging patterns with structured application logging.
-
-The reference implementation should distinguish between:
-
-- application logs
-- governance audit events
-
-Application logs support troubleshooting.
-
-Audit events record meaningful governance actions.
-
-Those concerns should not be treated as the same data stream.
-
-### Define migration support
+### 8. Define migration support — Planned for 1.0.0
 
 Document and establish clear data-layer extension points for moving from synthetic CSV files to persistent storage.
 
@@ -426,28 +444,36 @@ Integrations should be added where they clarify reusable governance patterns.
 
 # 1.0.0 Readiness Definition
 
-AccessAtlas 1.0.0 will represent the first clean deployable starter application.
+AccessAtlas 1.0.0 will represent the first clean deployable starter foundation.
 
 The release does **not** require a hosted database or persistent public demo backend.
 
 The public demo should continue to reset tester changes and remain inexpensive to operate.
 
-The 1.0.0 release should include:
+## Completed foundation
 
-- modularized application structure
-- clean separation of demo-specific and starter application behavior
-- a starter version without the Demo Mode persona selector and demo sidebar structure
+- canonical modular application source
+- generated single-file quick-start distribution
+- automated starter/source synchronization checks
+- shared application core
+- separate clean starter and hosted demo runtimes
+- starter runtime identity extension point
+- role and scope logic shared across starter and demo
+- modular architecture documentation
+
+## Remaining release requirements
+
+- structured application logging
+- audit logging and an initial audit-event model
 - data export capability
 - broader automated test coverage
-- audit logging and an initial audit-event model
 - linting and formatting checks
-- structured application logging
 - documented migration extension points
-- current README, changelog, roadmap, and architecture documentation
+- current README, changelog, roadmap, architecture, and UI documentation
 
-Deployment guidance is a stretch goal for 1.0.0.
+Deployment guidance remains a stretch goal for 1.0.0.
 
-Authentication integration, persistent production storage, notifications, provisioning, configurable compliance requirements, and complete governance-model configuration are not required for 1.0.0 unless explicitly moved into the release scope later.
+Authentication integration, persistent production storage, notifications, provisioning, configurable compliance requirements, and complete governance-model configuration are not required for 1.0.0 unless explicitly moved into release scope later.
 
 ---
 

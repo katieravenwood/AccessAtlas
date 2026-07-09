@@ -10,20 +10,51 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- Canonical modular application source under `modular/`.
+- Shared application core in `modular/accessatlas/app_core.py`.
+- `RuntimeContext` contract for resolved identity, role-visible sections, scoped governance datasets, runtime type, and optional runtime-specific guidance.
+- Clean starter runtime in `modular/accessatlas/starter_runtime.py`.
+- Hosted demo runtime in `modular/accessatlas/demo_runtime.py`.
+- Separate modular entry points:
+  - `modular/app.py` for the clean starter
+  - `modular/demo_app.py` for the hosted role-preview demo
+- `ACCESSATLAS_USER_ID` starter identity configuration placeholder.
+- `tools/build_single_file.py` for publishing the root single-file starter from canonical modular source.
+- `python tools/build_single_file.py --check` synchronization validation.
+- Automated tests verifying:
+  - generated root `app.py` remains synchronized with modular source
+  - generated and modular Python sources compile
+  - the starter distribution does not contain Demo Mode controls
+  - the hosted demo retains the persona selector and visible-scope preview
+  - starter and demo entry points select distinct runtime factories
+- `docs/MODULAR_ARCHITECTURE.md` documenting the dual-distribution and starter/demo runtime model.
 - Current-state README documentation aligned to the task-based application structure.
 - `docs/UI_STYLE_GUIDE.md` documenting current navigation vocabulary, screen hierarchy, table conventions, status semantics, empty states, reconciliation patterns, and Streamlit UI conventions.
 
 ### Changed
 
+- Reframed `modular/` as the canonical engineering source while keeping root `app.py` as the easy quick-start distribution.
+- Generalized role-scope logic from demo-specific naming to application-level scope behavior.
+- Moved synthetic persona selection, Demo Mode warnings, demo-user summaries, visible demo scope, and contextual demo sidebar guidance into the hosted demo runtime.
+- Removed Demo Mode controls and demo-specific sidebar structure from the starter runtime and generated root application.
+- Updated the single-file build process to publish only the clean starter runtime.
+- Updated CI to verify single-file synchronization before running tests.
+- Updated data-path discovery so root and modular distributions use the same repository-level `data/` directory.
 - Documentation now treats the repository implementation as the source of truth for current application labels and capabilities.
-- README navigation and role descriptions were aligned to:
+- README navigation and role descriptions remain aligned to:
   - Dashboard
   - My Access
   - Manage Access
   - Access Reconciliation
   - AccessAtlas App Admin
-- Repository structure documentation was updated to include current documentation, tests, CI workflow, archive, and PostgreSQL implementation notes.
-- Future-direction documentation was revised to remove capabilities already present in the repository.
+- README now documents the quick-start starter, modular starter, and hosted demo as distinct run paths.
+- Repository structure documentation now includes `modular/`, build tooling, runtime-separation tests, roadmap, and modular architecture documentation.
+- Future-direction documentation was revised to remove completed modularization and demo/starter separation work.
+
+### Fixed
+
+- Prevented demo-only persona and sidebar behavior from leaking into the generated quick-start starter.
+- Added synchronization checks to prevent root `app.py` from silently drifting from canonical modular source.
 
 ---
 

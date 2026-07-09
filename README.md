@@ -4,11 +4,16 @@ AccessAtlas is a Streamlit-based reference application for centralized access go
 
 It demonstrates how an organization can bring users, systems, permissions, administrator responsibilities, compliance records, and reconciliation workflows into one governance model without tying the design to a single technology platform or identity system.
 
-The current application is intentionally a **reference implementation**. It uses synthetic CSV-backed data and Streamlit session state to demonstrate workflows, role-aware visibility, and a production-oriented data model. It is not a production identity, authentication, or authorization platform.
+AccessAtlas is published in two forms from one canonical modular codebase:
+
+- a **single-file quick-start starter** for organizations that want to inspect, edit, and run the application with minimal application-architecture overhead; and
+- a **modular implementation** for teams extending authentication, persistence, notifications, audit workflows, provisioning, or automated tests.
+
+A separate hosted demo runtime preserves the synthetic role-preview experience. All reference data is synthetic, and demo changes remain session-backed rather than persistent.
 
 **Live demo:** [https://accessatlas.streamlit.app/](https://accessatlas.streamlit.app/)
 
-> **Demo Mode simulates role-based visibility and workflow behavior. It is not an authentication or production authorization mechanism.**
+> **The hosted Demo Mode simulates role-based visibility and workflow behavior. It is not authentication or a production authorization mechanism.**
 
 ---
 
@@ -62,7 +67,7 @@ This allows the application to answer both user-centered and system-centered que
 
 ### 2. Role-aware governance workflows
 
-Demo Mode uses synthetic personas to show how the same governance data can support different operational responsibilities.
+The hosted demo uses synthetic personas to show how the same governance data can support different operational responsibilities. The starter runtimes use the same role and scope rules without rendering the demo persona selector.
 
 | Demo role | Visible sections | Demonstrated responsibility |
 |---|---|---|
@@ -71,7 +76,7 @@ Demo Mode uses synthetic personas to show how the same governance data can suppo
 | System Administrator | Dashboard, My Access, Manage Access, Access Reconciliation | Review and manage users and access within administered-system scope |
 | Super Administrator | All sections | Review the complete synthetic governance dataset and all demo workflows |
 
-Unavailable sections are not rendered for the selected Demo Mode persona.
+Unavailable sections are not rendered for the current application role.
 
 The application also scopes visible records. For example, System Administrators see only users and systems associated with systems they administer.
 
@@ -108,7 +113,7 @@ Recommended actions include:
 - **Inactivate**
 - **Update**
 
-The demo applies selected actions only to the current Streamlit session.
+The reference implementation applies selected actions only to the current Streamlit session.
 
 ### 5. Compliance-date reconciliation
 
@@ -155,7 +160,7 @@ My Access is the individual governance view.
 
 #### My Record
 
-Shows the selected synthetic user's:
+Shows the current user's:
 
 - profile and organizational attributes
 - compliance dates and status
@@ -164,7 +169,7 @@ Shows the selected synthetic user's:
 
 #### Update My Certification and Agreement Dates
 
-Demonstrates self-service maintenance of the selected user's compliance dates.
+Demonstrates self-service maintenance of the current user's compliance dates.
 
 Updates are written only to Streamlit session state. Source CSV files are not changed.
 
@@ -185,7 +190,7 @@ Provides a user-centered governance view with:
 - training and agreement information
 - a session-state-backed add-user workflow
 
-Visible users are limited by the selected Demo Mode role and scope.
+Visible users are limited by the current application role and resolved scope.
 
 #### Managed Systems
 
@@ -256,7 +261,7 @@ It follows the same basic pattern:
 
 ### AccessAtlas App Admin
 
-This section is visible only to the Super Administrator Demo Mode role.
+This section is visible only to the Super Administrator application role.
 
 #### Compliance Monitoring
 
@@ -317,7 +322,7 @@ created_date
 updated_date
 ```
 
-`application_role` controls the simulated AccessAtlas persona.
+`application_role` drives the current reference role and scope model. In the hosted demo, it also controls the synthetic persona preview.
 
 `user_type` describes the identity's relationship to the organization.
 
@@ -449,34 +454,126 @@ access_agreement_date
 
 ---
 
-## Reference Architecture
+## Application Architecture and Distribution Model
 
-The current repository intentionally keeps the implementation simple:
+AccessAtlas uses one shared modular application core with separate starter and demo runtimes.
 
 ```text
-Streamlit UI
-    │
-    ├── Role-aware demo scoping
-    ├── Governance review workflows
-    ├── Reconciliation logic
-    └── Session-state demo updates
-             │
-             ▼
-      Synthetic CSV datasets
+                         modular/accessatlas/app_core.py
+                                      |
+                         shared UI and workflows
+                                      |
+                   +------------------+------------------+
+                   |                                     |
+                   v                                     v
+      build_starter_runtime()                build_demo_runtime()
+                   |                                     |
+                   v                                     v
+          modular/app.py                       modular/demo_app.py
+                   |                                     |
+                   | clean modular starter                | hosted demo
+                   v                                     v
+      tools/build_single_file.py              role-preview deployment
+                   |
+                   v
+              root app.py
 ```
 
-The active application is implemented in the root-level `app.py`.
+### Quick-start single-file starter
 
-The CSV files act as reference datasets. Streamlit session state provides temporary write behavior for demonstrations such as:
+The root-level `app.py` is a generated, self-contained Streamlit application intended for rapid evaluation and direct customization.
 
-- self-service compliance updates
-- adding a synthetic user
-- direct access add/edit actions
-- reconciliation action application
+```bash
+streamlit run app.py
+```
 
-Refreshing or restarting the session resets those changes to the source data.
+This is the recommended starting point for small and mid-sized organizations that want a readable one-file application without first learning the modular package structure.
 
-This is a deliberate reference-app boundary. Production persistence, authorization, transactions, and audit logging belong in the backend rather than being simulated in the UI.
+The root `app.py` is a published distribution, not the canonical engineering source. Shared application changes should be made under `modular/` and then republished with the build script.
+
+### Clean modular starter
+
+The canonical engineering source is under:
+
+```text
+modular/
+```
+
+Run the modular starter with:
+
+```bash
+streamlit run modular/app.py
+```
+
+The modular version separates the shared application core from configuration, compliance logic, data loading, scope rules, temporary state, presentation helpers, reconciliation behavior, and runtime identity resolution.
+
+The starter runtime does not include:
+
+- a Demo Mode persona selector
+- demo-specific sidebar warnings
+- the Current Demo User panel
+- the Visible Demo Scope panel
+- demo-only contextual sidebar guidance
+
+Until a pluggable authentication module is added, the starter can resolve its current application identity from:
+
+```text
+ACCESSATLAS_USER_ID
+```
+
+For example:
+
+```bash
+ACCESSATLAS_USER_ID=USR-0001 streamlit run app.py
+```
+
+This is a development and configuration placeholder, not authentication. Production implementations must replace it with an approved identity mechanism and enforce equivalent authorization in the backend and data-access layer.
+
+### Hosted demo
+
+The public preview uses the demo runtime:
+
+```bash
+streamlit run modular/demo_app.py
+```
+
+The demo retains the synthetic persona selector, current-user summary, visible-scope summary, contextual guidance, and role-aware preview experience.
+
+Tester changes use Streamlit session state and reset with the session. The demo therefore remains inexpensive to host and does not require a persistent public backend.
+
+### One application core, two runtimes
+
+`modular/accessatlas/app_core.py` owns the shared AccessAtlas interface and workflows.
+
+The starter and demo entry points supply different runtime factories:
+
+```python
+run_app(build_starter_runtime)
+```
+
+```python
+run_app(build_demo_runtime)
+```
+
+The runtime resolves the current identity, visible sections, scoped records, and optional runtime-specific guidance. The application core does not own demo persona selection.
+
+This keeps the starter and demo from becoming separate implementations.
+
+### Publishing the quick-start application
+
+Build the root single-file starter from the canonical modular source:
+
+```bash
+python tools/build_single_file.py
+```
+
+Verify that the committed quick-start distribution is synchronized:
+
+```bash
+python tools/build_single_file.py --check
+```
+
+CI runs the synchronization check before the test suite.
 
 ---
 
@@ -502,9 +599,30 @@ This is a deliberate reference-app boundary. Production persistence, authorizati
 │   │   ├── access-reviewer-guide.md
 │   │   ├── super-admin-guide.md
 │   │   └── system-admin-guide.md
+│   ├── MODULAR_ARCHITECTURE.md
 │   └── UI_STYLE_GUIDE.md
+├── modular/
+│   ├── accessatlas/
+│   │   ├── app_core.py
+│   │   ├── compliance.py
+│   │   ├── config.py
+│   │   ├── data.py
+│   │   ├── demo_runtime.py
+│   │   ├── navigation.py
+│   │   ├── presentation.py
+│   │   ├── reconciliation.py
+│   │   ├── runtime.py
+│   │   ├── scope.py
+│   │   ├── starter_runtime.py
+│   │   └── state.py
+│   ├── app.py
+│   └── demo_app.py
 ├── tests/
-│   └── test_reconcile.py
+│   ├── test_reconcile.py
+│   ├── test_runtime_separation.py
+│   └── test_single_file_build.py
+├── tools/
+│   └── build_single_file.py
 ├── .gitignore
 ├── app.py
 ├── CHANGELOG.md
@@ -512,10 +630,15 @@ This is a deliberate reference-app boundary. Production persistence, authorizati
 ├── POSTGRES_NOTES.md
 ├── README.md
 ├── requirements.txt
+├── ROADMAP.md
 └── SNOWFLAKE_NOTES.md
 ```
 
-The `archive/` directory retains an earlier implementation for historical reference. The current application is the root-level `app.py`.
+The root `app.py` is the generated quick-start distribution.
+
+The canonical application source is under `modular/`. The hosted demo uses `modular/demo_app.py`.
+
+The `archive/` directory retains an earlier implementation for historical reference.
 
 ---
 
@@ -574,16 +697,65 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 4. Launch the app
+### 4. Choose a run path
+
+#### Quick-start single-file starter
 
 ```bash
 streamlit run app.py
 ```
 
-### 5. Run tests
+#### Clean modular starter
+
+```bash
+streamlit run modular/app.py
+```
+
+#### Hosted demo runtime
+
+```bash
+streamlit run modular/demo_app.py
+```
+
+The demo runtime retains the synthetic role selector and demo sidebar. The starter runtimes do not.
+
+### 5. Optionally select a starter identity
+
+The starter currently supports a development identity placeholder through `ACCESSATLAS_USER_ID`.
+
+macOS or Linux:
+
+```bash
+ACCESSATLAS_USER_ID=USR-0001 streamlit run app.py
+```
+
+Windows PowerShell:
+
+```powershell
+$env:ACCESSATLAS_USER_ID = "USR-0001"
+streamlit run app.py
+```
+
+When the variable is not set, the reference dataset falls back to the first active Super Administrator, then the first active user.
+
+This behavior is intended only to keep the starter immediately runnable. It is not authentication.
+
+### 6. Run tests
 
 ```bash
 pytest
+```
+
+### 7. Rebuild the quick-start distribution after modular changes
+
+```bash
+python tools/build_single_file.py
+```
+
+Verify synchronization with:
+
+```bash
+python tools/build_single_file.py --check
 ```
 
 ---
@@ -611,7 +783,7 @@ The sample records are designed to demonstrate varied governance scenarios, incl
 - multiple administrators
 - reconciliation add, update, and inactivation cases
 
-Do not treat Demo Mode as a security boundary.
+Do not treat the hosted Demo Mode, starter identity placeholder, hidden UI controls, or client-visible scope logic as a security boundary.
 
 ---
 
@@ -696,6 +868,8 @@ Keep the reference implementation understandable while providing a model that ca
 Additional documentation is available in the repository:
 
 - `CHANGELOG.md` — development history and unreleased changes
+- `ROADMAP.md` — Now / Next / Later product direction and 1.0.0 readiness
+- `docs/MODULAR_ARCHITECTURE.md` — single-file publishing and starter/demo runtime architecture
 - `docs/UI_STYLE_GUIDE.md` — current interface vocabulary and presentation conventions
 - `docs/architecture/governance_patterns.md` — governance architecture patterns
 - `docs/user-guides/access-reviewer-guide.md` — access review guidance
@@ -708,23 +882,30 @@ Additional documentation is available in the repository:
 
 ## Current Status and Future Direction
 
-AccessAtlas is currently a functional reference application and public demo, not a production access-management service.
+AccessAtlas is currently a functional reference application, quick-start starter, modular implementation, and public demo. It is not a production identity or access-management service.
 
-The present implementation demonstrates the core governance model and primary workflows. Future work may include:
+The current 1.0.0 engineering work has established:
 
-- production authentication and authorization
-- persistent audit-event logging
-- approval workflows
-- formal access review campaigns
-- notification history and delivery workflows
-- user group and team membership management
-- automated source-system ingestion
-- Snowflake-native role metadata ingestion
-- API-based access synchronization
-- expanded automated test coverage
-- production observability and deployment patterns
+- a canonical modular source under `modular/`
+- a generated root-level single-file starter
+- automated synchronization checks between the two distributions
+- a shared application core
+- separate starter and hosted demo runtimes
+- a starter identity extension point
+- disposable, session-backed demo changes
 
-See `CHANGELOG.md` for development history.
+The remaining 1.0.0 engineering priorities are:
+
+- structured application logging
+- a governance audit-event model
+- data export capability
+- broader automated test coverage
+- linting and formatting checks
+- migration and deployment guidance
+
+Notifications remain the first planned functional module after the 1.0.0 foundation.
+
+See `ROADMAP.md` for product direction and `CHANGELOG.md` for development history.
 
 ---
 

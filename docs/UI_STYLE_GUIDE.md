@@ -202,6 +202,26 @@ The hosted demo uses synthetic personas to preview these rules. The starter runt
 
 These UI and reference scope rules are not a production authorization boundary. Production authorization belongs in the backend and data-access layer.
 
+## Data Export Controls
+
+Place export controls next to the detailed table or results surface they export.
+
+Export labels should identify the dataset clearly, for example:
+
+- `Download Filtered Users CSV`
+- `Download Scoped Access Assignments CSV`
+- `Download Reconciliation Results CSV`
+- `Download Filtered Audit History CSV`
+
+Do not create a generic `Export` button when the dataset is ambiguous.
+
+Exports should respect the same role, record scope, and active filters as the table or workflow they support.
+
+Do not place an unrestricted "Export Everything" action in AccessAtlas App Admin.
+
+CSV remains the baseline reference format.
+
+
 ## Governance Audit History
 
 Governance Audit History is an administrative review surface, not an operational application-log viewer.

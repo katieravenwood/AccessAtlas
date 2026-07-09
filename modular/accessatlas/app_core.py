@@ -41,6 +41,7 @@ from accessatlas.config import (
     USER_DISPLAY_COLUMNS,
 )
 from accessatlas.data import load_data
+from accessatlas.exports import prepare_csv_export
 from accessatlas.logging_config import (
     configure_logging,
     get_logger,
@@ -102,6 +103,60 @@ def run_app(runtime_factory):
         runtime_factory=getattr(runtime_factory, "__name__", type(runtime_factory).__name__),
     )
     st.set_page_config(page_title="AccessAtlas", layout="wide")
+
+    def render_csv_export_button(
+        dataframe,
+        *,
+        export_name,
+        label,
+        key,
+        columns=None,
+        sort_by=None,
+        help_text=None,
+    ):
+        """Render a scoped CSV download and record successful export activity."""
+        artifact = prepare_csv_export(
+            dataframe,
+            export_name=export_name,
+            columns=columns,
+            sort_by=sort_by,
+        )
+
+        downloaded = st.download_button(
+            label,
+            data=artifact.data,
+            file_name=artifact.filename,
+            mime=artifact.mime_type,
+            key=key,
+            help=help_text,
+            disabled=artifact.record_count == 0,
+        )
+
+        if downloaded:
+            log_event(
+                logger,
+                logging.INFO,
+                "data_export_downloaded",
+                "Governance data export downloaded.",
+                export_name=artifact.export_name,
+                record_count=artifact.record_count,
+                column_count=artifact.column_count,
+            )
+            record_audit_event(
+                event_type="data_export",
+                action="export_dataset",
+                entity_type="governance_dataset",
+                entity_id=artifact.export_name,
+                source="CSV Export",
+                summary=f"Governance dataset exported: {artifact.export_name}.",
+                changes={
+                    "record_count": artifact.record_count,
+                    "column_count": artifact.column_count,
+                    "filename": artifact.filename,
+                },
+            )
+
+        return artifact
 
 
 
@@ -510,6 +565,14 @@ def run_app(runtime_factory):
             user_view[USER_DISPLAY_COLUMNS],
             width='stretch',
         )
+        render_csv_export_button(
+            user_view,
+            export_name="accessatlas_users",
+            label="Download Filtered Users CSV",
+            key="export_users_csv",
+            sort_by=["display_name", "user_id"],
+            help_text="Exports the currently filtered user records visible in your application scope.",
+        )
 
         st.markdown("### Selected User Access Profile")
         selected_user_id = st.selectbox(
@@ -554,6 +617,14 @@ def run_app(runtime_factory):
 
         show_dataframe(system_view, 
                     width='stretch')
+        render_csv_export_button(
+            system_view,
+            export_name="accessatlas_systems",
+            label="Download Filtered Systems CSV",
+            key="export_systems_csv",
+            sort_by=["system_name", "system_id"],
+            help_text="Exports the currently filtered system records visible in your application scope.",
+        )
 
         st.markdown("### Selected System Access Profile")
         selected_system_id = st.selectbox(
@@ -1027,6 +1098,14 @@ def run_app(runtime_factory):
 
         with assignments_tab:
             render_system_admin_assignments_overview(admin_view)
+            render_csv_export_button(
+                admin_view,
+                export_name="accessatlas_system_administrator_assignments",
+                label="Download System Administrator Assignments CSV",
+                key="export_system_admin_assignments_csv",
+                sort_by=["system_name", "display_name"],
+                help_text="Exports administrator assignments within the current application scope.",
+            )
 
         with admin_record_tab:
             render_admin_record_review(admin_view)
@@ -1093,6 +1172,15 @@ def run_app(runtime_factory):
             compliance_detail_styler(display_table(comp[COMPLIANCE_COLUMNS])),
             width='stretch',
         )
+        render_csv_export_button(
+            comp,
+            export_name="accessatlas_compliance_detail",
+            label="Download Filtered Compliance Detail CSV",
+            key="export_compliance_detail_csv",
+            columns=COMPLIANCE_COLUMNS,
+            sort_by=["display_name", "user_id"],
+            help_text="Exports the currently filtered compliance detail records.",
+        )
 
         st.markdown("### Compliance Follow-Up Queue")
         st.caption(
@@ -1108,6 +1196,14 @@ def run_app(runtime_factory):
                 display_table(follow_up),
                 hide_index=True,
                 width='stretch',
+            )
+            render_csv_export_button(
+                follow_up,
+                export_name="accessatlas_compliance_follow_up",
+                label="Download Compliance Follow-Up CSV",
+                key="export_compliance_follow_up_csv",
+                sort_by=["display_name", "user_id", "compliance_item"],
+                help_text="Exports active compliance records that currently require follow-up.",
             )
 
 
@@ -1429,6 +1525,15 @@ def run_app(runtime_factory):
             scoped_current_access = scoped_current_access[
                 scoped_current_access["user_id"].isin(allowed_users["user_id"])
             ]
+
+        render_csv_export_button(
+            scoped_current_access,
+            export_name="accessatlas_access_assignments",
+            label="Download Scoped Access Assignments CSV",
+            key="export_access_assignments_csv",
+            sort_by=["system_id", "user_id", "resource_type", "resource_name", "permission_name"],
+            help_text="Exports access assignments available in the current direct-management scope.",
+        )
 
         with st.expander("Current manageable access records", expanded=False):
             if scoped_current_access.empty:
@@ -1951,6 +2056,15 @@ def run_app(runtime_factory):
                 action_results[visible_action_result_columns],
                 width='stretch',
             )
+            render_csv_export_button(
+                action_results,
+                export_name="accessatlas_access_reconciliation_results",
+                label="Download Reconciliation Results CSV",
+                key="export_access_reconciliation_results_csv",
+                columns=visible_action_result_columns,
+                sort_by=["system_id", "user_id", "audit_event_id"],
+                help_text="Exports action results from the most recent system access reconciliation run.",
+            )
         else:
             st.info(
                 "No reconciliation actions have been applied yet in this current session. "
@@ -2147,6 +2261,14 @@ def run_app(runtime_factory):
             )
         else:
             show_dataframe(training_action_results, width='stretch')
+            render_csv_export_button(
+                training_action_results,
+                export_name="accessatlas_training_reconciliation_results",
+                label="Download Training Reconciliation Results CSV",
+                key="export_training_reconciliation_results_csv",
+                sort_by=["user_id", "audit_event_id"],
+                help_text="Exports action results from the most recent training and agreement reconciliation run.",
+            )
 
 
     def render_access_reconciliation_tab():
@@ -2429,6 +2551,14 @@ def run_app(runtime_factory):
                 ascending=False,
             ),
             width="stretch",
+        )
+        render_csv_export_button(
+            filtered_events,
+            export_name="accessatlas_governance_audit_history",
+            label="Download Filtered Audit History CSV",
+            key="export_audit_history_csv",
+            sort_by=["occurred_at", "audit_event_id"],
+            help_text="Exports the currently filtered governance audit history, including structured change detail.",
         )
 
         with st.expander("View selected audit event details"):

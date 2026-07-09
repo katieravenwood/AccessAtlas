@@ -246,6 +246,60 @@ modular/demo_app.py
 
 The root `app.py` should remain the recommended quick-start path in the README.
 
+## Data export boundary
+
+CSV export preparation is centralized in:
+
+```text
+modular/accessatlas/exports.py
+```
+
+The module does not decide which records a user may export.
+
+Role and record scope are resolved before a workflow passes a dataframe to the export helper:
+
+```text
+runtime scope
+    ↓
+workflow dataframe
+    ↓
+prepare_csv_export()
+    ↓
+CSV download artifact
+```
+
+This keeps export serialization separate from authorization and scope resolution.
+
+The reference export artifact contains:
+
+```text
+export_name
+filename
+data
+mime_type
+record_count
+column_count
+```
+
+CSV preparation supports explicit column ordering and stable sorting.
+
+Text fields beginning with spreadsheet formula prefixes are escaped before CSV serialization. This protects users who open exported governance data in spreadsheet software from formula-style cell execution.
+
+Successful downloads emit:
+
+```text
+Operational log
+    └── data_export_downloaded
+
+Governance audit history
+    └── data_export / export_dataset
+```
+
+The application log and audit event record export metadata, not the exported row contents.
+
+CSV is the baseline reference format. Additional formats should be added only when they clarify a reusable governance or interoperability pattern.
+
+
 ## Governance audit events
 
 Governance audit history is implemented separately from structured application logging.

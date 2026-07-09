@@ -1,12 +1,14 @@
 """AccessAtlas application module."""
 
 from datetime import date
+import logging
 
 import pandas as pd
 import streamlit as st
 
 from accessatlas.compliance import normalize_date_value, uploaded_dates_compliance_status
 from accessatlas.config import RECONCILIATION_KEY_COLUMNS, TRAINING_RECONCILIATION_DATE_COLUMNS
+from accessatlas.logging_config import get_logger, log_event
 from accessatlas.state import (
     access_key_mask,
     generate_next_access_id,
@@ -14,9 +16,27 @@ from accessatlas.state import (
     update_user_compliance_dates,
 )
 
+
+logger = get_logger(__name__)
+
 def validate_upload(upload_df, required_columns):
     """Return a list of required columns missing from an uploaded file."""
-    return [column for column in required_columns if column not in upload_df.columns]
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in upload_df.columns
+    ]
+    log_event(
+        logger,
+        logging.WARNING if missing_columns else logging.INFO,
+        "upload_validated",
+        "Uploaded reconciliation file schema validated.",
+        record_count=len(upload_df),
+        required_column_count=len(required_columns),
+        missing_columns=missing_columns,
+        is_valid=not missing_columns,
+    )
+    return missing_columns
 
 def reconcile(current_access, upload_df, selected_system_id=None):
     """Compare current access assignments to an uploaded access export."""
@@ -40,6 +60,14 @@ def reconcile(current_access, upload_df, selected_system_id=None):
         key_cols = [c for c in fallback if c in current.columns and c in upload.columns]
 
     if not key_cols:
+        log_event(
+            logger,
+            logging.ERROR,
+            "reconciliation_key_resolution_failed",
+            "Reconciliation could not resolve matching key columns.",
+            current_columns=list(current.columns),
+            upload_columns=list(upload.columns),
+        )
         raise KeyError(
             "Reconciliation cannot proceed: no matching key columns found in current and uploaded data. "
             f"Expected one of {RECONCILIATION_KEY_COLUMNS} or fallback {fallback}.")
@@ -90,7 +118,24 @@ def reconcile(current_access, upload_df, selected_system_id=None):
             }
         )
 
-    return pd.DataFrame(rows)
+    comparison = pd.DataFrame(rows)
+    change_counts = (
+        comparison["change_type"].value_counts(dropna=False).to_dict()
+        if not comparison.empty
+        else {}
+    )
+    log_event(
+        logger,
+        logging.INFO,
+        "access_reconciliation_completed",
+        "System access reconciliation comparison completed.",
+        selected_system_id=selected_system_id or "All Systems",
+        current_record_count=len(current),
+        uploaded_record_count=len(upload),
+        comparison_record_count=len(comparison),
+        change_counts=change_counts,
+    )
+    return comparison
 
 def apply_reconciliation_action(access_df, row):
     """Apply one reconciliation recommendation to the canonical access table."""

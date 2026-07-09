@@ -88,21 +88,36 @@ modular/demo_app.py
 
 The root `app.py` and `modular/app.py` remain clean starter paths.
 
-### 3. Add structured application logging — Next implementation step
+### 3. Add structured application logging — Completed
 
-Introduce structured operational logging for application behavior and troubleshooting.
+AccessAtlas now includes structured operational logging through the Python standard `logging` package.
 
-Application logs should capture technical events such as:
+The implementation provides:
 
-- application startup and runtime selection
-- data loading and validation outcomes
-- reconciliation processing errors
-- export failures
-- unexpected workflow exceptions
+- JSON Lines output by default
+- optional human-readable text output
+- configurable log level
+- idempotent handler configuration for Streamlit reruns
+- runtime and application-role context
+- structured event names and fields
+- exception logging with tracebacks
+- tests for logging configuration and output contracts
 
-Application logs must remain distinct from governance audit events.
+Current operational events cover:
 
-### 4. Add audit logging and an audit-event model — Planned for 1.0.0
+- application run start
+- reference-data loading
+- runtime and visible-scope resolution
+- application-section rendering
+- upload schema validation
+- reconciliation comparison completion
+- reconciliation action processing
+- key-resolution failures
+- data-load failures
+
+Application logs remain explicitly separate from governance audit events.
+
+### 4. Add audit logging and an audit-event model — Next implementation step
 
 Introduce a modular governance audit-event model capable of recording meaningful actions.
 
@@ -463,7 +478,6 @@ The public demo should continue to reset tester changes and remain inexpensive t
 
 ## Remaining release requirements
 
-- structured application logging
 - audit logging and an initial audit-event model
 - data export capability
 - broader automated test coverage

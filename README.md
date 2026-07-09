@@ -70,7 +70,7 @@ This allows the application to answer both user-centered and system-centered que
 The hosted demo uses synthetic personas to show how the same governance data can support different operational responsibilities. The starter runtimes use the same role and scope rules without rendering the demo persona selector.
 
 | Demo role | Visible sections | Demonstrated responsibility |
-|---|---|---|
+| --- | --- | --- |
 | User | My Access | Review own governance record and update personal certification/agreement dates |
 | Manager | Dashboard, My Access, Manage Access, Access Reconciliation | Review own record, direct reports, associated systems, and scoped reconciliation information |
 | System Administrator | Dashboard, My Access, Manage Access, Access Reconciliation | Review and manage users and access within administered-system scope |
@@ -377,7 +377,7 @@ source
 
 This structure allows the same access model to describe a platform role, database permission, dashboard assignment, site membership, or other resource-specific access relationship.
 
-### System Administrator Assignments
+### System Administrator Roles
 
 System administrator assignments describe responsibility for administering a governed system.
 
@@ -652,6 +652,7 @@ The current reference implementation uses:
 - synthetic CSV datasets
 - Pytest
 - GitHub Actions
+- Python standard-library structured logging
 
 The application is platform-neutral at the governance-model level. A production implementation could use a backend or integrations such as:
 
@@ -699,19 +700,19 @@ pip install -r requirements.txt
 
 ### 4. Choose a run path
 
-#### Quick-start single-file starter
+#### Run the quick-start single-file starter
 
 ```bash
 streamlit run app.py
 ```
 
-#### Clean modular starter
+#### Run the modular app version
 
 ```bash
 streamlit run modular/app.py
 ```
 
-#### Hosted demo runtime
+#### Run the demo version
 
 ```bash
 streamlit run modular/demo_app.py
@@ -808,6 +809,25 @@ Typical production requirements include:
 - backup and recovery
 - operational support and data-retention policies
 
+### Application logging
+
+AccessAtlas uses structured operational logging for troubleshooting and runtime visibility.
+
+JSON logs are enabled by default and can be configured with:
+
+```text
+ACCESSATLAS_LOG_LEVEL
+ACCESSATLAS_LOG_FORMAT
+```
+
+For example:
+
+```bash
+ACCESSATLAS_LOG_LEVEL=DEBUG ACCESSATLAS_LOG_FORMAT=text streamlit run modular/app.py
+```
+
+Application logs and governance audit events are intentionally separate. Operational logs describe application behavior and processing outcomes. Governance actions will be recorded through the audit-event model.
+
 A particularly important architectural principle is that **hidden UI controls are not authorization**. The current app hides and scopes screens to demonstrate intended personas, but a production implementation must enforce the same rules in its backend and data-access layer.
 
 ---
@@ -869,7 +889,7 @@ Additional documentation is available in the repository:
 
 - `CHANGELOG.md` — development history and unreleased changes
 - `ROADMAP.md` — Now / Next / Later product direction and 1.0.0 readiness
-- `docs/MODULAR_ARCHITECTURE.md` — single-file publishing and starter/demo runtime architecture
+- `docs/MODULAR_ARCHITECTURE.md` — single-file publishing, starter/demo runtime architecture, and structured logging configuration
 - `docs/UI_STYLE_GUIDE.md` — current interface vocabulary and presentation conventions
 - `docs/architecture/governance_patterns.md` — governance architecture patterns
 - `docs/user-guides/access-reviewer-guide.md` — access review guidance
@@ -893,10 +913,10 @@ The current 1.0.0 engineering work has established:
 - separate starter and hosted demo runtimes
 - a starter identity extension point
 - disposable, session-backed demo changes
+- structured application logging with JSON or text output
 
 The remaining 1.0.0 engineering priorities are:
 
-- structured application logging
 - a governance audit-event model
 - data export capability
 - broader automated test coverage

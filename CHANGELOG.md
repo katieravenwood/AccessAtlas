@@ -30,6 +30,12 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - `docs/MODULAR_ARCHITECTURE.md` documenting the dual-distribution and starter/demo runtime model.
 - Current-state README documentation aligned to the task-based application structure.
 - `docs/UI_STYLE_GUIDE.md` documenting current navigation vocabulary, screen hierarchy, table conventions, status semantics, empty states, reconciliation patterns, and Streamlit UI conventions.
+- Structured application logging through `modular/accessatlas/logging_config.py`.
+- JSON Lines logging as the default operational log format with optional human-readable text output.
+- `ACCESSATLAS_LOG_LEVEL` and `ACCESSATLAS_LOG_FORMAT` logging configuration.
+- Runtime logging context for runtime name and application role.
+- Operational events for application startup, reference-data loading, runtime scoping, section rendering, upload validation, and reconciliation processing.
+- `tests/test_logging.py` covering logger idempotency, JSON event fields, runtime context, and invalid configuration fallback.
 
 ### Changed
 
@@ -50,6 +56,9 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - README now documents the quick-start starter, modular starter, and hosted demo as distinct run paths.
 - Repository structure documentation now includes `modular/`, build tooling, runtime-separation tests, roadmap, and modular architecture documentation.
 - Future-direction documentation was revised to remove completed modularization and demo/starter separation work.
+- Separated operational application logs from the planned governance audit-event model.
+- Configured the AccessAtlas logger namespace idempotently so Streamlit reruns do not create duplicate handlers.
+- Added structured exception logging for reference-data load failures and reconciliation key-resolution failures.
 
 ### Fixed
 

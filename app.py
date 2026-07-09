@@ -186,6 +186,216 @@ COLUMN_LABELS = {
 }
 
 
+# === Shared module: accessatlas/logging_config.py ===
+from contextvars import ContextVar
+from datetime import datetime, timezone
+import json
+import logging
+import os
+import sys
+from typing import Any, Mapping
+
+
+LOG_LEVEL_ENV = "ACCESSATLAS_LOG_LEVEL"
+LOG_FORMAT_ENV = "ACCESSATLAS_LOG_FORMAT"
+DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_LOG_FORMAT = "json"
+LOGGER_NAMESPACE = "accessatlas"
+
+_runtime_name: ContextVar[str] = ContextVar("accessatlas_runtime_name", default="unresolved")
+_application_role: ContextVar[str] = ContextVar("accessatlas_application_role", default="unresolved")
+
+_RESERVED_RECORD_FIELDS = set(logging.makeLogRecord({}).__dict__) | {
+    "message",
+    "asctime",
+}
+
+
+def _normalize_log_level(value: str | None) -> int:
+    """Return a valid logging level from configuration."""
+    normalized = (value or DEFAULT_LOG_LEVEL).strip().upper()
+    level = logging.getLevelName(normalized)
+    return level if isinstance(level, int) else logging.INFO
+
+
+def _normalize_log_format(value: str | None) -> str:
+    """Return a supported output format."""
+    normalized = (value or DEFAULT_LOG_FORMAT).strip().lower()
+    return normalized if normalized in {"json", "text"} else DEFAULT_LOG_FORMAT
+
+
+def _json_safe(value: Any) -> Any:
+    """Return a JSON-serializable representation of a log field."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    return str(value)
+
+
+class AccessAtlasContextFilter(logging.Filter):
+    """Attach runtime context to every AccessAtlas application log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.runtime_name = _runtime_name.get()
+        record.application_role = _application_role.get()
+        return True
+
+
+class JsonFormatter(logging.Formatter):
+    """Render AccessAtlas application logs as one JSON object per line."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "timestamp": datetime.fromtimestamp(
+                record.created,
+                tz=timezone.utc,
+            ).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "event": getattr(record, "event_name", "application_log"),
+            "message": record.getMessage(),
+            "runtime": getattr(record, "runtime_name", "unresolved"),
+            "application_role": getattr(record, "application_role", "unresolved"),
+        }
+
+        event_fields = getattr(record, "event_fields", {})
+        if event_fields:
+            payload["fields"] = _json_safe(event_fields)
+
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(payload, separators=(",", ":"), sort_keys=True)
+
+
+class TextFormatter(logging.Formatter):
+    """Render readable local-development application logs."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        event_name = getattr(record, "event_name", "application_log")
+        event_fields = getattr(record, "event_fields", {})
+        fields_text = ""
+        if event_fields:
+            fields_text = f" fields={json.dumps(_json_safe(event_fields), sort_keys=True)}"
+
+        message = (
+            f"{datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()} "
+            f"{record.levelname} {record.name} "
+            f"event={event_name} runtime={getattr(record, 'runtime_name', 'unresolved')} "
+            f"role={getattr(record, 'application_role', 'unresolved')} "
+            f"{record.getMessage()}{fields_text}"
+        )
+
+        if record.exc_info:
+            message = f"{message}\n{self.formatException(record.exc_info)}"
+
+        return message
+
+
+def configure_logging(
+    *,
+    level: str | None = None,
+    output_format: str | None = None,
+) -> logging.Logger:
+    """Configure the AccessAtlas logger namespace once per Python process.
+
+    Repeated calls update the handler level and formatter without adding
+    duplicate handlers. This is important in Streamlit, where the app script
+    reruns during user interaction.
+    """
+    logger = logging.getLogger(LOGGER_NAMESPACE)
+    logger.setLevel(_normalize_log_level(level or os.getenv(LOG_LEVEL_ENV)))
+    logger.propagate = False
+
+    selected_format = _normalize_log_format(
+        output_format or os.getenv(LOG_FORMAT_ENV)
+    )
+    formatter: logging.Formatter = (
+        JsonFormatter() if selected_format == "json" else TextFormatter()
+    )
+
+    handler = next(
+        (
+            candidate
+            for candidate in logger.handlers
+            if getattr(candidate, "_accessatlas_handler", False)
+        ),
+        None,
+    )
+
+    if handler is None:
+        handler = logging.StreamHandler(sys.stdout)
+        handler._accessatlas_handler = True  # type: ignore[attr-defined]
+        handler.addFilter(AccessAtlasContextFilter())
+        logger.addHandler(handler)
+
+    handler.setLevel(logger.level)
+    handler.setFormatter(formatter)
+    return logger
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Return a child logger inside the AccessAtlas application namespace."""
+    if name == LOGGER_NAMESPACE or name.startswith(f"{LOGGER_NAMESPACE}."):
+        logger_name = name
+    else:
+        logger_name = f"{LOGGER_NAMESPACE}.{name}"
+    return logging.getLogger(logger_name)
+
+
+def set_runtime_log_context(
+    *,
+    runtime_name: str,
+    application_role: str,
+) -> None:
+    """Set low-cardinality runtime context for subsequent application logs."""
+    _runtime_name.set(runtime_name)
+    _application_role.set(application_role)
+
+
+def reset_runtime_log_context() -> None:
+    """Reset runtime context to its unresolved startup state."""
+    _runtime_name.set("unresolved")
+    _application_role.set("unresolved")
+
+
+def log_event(
+    logger: logging.Logger,
+    level: int,
+    event_name: str,
+    message: str,
+    **fields: Any,
+) -> None:
+    """Write one structured application event."""
+    logger.log(
+        level,
+        message,
+        extra={
+            "event_name": event_name,
+            "event_fields": fields,
+        },
+    )
+
+
+def log_exception(
+    logger: logging.Logger,
+    event_name: str,
+    message: str,
+    **fields: Any,
+) -> None:
+    """Write one structured exception event with the active traceback."""
+    logger.exception(
+        message,
+        extra={
+            "event_name": event_name,
+            "event_fields": fields,
+        },
+    )
+
+
 # === Shared module: accessatlas/compliance.py ===
 from datetime import date
 
@@ -283,17 +493,44 @@ def uploaded_dates_compliance_status(uploaded_values):
 
 
 # === Shared module: accessatlas/data.py ===
+import logging
+
 import pandas as pd
 import streamlit as st
 
 
+
+logger = get_logger(__name__)
+
 @st.cache_data
 def load_csv(filename, date_columns=None):
     """Load a CSV file from the data directory with optional date parsing."""
-    return pd.read_csv(
-        DATA_DIR / filename,
-        parse_dates=date_columns or []
+    source_path = DATA_DIR / filename
+    try:
+        dataframe = pd.read_csv(
+            source_path,
+            parse_dates=date_columns or [],
+        )
+    except Exception:
+        log_exception(
+            logger,
+            "data_load_failed",
+            "Reference dataset could not be loaded.",
+            dataset=filename,
+            source_path=str(source_path),
+        )
+        raise
+
+    log_event(
+        logger,
+        logging.INFO,
+        "data_loaded",
+        "Reference dataset loaded.",
+        dataset=filename,
+        record_count=len(dataframe),
+        column_count=len(dataframe.columns),
     )
+    return dataframe
 
 @st.cache_data
 def load_data():
@@ -318,12 +555,23 @@ def load_data():
         ["granted_date", "revoked_date"],
     )
 
-    return {
+    datasets = {
         "users": users,
         "systems": systems,
         "access_assignments": access_assignments,
         "system_admin_assignments": system_admin_assignments,
     }
+    log_event(
+        logger,
+        logging.INFO,
+        "reference_data_ready",
+        "Reference datasets are ready for the application.",
+        dataset_counts={
+            name: len(dataframe)
+            for name, dataframe in datasets.items()
+        },
+    )
+    return datasets
 
 
 # === Shared module: accessatlas/navigation.py ===
@@ -663,14 +911,33 @@ def access_key_mask(access_df, row):
 
 # === Shared module: accessatlas/reconciliation.py ===
 from datetime import date
+import logging
 
 import pandas as pd
 import streamlit as st
 
 
+
+logger = get_logger(__name__)
+
 def validate_upload(upload_df, required_columns):
     """Return a list of required columns missing from an uploaded file."""
-    return [column for column in required_columns if column not in upload_df.columns]
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in upload_df.columns
+    ]
+    log_event(
+        logger,
+        logging.WARNING if missing_columns else logging.INFO,
+        "upload_validated",
+        "Uploaded reconciliation file schema validated.",
+        record_count=len(upload_df),
+        required_column_count=len(required_columns),
+        missing_columns=missing_columns,
+        is_valid=not missing_columns,
+    )
+    return missing_columns
 
 def reconcile(current_access, upload_df, selected_system_id=None):
     """Compare current access assignments to an uploaded access export."""
@@ -694,6 +961,14 @@ def reconcile(current_access, upload_df, selected_system_id=None):
         key_cols = [c for c in fallback if c in current.columns and c in upload.columns]
 
     if not key_cols:
+        log_event(
+            logger,
+            logging.ERROR,
+            "reconciliation_key_resolution_failed",
+            "Reconciliation could not resolve matching key columns.",
+            current_columns=list(current.columns),
+            upload_columns=list(upload.columns),
+        )
         raise KeyError(
             "Reconciliation cannot proceed: no matching key columns found in current and uploaded data. "
             f"Expected one of {RECONCILIATION_KEY_COLUMNS} or fallback {fallback}.")
@@ -744,7 +1019,24 @@ def reconcile(current_access, upload_df, selected_system_id=None):
             }
         )
 
-    return pd.DataFrame(rows)
+    comparison = pd.DataFrame(rows)
+    change_counts = (
+        comparison["change_type"].value_counts(dropna=False).to_dict()
+        if not comparison.empty
+        else {}
+    )
+    log_event(
+        logger,
+        logging.INFO,
+        "access_reconciliation_completed",
+        "System access reconciliation comparison completed.",
+        selected_system_id=selected_system_id or "All Systems",
+        current_record_count=len(current),
+        uploaded_record_count=len(upload),
+        comparison_record_count=len(comparison),
+        change_counts=change_counts,
+    )
+    return comparison
 
 def apply_reconciliation_action(access_df, row):
     """Apply one reconciliation recommendation to the canonical access table."""
@@ -882,7 +1174,17 @@ def apply_reconciliation_actions(access_df, selected_rows):
         )
         action_results.append(build_reconciliation_action_result(display_row, outcome))
 
-    return updated_access, counts, pd.DataFrame(action_results)
+    result_dataframe = pd.DataFrame(action_results)
+    log_event(
+        logger,
+        logging.INFO,
+        "access_reconciliation_actions_applied",
+        "Selected system access reconciliation actions were processed.",
+        selected_action_count=len(selected_rows),
+        outcome_counts=counts,
+        resulting_access_record_count=len(updated_access),
+    )
+    return updated_access, counts, result_dataframe
 
 def inactivate_user_record(user_id):
     """Mark one user record inactive in the session-state user registry."""
@@ -971,7 +1273,23 @@ def reconcile_training_dates(current_users, upload_df):
 
         rows.append(row)
 
-    return pd.DataFrame(rows)
+    comparison = pd.DataFrame(rows)
+    change_counts = (
+        comparison["change_type"].value_counts(dropna=False).to_dict()
+        if not comparison.empty
+        else {}
+    )
+    log_event(
+        logger,
+        logging.INFO,
+        "training_reconciliation_completed",
+        "Training and agreement reconciliation comparison completed.",
+        current_user_count=len(current),
+        uploaded_user_count=len(upload),
+        comparison_record_count=len(comparison),
+        change_counts=change_counts,
+    )
+    return comparison
 
 def apply_training_date_actions(selected_rows):
     """Apply selected training date reconciliation actions to session state."""
@@ -1037,7 +1355,16 @@ def apply_training_date_actions(selected_rows):
             }
         )
 
-    return counts, pd.DataFrame(results)
+    result_dataframe = pd.DataFrame(results)
+    log_event(
+        logger,
+        logging.INFO,
+        "training_reconciliation_actions_applied",
+        "Selected training and agreement reconciliation actions were processed.",
+        selected_action_count=len(selected_rows),
+        outcome_counts=counts,
+    )
+    return counts, result_dataframe
 
 
 def display_recommended_action(action):
@@ -1077,6 +1404,7 @@ class RuntimeContext:
 
 
 # === Shared module: accessatlas/starter_runtime.py ===
+import logging
 import os
 
 import pandas as pd
@@ -1085,6 +1413,9 @@ import streamlit as st
 
 
 STARTER_USER_ID_ENV = "ACCESSATLAS_USER_ID"
+
+
+logger = get_logger(__name__)
 
 
 def _resolve_starter_user(users: pd.DataFrame) -> pd.Series:
@@ -1098,6 +1429,13 @@ def _resolve_starter_user(users: pd.DataFrame) -> pd.Series:
                 f"{STARTER_USER_ID_ENV}={configured_user_id!r} does not match a user_id "
                 "in the current user dataset."
             )
+        log_event(
+            logger,
+            logging.INFO,
+            "starter_identity_resolved",
+            "Starter identity resolved from configuration.",
+            resolution_method="environment",
+        )
         return matching_users.iloc[0]
 
     super_admins = users[
@@ -1105,15 +1443,36 @@ def _resolve_starter_user(users: pd.DataFrame) -> pd.Series:
         & (users["record_status"] == "Active")
     ]
     if not super_admins.empty:
+        log_event(
+            logger,
+            logging.WARNING,
+            "starter_identity_fallback",
+            "Starter identity configuration was not provided; using the active Super Administrator fallback.",
+            resolution_method="super_administrator_fallback",
+        )
         return super_admins.sort_values("user_id").iloc[0]
 
     active_users = users[users["record_status"] == "Active"]
     if not active_users.empty:
+        log_event(
+            logger,
+            logging.WARNING,
+            "starter_identity_fallback",
+            "Starter identity configuration was not provided; using the first active user fallback.",
+            resolution_method="active_user_fallback",
+        )
         return active_users.sort_values("user_id").iloc[0]
 
     if users.empty:
         raise ValueError("The user dataset is empty; AccessAtlas cannot resolve a starter identity.")
 
+    log_event(
+        logger,
+        logging.WARNING,
+        "starter_identity_fallback",
+        "No active users were available; using the first user record fallback.",
+        resolution_method="first_user_fallback",
+    )
     return users.sort_values("user_id").iloc[0]
 
 
@@ -1125,6 +1484,10 @@ def build_starter_runtime(
 ) -> RuntimeContext:
     """Build the clean starter runtime from a configured application identity."""
     current_user = _resolve_starter_user(users)
+    set_runtime_log_context(
+        runtime_name="starter",
+        application_role=str(current_user["application_role"]),
+    )
     visible_tabs = get_visible_tabs(current_user["application_role"])
 
     scoped_users, scoped_systems, scoped_access, scoped_system_admins = apply_role_scope(
@@ -1133,6 +1496,18 @@ def build_starter_runtime(
         access,
         system_admins,
         current_user,
+    )
+
+    log_event(
+        logger,
+        logging.INFO,
+        "runtime_scope_resolved",
+        "Starter runtime scope resolved.",
+        visible_section_count=len(visible_tabs),
+        visible_user_count=len(scoped_users),
+        visible_system_count=len(scoped_systems),
+        visible_access_count=len(scoped_access),
+        visible_admin_assignment_count=len(scoped_system_admins),
     )
 
     return RuntimeContext(
@@ -1149,14 +1524,27 @@ def build_starter_runtime(
 
 # === Shared module: accessatlas/app_core.py ===
 from datetime import date
+import logging
 
 import pandas as pd
 import streamlit as st
 
 
 
+logger = get_logger(__name__)
+
+
 def run_app(runtime_factory):
     """Run AccessAtlas using the supplied runtime-context factory."""
+    configure_logging()
+    reset_runtime_log_context()
+    log_event(
+        logger,
+        logging.INFO,
+        "application_run_started",
+        "AccessAtlas application run started.",
+        runtime_factory=getattr(runtime_factory, "__name__", type(runtime_factory).__name__),
+    )
     st.set_page_config(page_title="AccessAtlas", layout="wide")
 
 
@@ -1232,84 +1620,6 @@ def run_app(runtime_factory):
             st.rerun()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     data = load_data()
     initialize_user_update_state()
     initialize_editable_user_state(data["users"])
@@ -1339,6 +1649,22 @@ def run_app(runtime_factory):
         all_systems,
         all_access,
         all_system_admins,
+    )
+    set_runtime_log_context(
+        runtime_name=runtime.runtime_name,
+        application_role=str(runtime.current_user["application_role"]),
+    )
+    log_event(
+        logger,
+        logging.INFO,
+        "runtime_initialized",
+        "Application runtime initialized.",
+        is_demo=runtime.is_demo,
+        visible_section_count=len(runtime.visible_tabs),
+        visible_user_count=len(runtime.users),
+        visible_system_count=len(runtime.systems),
+        visible_access_count=len(runtime.access),
+        visible_admin_assignment_count=len(runtime.system_admins),
     )
     current_user = runtime.current_user
     visible_tabs = runtime.visible_tabs
@@ -3393,8 +3719,15 @@ def run_app(runtime_factory):
     selected_section = section_name_from_label(selected_section_label)
 
     if runtime.section_guidance_renderer is not None:
-            runtime.section_guidance_renderer(selected_section)
+        runtime.section_guidance_renderer(selected_section)
 
+    log_event(
+        logger,
+        logging.INFO,
+        "section_rendered",
+        "Application section selected for rendering.",
+        section=selected_section,
+    )
     TAB_RENDERERS[selected_section]()
 
 

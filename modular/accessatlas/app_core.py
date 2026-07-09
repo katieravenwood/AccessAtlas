@@ -14,6 +14,7 @@ This module provides:
 """
 
 from datetime import date
+import logging
 
 import pandas as pd
 import streamlit as st
@@ -34,6 +35,13 @@ from accessatlas.config import (
     USER_DISPLAY_COLUMNS,
 )
 from accessatlas.data import load_data
+from accessatlas.logging_config import (
+    configure_logging,
+    get_logger,
+    log_event,
+    reset_runtime_log_context,
+    set_runtime_log_context,
+)
 from accessatlas.navigation import (
     get_visible_tabs,
     section_label,
@@ -72,8 +80,20 @@ from accessatlas.state import (
 )
 
 
+logger = get_logger(__name__)
+
+
 def run_app(runtime_factory):
     """Run AccessAtlas using the supplied runtime-context factory."""
+    configure_logging()
+    reset_runtime_log_context()
+    log_event(
+        logger,
+        logging.INFO,
+        "application_run_started",
+        "AccessAtlas application run started.",
+        runtime_factory=getattr(runtime_factory, "__name__", type(runtime_factory).__name__),
+    )
     st.set_page_config(page_title="AccessAtlas", layout="wide")
 
 
@@ -256,6 +276,22 @@ def run_app(runtime_factory):
         all_systems,
         all_access,
         all_system_admins,
+    )
+    set_runtime_log_context(
+        runtime_name=runtime.runtime_name,
+        application_role=str(runtime.current_user["application_role"]),
+    )
+    log_event(
+        logger,
+        logging.INFO,
+        "runtime_initialized",
+        "Application runtime initialized.",
+        is_demo=runtime.is_demo,
+        visible_section_count=len(runtime.visible_tabs),
+        visible_user_count=len(runtime.users),
+        visible_system_count=len(runtime.systems),
+        visible_access_count=len(runtime.access),
+        visible_admin_assignment_count=len(runtime.system_admins),
     )
     current_user = runtime.current_user
     visible_tabs = runtime.visible_tabs
@@ -2310,6 +2346,13 @@ def run_app(runtime_factory):
     selected_section = section_name_from_label(selected_section_label)
 
     if runtime.section_guidance_renderer is not None:
-            runtime.section_guidance_renderer(selected_section)
+        runtime.section_guidance_renderer(selected_section)
 
+    log_event(
+        logger,
+        logging.INFO,
+        "section_rendered",
+        "Application section selected for rendering.",
+        section=selected_section,
+    )
     TAB_RENDERERS[selected_section]()

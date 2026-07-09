@@ -23,7 +23,7 @@ Do not reintroduce older top-level labels such as `Overview`, `Users`, `Systems`
 Use the following current labels:
 
 | Current Label | Purpose |
-|---|---|
+| --- | --- |
 | My Record | Individual record view within My Access |
 | Update My Certification and Agreement Dates | Self-service date update workflow |
 | Managed Users | Scoped user review |

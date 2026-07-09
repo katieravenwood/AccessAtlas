@@ -25,6 +25,8 @@ OUTPUT_PATH = ROOT / "app.py"
 
 MODULE_ORDER = [
     "config.py",
+    "logging_config.py",
+    "audit.py",
     "compliance.py",
     "data.py",
     "navigation.py",

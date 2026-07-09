@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+
 import pandas as pd
 import streamlit as st
 
+from accessatlas.logging_config import get_logger, log_event, set_runtime_log_context
 from accessatlas.navigation import get_visible_tabs
 from accessatlas.runtime import RuntimeContext
 from accessatlas.scope import apply_role_scope
+
+
+logger = get_logger(__name__)
 
 
 def _demo_user_options(users: pd.DataFrame) -> pd.DataFrame:
@@ -139,6 +145,10 @@ def build_demo_runtime(
         index=default_index,
     )
     current_user = _current_demo_user(users, selected_label)
+    set_runtime_log_context(
+        runtime_name="demo",
+        application_role=str(current_user["application_role"]),
+    )
     visible_tabs = get_visible_tabs(current_user["application_role"])
 
     st.sidebar.markdown("### Current Demo User")
@@ -169,6 +179,18 @@ def build_demo_runtime(
         f"Viewing as **{current_user['display_name']}** "
         f"with role **{current_user['application_role']}**. "
         "Visible sections and records are controlled by simulated demo-role rules."
+    )
+
+    log_event(
+        logger,
+        logging.INFO,
+        "runtime_scope_resolved",
+        "Demo runtime scope resolved.",
+        visible_section_count=len(visible_tabs),
+        visible_user_count=len(scoped_users),
+        visible_system_count=len(scoped_systems),
+        visible_access_count=len(scoped_access),
+        visible_admin_assignment_count=len(scoped_system_admins),
     )
 
     return RuntimeContext(

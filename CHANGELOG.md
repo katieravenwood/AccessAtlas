@@ -10,6 +10,25 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- `modular/accessatlas/audit.py` with:
+  - immutable `AuditEvent` model
+  - replaceable `AuditStore` protocol
+  - session-backed append-oriented `SessionAuditStore`
+  - actor/runtime audit context
+  - deterministic JSON change-detail serialization
+  - audit history dataframe access
+- Governance audit events for:
+  - user record creation
+  - self-service compliance date updates
+  - training and agreement reconciliation updates
+  - compliance-driven user inactivation
+  - direct access assignment creation and update
+  - system access reconciliation add, update, and inactivation actions
+- Governance Audit History under AccessAtlas App Admin for Super Administrators.
+- Audit-history metrics, filters, chronological event review, and event-level JSON change detail.
+- `tests/test_audit.py` covering actor context, replaceable stores, stable schema, serialization, and append order.
+
+
 - Canonical modular application source under `modular/`.
 - Shared application core in `modular/accessatlas/app_core.py`.
 - `RuntimeContext` contract for resolved identity, role-visible sections, scoped governance datasets, runtime type, and optional runtime-specific guidance.
@@ -30,8 +49,22 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - `docs/MODULAR_ARCHITECTURE.md` documenting the dual-distribution and starter/demo runtime model.
 - Current-state README documentation aligned to the task-based application structure.
 - `docs/UI_STYLE_GUIDE.md` documenting current navigation vocabulary, screen hierarchy, table conventions, status semantics, empty states, reconciliation patterns, and Streamlit UI conventions.
+- Structured application logging through `modular/accessatlas/logging_config.py`.
+- JSON Lines logging as the default operational log format with optional human-readable text output.
+- `ACCESSATLAS_LOG_LEVEL` and `ACCESSATLAS_LOG_FORMAT` logging configuration.
+- Runtime logging context for runtime name and application role.
+- Operational events for application startup, reference-data loading, runtime scoping, section rendering, upload validation, and reconciliation processing.
+- `tests/test_logging.py` covering logger idempotency, JSON event fields, runtime context, and invalid configuration fallback.
 
 ### Changed
+
+- Replaced reconciliation-only synthetic `audit_event_id` generation with real governance audit events.
+- Reconciliation result rows now reference the audit event created for the applied governance action.
+- Separated operational structured logging from governance history at both the data-model and UI layers.
+- Added actor and runtime context initialization after the application runtime resolves.
+- Added governance audit history to the Super Administrator administrative workflow.
+- Updated the single-file builder to include the audit module in the generated starter.
+
 
 - Reframed `modular/` as the canonical engineering source while keeping root `app.py` as the easy quick-start distribution.
 - Generalized role-scope logic from demo-specific naming to application-level scope behavior.
@@ -50,6 +83,9 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - README now documents the quick-start starter, modular starter, and hosted demo as distinct run paths.
 - Repository structure documentation now includes `modular/`, build tooling, runtime-separation tests, roadmap, and modular architecture documentation.
 - Future-direction documentation was revised to remove completed modularization and demo/starter separation work.
+- Separated operational application logs from the planned governance audit-event model.
+- Configured the AccessAtlas logger namespace idempotently so Streamlit reruns do not create duplicate handlers.
+- Added structured exception logging for reference-data load failures and reconciliation key-resolution failures.
 
 ### Fixed
 

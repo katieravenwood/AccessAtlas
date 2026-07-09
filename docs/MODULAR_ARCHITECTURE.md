@@ -151,6 +151,65 @@ It:
 5. renders demo scope information; and
 6. attaches demo-only contextual guidance.
 
+
+## Structured application logging
+
+`modular/accessatlas/logging_config.py` configures AccessAtlas operational logs.
+
+Application logs are separate from governance audit events:
+
+- **application logs** support troubleshooting, runtime visibility, data-loading diagnostics, and processing failures;
+- **audit events** record meaningful governance actions and belong to the separate audit-event model.
+
+The logging module uses the Python standard `logging` package and emits JSON lines by default.
+
+Configuration is controlled through:
+
+```text
+ACCESSATLAS_LOG_LEVEL
+ACCESSATLAS_LOG_FORMAT
+```
+
+Supported log formats are:
+
+```text
+json
+text
+```
+
+The default is:
+
+```text
+ACCESSATLAS_LOG_LEVEL=INFO
+ACCESSATLAS_LOG_FORMAT=json
+```
+
+The logger is configured idempotently so Streamlit reruns do not add duplicate handlers.
+
+Runtime context is attached after the starter or demo runtime resolves. Current structured fields include:
+
+```text
+event
+runtime
+application_role
+fields
+```
+
+Application logs deliberately avoid display names, email addresses, and governance action details that belong in the audit model.
+
+Initial operational events cover:
+
+- application run start
+- reference-data loading
+- runtime and visible-scope resolution
+- application-section rendering
+- upload schema validation
+- reconciliation comparison completion
+- reconciliation action processing
+- reconciliation key-resolution failures
+- reference-data load failures
+
+
 ## Single-file publishing
 
 The modular implementation remains the canonical engineering source.
@@ -186,6 +245,45 @@ modular/demo_app.py
 ```
 
 The root `app.py` should remain the recommended quick-start path in the README.
+
+## Governance audit events
+
+Governance audit history is implemented separately from structured application logging.
+
+```text
+Operational event
+    └── logging_config.py
+        └── runtime/process troubleshooting
+
+Governance action
+    └── audit.py
+        └── append-oriented audit event
+```
+
+`modular/accessatlas/audit.py` defines:
+
+- `AuditEvent`
+- `AuditStore`
+- `SessionAuditStore`
+- audit actor/runtime context
+- event creation and recording helpers
+- dataframe access for review and future export
+
+The shared application core sets audit actor context after the starter or demo runtime resolves the current user.
+
+The default session-backed store is deliberate for the reference application:
+
+- hosted demo actions do not persist
+- no public test activity accumulates
+- no hosted database is required
+- the event model remains demonstrable
+
+The `AuditStore` protocol is the production extension point. A persistent implementation may write to an append-oriented database table, governed event store, or another controlled audit repository.
+
+Production implementations should define retention, immutability, access control, evidence requirements, and archival behavior according to their own governance and regulatory context.
+
+Audit event change detail is serialized into `changes_json`. The reference model records actor, target, entity, system, outcome, source, summary, and runtime context without using the operational log stream as governance history.
+
 
 ## Maintenance rule
 

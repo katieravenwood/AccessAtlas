@@ -2,7 +2,7 @@
 
 AccessAtlas uses a task-based interface for access governance workflows.
 
-This guide records the current reference implementation's UI vocabulary and presentation conventions. It is descriptive of the current application and should be used when adding or revising screens.
+This guide records the shared AccessAtlas application's UI vocabulary and presentation conventions. It applies to the quick-start starter, modular starter, and hosted demo unless a rule is explicitly identified as demo-specific.
 
 ## Top-Level Navigation
 
@@ -23,7 +23,7 @@ Do not reintroduce older top-level labels such as `Overview`, `Users`, `Systems`
 Use the following current labels:
 
 | Current Label | Purpose |
-| --- | --- |
+|---|---|
 | My Record | Individual record view within My Access |
 | Update My Certification and Agreement Dates | Self-service date update workflow |
 | Managed Users | Scoped user review |
@@ -37,6 +37,7 @@ Use the following current labels:
 | Training Certificate Date and Agreement Reconciliation | Compliance-date reconciliation |
 | Compliance Monitoring | Administrative compliance review |
 | System Administrator Assignments | Administrative responsibility review |
+| Governance Audit History | Current-session governance action review |
 
 Prefer the exact application label when documentation refers to a visible screen or tab.
 
@@ -75,7 +76,7 @@ Avoid:
 
 > Please use the filters below in order to narrow down the records that are displayed.
 
-Demo-specific language must state clearly that Demo Mode simulates visibility or workflow behavior and is not authentication.
+Demo-specific language belongs only in the hosted demo runtime and must state clearly that Demo Mode simulates visibility or workflow behavior and is not authentication. The starter runtimes should not render Demo Mode warnings, persona selectors, or demo-only contextual guidance.
 
 ## Filters
 
@@ -169,7 +170,7 @@ Both reconciliation workflows should follow the same mental model:
 5. Summarize change types
 6. Review the queue
 7. Select applicable actions
-8. Apply demo-session updates
+8. Apply current-session updates
 9. Review results
 
 The queue should make the recommended action and change type easy to scan.
@@ -186,7 +187,7 @@ Historical records should be inactivated rather than deleted.
 
 ## Role-Aware Interface Rules
 
-The current Demo Mode section visibility is:
+The current shared application section visibility is:
 
 - User: My Access
 - Manager: Dashboard, My Access, Manage Access, Access Reconciliation
@@ -195,9 +196,34 @@ The current Demo Mode section visibility is:
 
 System Administrator views must remain limited to administered-system scope.
 
-User self-service must remain limited to the selected user's own record.
+User self-service must remain limited to the current user's own record.
 
-These are demonstration rules only. Production authorization belongs in the backend and data layer.
+The hosted demo uses synthetic personas to preview these rules. The starter runtime resolves a current application identity without rendering the demo selector.
+
+These UI and reference scope rules are not a production authorization boundary. Production authorization belongs in the backend and data-access layer.
+
+## Governance Audit History
+
+Governance Audit History is an administrative review surface, not an operational application-log viewer.
+
+Use it to show:
+
+- event identity and time
+- event type and action
+- actor identity and role
+- affected entity
+- target user and system when applicable
+- outcome
+- source
+- concise summary
+- structured change detail
+
+Keep the primary table scan-friendly. Detailed `changes_json` belongs in an event-level expander or detail view rather than the main table.
+
+Do not mix structured application logs into Governance Audit History.
+
+The reference UI should state clearly that audit history is session-backed. Production audit storage may require stronger immutability, retention, and access controls.
+
 
 ## Streamlit API Conventions
 
@@ -208,13 +234,16 @@ Use current Streamlit width parameters:
 
 Centralize repeated display behavior in helpers where doing so improves consistency without obscuring the workflow.
 
-Prefer small, explicit helpers over broad framework-like abstraction in the single-file reference application.
+Prefer small, explicit helpers over broad framework-like abstraction. Shared UI behavior belongs in the modular source; the generated single-file starter should remain readable after publishing.
 
 ## Documentation Alignment
 
-When a visible UI label changes, review at minimum:
+When a visible UI label or runtime behavior changes, review at minimum:
 
 - `README.md`
+- `CHANGELOG.md`
+- `ROADMAP.md` when roadmap status changes
+- `docs/MODULAR_ARCHITECTURE.md` when entry points, runtime boundaries, or publishing behavior change
 - `docs/UI_STYLE_GUIDE.md`
 - user guides under `docs/user-guides/`
 - implementation notes when the changed concept is architectural or data-related

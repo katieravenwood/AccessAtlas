@@ -88,39 +88,58 @@ modular/demo_app.py
 
 The root `app.py` and `modular/app.py` remain clean starter paths.
 
-### 3. Add structured application logging — Next implementation step
+### 3. Add structured application logging — Completed
 
-Introduce structured operational logging for application behavior and troubleshooting.
+AccessAtlas now includes structured operational logging through the Python standard `logging` package.
 
-Application logs should capture technical events such as:
+The implementation provides:
 
-- application startup and runtime selection
-- data loading and validation outcomes
-- reconciliation processing errors
-- export failures
-- unexpected workflow exceptions
+- JSON Lines output by default
+- optional human-readable text output
+- configurable log level
+- idempotent handler configuration for Streamlit reruns
+- runtime and application-role context
+- structured event names and fields
+- exception logging with tracebacks
+- tests for logging configuration and output contracts
 
-Application logs must remain distinct from governance audit events.
+Current operational events cover:
 
-### 4. Add audit logging and an audit-event model — Planned for 1.0.0
+- application run start
+- reference-data loading
+- runtime and visible-scope resolution
+- application-section rendering
+- upload schema validation
+- reconciliation comparison completion
+- reconciliation action processing
+- key-resolution failures
+- data-load failures
 
-Introduce a modular governance audit-event model capable of recording meaningful actions.
+Application logs remain explicitly separate from governance audit events.
 
-Initial event types should include:
+### 4. Add audit logging and an audit-event model — Next implementation step
 
-- user record creation or update
-- self-service compliance date update
-- access assignment creation or update
+AccessAtlas now includes a modular governance audit-event model and replaceable audit-store contract.
+
+The current reference implementation records meaningful governance actions for:
+
+- user record creation
+- self-service compliance date updates
+- access assignment creation and update
 - access inactivation
-- reconciliation action application
-- administrator assignment changes
-- system catalog changes, as those workflows are introduced
+- access reconciliation actions
+- training and agreement reconciliation actions
+- compliance-driven user inactivation
 
-The reference implementation may keep audit events in session-backed or file-backed nonproduction storage, but the model should support migration to a persistent append-oriented event store.
+The default `SessionAuditStore` keeps events append-oriented and session-backed so public demo activity remains disposable.
 
-Audit history should support periodic access review and semiannual audit workflows.
+Super Administrators can review current-session governance history in AccessAtlas App Admin.
 
-### 5. Add data exports — Planned for 1.0.0
+The event schema and storage contract are designed for migration to controlled persistent audit storage.
+
+Administrator assignment changes and system catalog changes should emit events when those write workflows are introduced.
+
+### 5. Add data exports — Next implementation step
 
 Provide CSV export capability for key governance datasets and review results.
 
@@ -463,8 +482,6 @@ The public demo should continue to reset tester changes and remain inexpensive t
 
 ## Remaining release requirements
 
-- structured application logging
-- audit logging and an initial audit-event model
 - data export capability
 - broader automated test coverage
 - linting and formatting checks

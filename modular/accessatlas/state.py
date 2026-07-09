@@ -5,6 +5,8 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
+from accessatlas.audit import record_audit_event
+
 def initialize_user_update_state():
     """Initialize session state used for demo self-service updates."""
     if "user_compliance_updates" not in st.session_state:
@@ -30,14 +32,34 @@ def update_user_compliance_dates(
     annual_training_date,
     biennial_training_date,
     access_agreement_date,
+    *,
+    audit_action="update_compliance_dates",
+    audit_source="Self Service",
 ):
-    """Store user-submitted compliance date updates in session state."""
+    """Store user-submitted compliance date updates and record the governance action."""
     initialize_user_update_state()
-    st.session_state["user_compliance_updates"][user_id] = {
+
+    previous_values = st.session_state["user_compliance_updates"].get(user_id, {}).copy()
+    new_values = {
         "annual_training_date": annual_training_date,
         "biennial_training_date": biennial_training_date,
         "access_agreement_date": access_agreement_date,
     }
+    st.session_state["user_compliance_updates"][user_id] = new_values
+
+    return record_audit_event(
+        event_type="user_compliance",
+        action=audit_action,
+        entity_type="user",
+        entity_id=user_id,
+        target_user_id=user_id,
+        source=audit_source,
+        summary="User compliance dates updated.",
+        changes={
+            "before": previous_values,
+            "after": new_values,
+        },
+    )
 
 def initialize_editable_user_state(users):
     """Initialize session-state backed user records for demo user management."""
@@ -107,6 +129,16 @@ def add_user_record(
     st.session_state["editable_users"] = pd.concat(
         [current_users, pd.DataFrame([new_user])],
         ignore_index=True,
+    )
+    record_audit_event(
+        event_type="user_record",
+        action="create_user",
+        entity_type="user",
+        entity_id=user_id,
+        target_user_id=user_id,
+        source="Direct User Entry",
+        summary="User governance record created.",
+        changes={"after": new_user},
     )
     return "added"
 

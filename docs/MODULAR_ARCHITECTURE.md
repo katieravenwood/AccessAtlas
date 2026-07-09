@@ -246,6 +246,48 @@ modular/demo_app.py
 
 The root `app.py` should remain the recommended quick-start path in the README.
 
+## Test strategy
+
+The test suite protects business-rule and architecture boundaries rather than reproducing Streamlit rendering.
+
+```text
+UI workflow
+    ↓
+tested business function
+    ↓
+tested state / audit / export boundary
+```
+
+Coverage is organized by concern:
+
+```text
+test_compliance.py
+test_scope.py
+test_navigation.py
+test_starter_runtime.py
+test_state.py
+test_reconcile.py
+test_reconciliation_edges.py
+test_audit.py
+test_exports.py
+test_logging.py
+test_runtime_separation.py
+test_single_file_build.py
+```
+
+`tests/conftest.py` adds the canonical `modular/` package to the test path.
+
+When Streamlit is unavailable, the test bootstrap provides a minimal session-state adapter for pure unit tests. This does not emulate Streamlit rendering; it only supports testing modules whose reference state adapter uses `st.session_state`.
+
+The full suite should run with:
+
+```bash
+pytest -q
+```
+
+Distribution checks remain part of the same suite so modular-source changes cannot silently drift from the generated root starter.
+
+
 ## Data export boundary
 
 CSV export preparation is centralized in:

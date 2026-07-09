@@ -455,6 +455,36 @@ access_agreement_date
 
 ---
 
+## Automated Test Coverage
+
+The AccessAtlas test suite now covers the principal non-UI business rules and distribution contracts.
+
+Current coverage includes:
+
+- compliance status, expiration, follow-up, and date normalization rules
+- role-based user, system, access, and administrator assignment scope
+- navigation label and visibility helpers
+- starter identity configuration and fallback behavior
+- session-backed user and access state helpers
+- identifier generation and access-key matching
+- access reconciliation comparison and action edge cases
+- training and agreement reconciliation outcomes
+- governance audit-event creation and storage contracts
+- CSV export preparation and spreadsheet safeguards
+- structured application logging configuration
+- starter/demo runtime separation
+- generated single-file synchronization and Python compilation
+
+The suite intentionally emphasizes deterministic business logic and architectural contracts. The Streamlit UI remains a thin workflow layer around these tested functions.
+
+Run the full suite with:
+
+```bash
+pytest -q
+```
+
+---
+
 ## Data Exports
 
 AccessAtlas provides scoped CSV downloads from the workflow where each dataset is reviewed.
@@ -1027,7 +1057,6 @@ The current 1.0.0 engineering work has established:
 The remaining 1.0.0 engineering priorities are:
 
 - a governance audit-event model
-- broader automated test coverage
 - linting and formatting checks
 - migration and deployment guidance
 

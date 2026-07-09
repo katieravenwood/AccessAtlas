@@ -119,23 +119,27 @@ Application logs remain explicitly separate from governance audit events.
 
 ### 4. Add audit logging and an audit-event model — Next implementation step
 
-Introduce a modular governance audit-event model capable of recording meaningful actions.
+AccessAtlas now includes a modular governance audit-event model and replaceable audit-store contract.
 
-Initial event types should include:
+The current reference implementation records meaningful governance actions for:
 
-- user record creation or update
-- self-service compliance date update
-- access assignment creation or update
+- user record creation
+- self-service compliance date updates
+- access assignment creation and update
 - access inactivation
-- reconciliation action application
-- administrator assignment changes
-- system catalog changes, as those workflows are introduced
+- access reconciliation actions
+- training and agreement reconciliation actions
+- compliance-driven user inactivation
 
-The reference implementation may keep audit events in session-backed or file-backed nonproduction storage, but the model should support migration to a persistent append-oriented event store.
+The default `SessionAuditStore` keeps events append-oriented and session-backed so public demo activity remains disposable.
 
-Audit history should support periodic access review and semiannual audit workflows.
+Super Administrators can review current-session governance history in AccessAtlas App Admin.
 
-### 5. Add data exports — Planned for 1.0.0
+The event schema and storage contract are designed for migration to controlled persistent audit storage.
+
+Administrator assignment changes and system catalog changes should emit events when those write workflows are introduced.
+
+### 5. Add data exports — Next implementation step
 
 Provide CSV export capability for key governance datasets and review results.
 
@@ -478,7 +482,6 @@ The public demo should continue to reset tester changes and remain inexpensive t
 
 ## Remaining release requirements
 
-- audit logging and an initial audit-event model
 - data export capability
 - broader automated test coverage
 - linting and formatting checks

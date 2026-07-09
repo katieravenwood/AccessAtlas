@@ -62,6 +62,7 @@ The application maintains a common view of:
 - resource-level permissions
 - system administrator assignments
 - compliance dates and status
+- append-oriented governance audit events
 
 This allows the application to answer both user-centered and system-centered questions from the same underlying model.
 
@@ -451,6 +452,70 @@ annual_training_date
 biennial_training_date
 access_agreement_date
 ```
+
+---
+
+## Governance Audit History
+
+AccessAtlas maintains a separate governance audit-event model for meaningful record actions.
+
+Application logs and governance audit events serve different purposes:
+
+```text
+Application logs
+    └── How is the software behaving?
+
+Governance audit events
+    └── What governance action happened to a record?
+```
+
+The reference implementation records events for:
+
+- user record creation
+- self-service compliance date updates
+- training and agreement reconciliation updates
+- user inactivation through compliance reconciliation
+- direct access assignment creation or update
+- system access reconciliation additions, updates, and inactivations
+
+Audit events include:
+
+```text
+audit_event_id
+occurred_at
+event_type
+action
+actor_user_id
+actor_role
+runtime
+entity_type
+entity_id
+target_user_id
+system_id
+outcome
+source
+summary
+changes_json
+```
+
+The modular contract is defined in:
+
+```text
+modular/accessatlas/audit.py
+```
+
+The default `SessionAuditStore` is append-oriented and uses Streamlit session state. This keeps the hosted demo disposable and avoids persistent public test data.
+
+Super Administrators can review current-session events in:
+
+```text
+AccessAtlas App Admin
+    └── Governance Audit History
+```
+
+The UI provides event counts, filters, a chronological event table, and event-level change detail.
+
+The reference audit store is not intended as a production immutable audit repository. Production implementations should replace it with controlled persistent storage appropriate to the organization's retention, security, and evidence requirements.
 
 ---
 

@@ -19,6 +19,12 @@ import logging
 import pandas as pd
 import streamlit as st
 
+from accessatlas.audit import (
+    get_audit_events,
+    record_audit_event,
+    reset_audit_actor_context,
+    set_audit_actor_context,
+)
 from accessatlas.compliance import (
     add_expirations,
     get_expired_follow_up_records,
@@ -87,6 +93,7 @@ def run_app(runtime_factory):
     """Run AccessAtlas using the supplied runtime-context factory."""
     configure_logging()
     reset_runtime_log_context()
+    reset_audit_actor_context()
     log_event(
         logger,
         logging.INFO,
@@ -280,6 +287,11 @@ def run_app(runtime_factory):
     set_runtime_log_context(
         runtime_name=runtime.runtime_name,
         application_role=str(runtime.current_user["application_role"]),
+    )
+    set_audit_actor_context(
+        actor_user_id=str(runtime.current_user["user_id"]),
+        actor_role=str(runtime.current_user["application_role"]),
+        runtime=runtime.runtime_name,
     )
     log_event(
         logger,
@@ -1156,16 +1168,39 @@ def run_app(runtime_factory):
                 [current_access, pd.DataFrame([record])],
                 ignore_index=True,
             )
+            record_audit_event(
+                event_type="access_assignment",
+                action="create_access",
+                entity_type="access_assignment",
+                entity_id=access_id,
+                target_user_id=user_id,
+                system_id=system_id,
+                source="Direct Access Entry",
+                summary="Access assignment created.",
+                changes={"after": record},
+            )
             return "added"
 
         match = current_access["access_id"] == access_id
         if not match.any():
             return "not_found"
 
+        before_record = current_access.loc[match].iloc[0].to_dict()
         for column_name, value in record.items():
             current_access.loc[match, column_name] = value
 
         st.session_state["editable_access_assignments"] = current_access
+        record_audit_event(
+            event_type="access_assignment",
+            action="update_access",
+            entity_type="access_assignment",
+            entity_id=access_id,
+            target_user_id=user_id,
+            system_id=system_id,
+            source="Direct Access Entry",
+            summary="Access assignment updated.",
+            changes={"before": before_record, "after": record},
+        )
         return "updated"
 
 
@@ -2307,15 +2342,145 @@ def run_app(runtime_factory):
         render_access_reconciliation_tab()
 
 
+    def render_audit_history_tab():
+        """Render session-backed governance audit history for Super Administrators."""
+        st.subheader("Governance Audit History")
+        st.caption(
+            "Review governance actions recorded during the current Streamlit session. "
+            "The reference audit store is append-oriented and session-backed; production "
+            "deployments should use controlled persistent audit storage."
+        )
+
+        audit_events = get_audit_events()
+
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        metric_col1.metric("Audit Events", len(audit_events))
+        metric_col2.metric(
+            "Event Types",
+            audit_events["event_type"].nunique() if not audit_events.empty else 0,
+        )
+        metric_col3.metric(
+            "Actors",
+            audit_events["actor_user_id"].replace("", pd.NA).nunique()
+            if not audit_events.empty
+            else 0,
+        )
+
+        if audit_events.empty:
+            st.info(
+                "No governance actions have been recorded in the current session. "
+                "Create or update a user, update compliance dates, change an access "
+                "assignment, or apply a reconciliation action to generate audit history."
+            )
+            return
+
+        filter_col1, filter_col2, filter_col3 = st.columns(3)
+        with filter_col1:
+            event_type_filter = st.multiselect(
+                "Filter by event type",
+                sorted(audit_events["event_type"].dropna().unique()),
+                key="audit_event_type_filter",
+            )
+        with filter_col2:
+            action_filter = st.multiselect(
+                "Filter by action",
+                sorted(audit_events["action"].dropna().unique()),
+                key="audit_action_filter",
+            )
+        with filter_col3:
+            outcome_filter = st.multiselect(
+                "Filter by outcome",
+                sorted(audit_events["outcome"].dropna().unique()),
+                key="audit_outcome_filter",
+            )
+
+        filtered_events = audit_events.copy()
+        if event_type_filter:
+            filtered_events = filtered_events[
+                filtered_events["event_type"].isin(event_type_filter)
+            ]
+        if action_filter:
+            filtered_events = filtered_events[
+                filtered_events["action"].isin(action_filter)
+            ]
+        if outcome_filter:
+            filtered_events = filtered_events[
+                filtered_events["outcome"].isin(outcome_filter)
+            ]
+
+        display_columns = [
+            "audit_event_id",
+            "occurred_at",
+            "event_type",
+            "action",
+            "actor_user_id",
+            "actor_role",
+            "entity_type",
+            "entity_id",
+            "target_user_id",
+            "system_id",
+            "outcome",
+            "source",
+            "summary",
+        ]
+        show_dataframe(
+            filtered_events[display_columns].sort_values(
+                "occurred_at",
+                ascending=False,
+            ),
+            width="stretch",
+        )
+
+        with st.expander("View selected audit event details"):
+            event_options = filtered_events.copy()
+            event_options["event_label"] = (
+                event_options["audit_event_id"].astype(str)
+                + " — "
+                + event_options["action"].astype(str)
+                + " — "
+                + event_options["summary"].astype(str)
+            )
+            selected_event_label = st.selectbox(
+                "Select audit event",
+                event_options["event_label"].tolist(),
+                key="selected_audit_event",
+            )
+            selected_event = event_options[
+                event_options["event_label"] == selected_event_label
+            ].iloc[0]
+
+            st.write(
+                f"""
+                **Audit Event ID:** {selected_event['audit_event_id']}  
+                **Occurred At:** {selected_event['occurred_at']}  
+                **Actor User ID:** {selected_event['actor_user_id'] or 'Not resolved'}  
+                **Actor Role:** {selected_event['actor_role'] or 'Not resolved'}  
+                **Runtime:** {selected_event['runtime']}  
+                **Entity:** {selected_event['entity_type']} / {selected_event['entity_id'] or 'Not supplied'}  
+                **Target User ID:** {selected_event['target_user_id'] or 'Not supplied'}  
+                **System ID:** {selected_event['system_id'] or 'Not supplied'}  
+                **Source:** {selected_event['source']}  
+                **Outcome:** {selected_event['outcome']}
+                """
+            )
+            st.markdown("#### Change Detail")
+            st.code(selected_event["changes_json"], language="json")
+
+
     def render_administration_section():
         """Render administrative and compliance workflows for Super Administrators."""
         st.subheader("AccessAtlas App Admin")
         section_caption(
-            "Review compliance monitoring details and system administrator assignment coverage."
+            "Review compliance monitoring, system administrator assignment coverage, "
+            "and governance audit history."
         )
 
-        compliance_tab, admins_tab = st.tabs(
-            ["Compliance Monitoring", "System Administrator Assignments"]
+        compliance_tab, admins_tab, audit_tab = st.tabs(
+            [
+                "Compliance Monitoring",
+                "System Administrator Assignments",
+                "Governance Audit History",
+            ]
         )
 
         with compliance_tab:
@@ -2323,6 +2488,9 @@ def run_app(runtime_factory):
 
         with admins_tab:
             render_system_admins_tab()
+
+        with audit_tab:
+            render_audit_history_tab()
 
 
     TAB_RENDERERS = {

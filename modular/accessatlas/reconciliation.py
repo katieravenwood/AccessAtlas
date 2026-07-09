@@ -6,6 +6,8 @@ import logging
 import pandas as pd
 import streamlit as st
 
+from accessatlas.audit import record_audit_event
+
 from accessatlas.compliance import normalize_date_value, uploaded_dates_compliance_status
 from accessatlas.config import RECONCILIATION_KEY_COLUMNS, TRAINING_RECONCILIATION_DATE_COLUMNS
 from accessatlas.logging_config import get_logger, log_event
@@ -178,14 +180,6 @@ def apply_reconciliation_action(access_df, row):
 
     return access_df, "skipped"
 
-def generate_audit_event_id():
-    """Generate a synthetic audit event ID for demo reconciliation actions."""
-    if "audit_event_counter" not in st.session_state:
-        st.session_state["audit_event_counter"] = 1
-
-    audit_event_id = f"AUD-{date.today().year}-{st.session_state['audit_event_counter']:06d}"
-    st.session_state["audit_event_counter"] += 1
-    return audit_event_id
 
 def build_reconciliation_change_summary(row, outcome):
     """Return a human-readable summary of what changed for a reconciliation row."""
@@ -215,18 +209,42 @@ def build_reconciliation_change_summary(row, outcome):
     return "No change summary available."
 
 def build_reconciliation_action_result(row, outcome):
-    """Return a display-friendly action result record for one applied action."""
+    """Return a display-friendly action result and record a successful governance event."""
     result_labels = {
         "added": "Success",
         "inactivated": "Success",
         "updated": "Success",
         "skipped": "Skipped",
     }
+    change_summary = build_reconciliation_change_summary(row, outcome)
+    audit_event_id = ""
+
+    if outcome != "skipped":
+        event = record_audit_event(
+            event_type="access_reconciliation",
+            action=f"reconciliation_{outcome}",
+            entity_type="access_assignment",
+            target_user_id=row.get("user_id", ""),
+            system_id=row.get("system_id", ""),
+            source="System Access Reconciliation",
+            summary=change_summary,
+            changes={
+                "recommended_action": row.get("recommended_action"),
+                "change_type": row.get("change_type"),
+                "resource_type": row.get("resource_type"),
+                "resource_name": row.get("resource_name"),
+                "permission_name": row.get("permission_name"),
+                "before_status": row.get("current_access_status"),
+                "after_status": row.get("uploaded_access_status"),
+                "source_system_record_id": row.get("source_system_record_id"),
+            },
+        )
+        audit_event_id = event.audit_event_id
 
     return {
-        "audit_event_id": generate_audit_event_id() if outcome != "skipped" else "",
+        "audit_event_id": audit_event_id,
         "action_result": result_labels.get(outcome, "Unknown"),
-        "changes_made": build_reconciliation_change_summary(row, outcome),
+        "changes_made": change_summary,
         "recommended_action": row.get("recommended_action"),
         "change_type": row.get("change_type"),
         "user_id": row.get("user_id"),
@@ -273,7 +291,17 @@ def apply_reconciliation_actions(access_df, selected_rows):
         )
         action_results.append(build_reconciliation_action_result(display_row, outcome))
 
-    return updated_access, counts, pd.DataFrame(action_results)
+    result_dataframe = pd.DataFrame(action_results)
+    log_event(
+        logger,
+        logging.INFO,
+        "access_reconciliation_actions_applied",
+        "Selected system access reconciliation actions were processed.",
+        selected_action_count=len(selected_rows),
+        outcome_counts=counts,
+        resulting_access_record_count=len(updated_access),
+    )
+    return updated_access, counts, result_dataframe
 
 def inactivate_user_record(user_id):
     """Mark one user record inactive in the session-state user registry."""
@@ -362,7 +390,23 @@ def reconcile_training_dates(current_users, upload_df):
 
         rows.append(row)
 
-    return pd.DataFrame(rows)
+    comparison = pd.DataFrame(rows)
+    change_counts = (
+        comparison["change_type"].value_counts(dropna=False).to_dict()
+        if not comparison.empty
+        else {}
+    )
+    log_event(
+        logger,
+        logging.INFO,
+        "training_reconciliation_completed",
+        "Training and agreement reconciliation comparison completed.",
+        current_user_count=len(current),
+        uploaded_user_count=len(upload),
+        comparison_record_count=len(comparison),
+        change_counts=change_counts,
+    )
+    return comparison
 
 def apply_training_date_actions(selected_rows):
     """Apply selected training date reconciliation actions to session state."""
@@ -373,16 +417,18 @@ def apply_training_date_actions(selected_rows):
 
     for _, row in selected_rows.iterrows():
         if row["recommended_action"] == "Update date records":
-            update_user_compliance_dates(
+            audit_event = update_user_compliance_dates(
                 row["user_id"],
                 row["uploaded_annual_training_date"],
                 row["uploaded_biennial_training_date"],
                 row["uploaded_access_agreement_date"],
+                audit_action="reconcile_compliance_dates",
+                audit_source="Training and Agreement Reconciliation",
             )
             counts["updated"] += 1
             results.append(
                 {
-                    "audit_event_id": generate_audit_event_id(),
+                    "audit_event_id": audit_event.audit_event_id,
                     "action_result": "Success",
                     "changes_made": row.get("changes_identified", "Date records updated."),
                     "recommended_action": row["recommended_action"],
@@ -398,9 +444,21 @@ def apply_training_date_actions(selected_rows):
         if row["recommended_action"] == "Inactivate user record":
             outcome = inactivate_user_record(row["user_id"])
             counts["inactivated" if outcome == "inactivated" else "skipped"] += 1
+            audit_event_id = ""
+            if outcome == "inactivated":
+                audit_event_id = record_audit_event(
+                    event_type="user_record",
+                    action="inactivate_user",
+                    entity_type="user",
+                    entity_id=row["user_id"],
+                    target_user_id=row["user_id"],
+                    source="Training and Agreement Reconciliation",
+                    summary="User record status set to Inactive.",
+                    changes={"record_status": {"before": row.get("current_record_status"), "after": "Inactive"}},
+                ).audit_event_id
             results.append(
                 {
-                    "audit_event_id": generate_audit_event_id() if outcome == "inactivated" else "",
+                    "audit_event_id": audit_event_id,
                     "action_result": "Success" if outcome == "inactivated" else "Skipped",
                     "changes_made": "User record status set to Inactive." if outcome == "inactivated" else "User record was not changed.",
                     "recommended_action": row["recommended_action"],
@@ -428,7 +486,16 @@ def apply_training_date_actions(selected_rows):
             }
         )
 
-    return counts, pd.DataFrame(results)
+    result_dataframe = pd.DataFrame(results)
+    log_event(
+        logger,
+        logging.INFO,
+        "training_reconciliation_actions_applied",
+        "Selected training and agreement reconciliation actions were processed.",
+        selected_action_count=len(selected_rows),
+        outcome_counts=counts,
+    )
+    return counts, result_dataframe
 
 
 def display_recommended_action(action):

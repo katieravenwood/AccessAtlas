@@ -1,316 +1,251 @@
-# AccessAtlas Modular Architecture
+# AccessAtlas UI Style Guide
 
-AccessAtlas publishes a quick-start single-file application from one canonical modular codebase and keeps the hosted demo as a separate runtime.
+AccessAtlas uses a task-based interface for access governance workflows.
 
-## Distribution and runtime model
+This guide records the shared AccessAtlas application's UI vocabulary and presentation conventions. It applies to the quick-start starter, modular starter, and hosted demo unless a rule is explicitly identified as demo-specific.
 
-```text
-                         modular/accessatlas/app_core.py
-                                      |
-                     shared workflows and application UI
-                                      |
-                   +------------------+------------------+
-                   |                                     |
-                   v                                     v
-      build_starter_runtime()                build_demo_runtime()
-                   |                                     |
-                   v                                     v
-          modular/app.py                       modular/demo_app.py
-                   |                                     |
-                   | canonical starter                    | hosted demo
-                   v                                     v
-      tools/build_single_file.py              Streamlit demo deployment
-                   |
-                   v
-              root app.py
-```
+## Top-Level Navigation
 
-The application UI and business logic are shared.
+Use the current task-oriented section names exactly:
 
-The runtime determines:
+- `Dashboard`
+- `My Access`
+- `Manage Access`
+- `Access Reconciliation`
+- `AccessAtlas App Admin`
 
-- the current application identity
-- role-visible sections
-- visible user, system, access, and administrator records
-- optional runtime-specific guidance
+The displayed selector may include icons when they improve scanning.
 
-## Root `app.py`: quick-start starter
+Do not reintroduce older top-level labels such as `Overview`, `Users`, `Systems`, `Review Changes`, or `Administration`.
 
-The root application is generated from the modular starter runtime.
+## Section Vocabulary
 
-It contains no:
+Use the following current labels:
 
-- Demo Mode persona selector
-- Demo Mode sidebar warning
-- Current Demo User panel
-- Visible Demo Scope panel
-- demo-only contextual sidebar guidance
+| Current Label | Purpose |
+|---|---|
+| My Record | Individual record view within My Access |
+| Update My Certification and Agreement Dates | Self-service date update workflow |
+| Managed Users | Scoped user review |
+| User Management Registry | User registry table |
+| Selected User Access Profile | Selected user detail |
+| Managed Systems | Scoped system review |
+| System Catalog | System registry table |
+| Selected System Access Profile | Selected system detail |
+| Edit / Add Access | Direct single-record access management |
+| System Access Export File Upload | Access export reconciliation |
+| Training Certificate Date and Agreement Reconciliation | Compliance-date reconciliation |
+| Compliance Monitoring | Administrative compliance review |
+| System Administrator Assignments | Administrative responsibility review |
+| Governance Audit History | Current-session governance action review |
 
-Run it with:
+Prefer the exact application label when documentation refers to a visible screen or tab.
 
-```bash
-streamlit run app.py
-```
+## Page Structure
 
-The starter resolves its current application identity from the `ACCESSATLAS_USER_ID` environment variable.
+Each major top-level section should generally follow this order:
 
-Example:
+1. Section title
+2. One-sentence workflow caption
+3. Summary metrics or visual summary, when useful
+4. Primary work area
+5. Supporting tables, cards, or detail views
 
-```bash
-ACCESSATLAS_USER_ID=USR-0001 streamlit run app.py
-```
+Do not add headings solely to create visual weight.
 
-When the variable is not set, the reference dataset resolves the first active Super Administrator, then the first active user, as a development-friendly fallback.
+## Heading Hierarchy
 
-This is an application identity placeholder, not authentication. Production implementations should replace the starter runtime with an approved authentication provider and enforce authorization in the backend and data-access layer.
+Use:
 
-## `modular/demo_app.py`: hosted demo
+- `st.subheader()` for top-level application section titles
+- `###` for major section blocks
+- `####` for lower-level record or summary blocks
+- `st.caption()` for workflow and filter instructions
 
-The hosted demo retains the synthetic persona selector and role-scoped preview experience.
+Keep heading depth semantic.
 
-Run it with:
+## Guidance and Instruction Text
 
-```bash
-streamlit run modular/demo_app.py
-```
+Use one sentence when one sentence will do.
 
-The demo includes:
+Prefer:
 
-- Demo Mode explanation
-- synthetic user/persona selector
-- current demo user summary
-- visible demo scope summary
-- contextual sidebar guidance
-- role-aware record and section scoping
+> Filter the records below by compliance status, department, or user type.
 
-Tester changes continue to use Streamlit session state and reset with the demo session.
+Avoid:
 
-## Shared application core
+> Please use the filters below in order to narrow down the records that are displayed.
 
-`modular/accessatlas/app_core.py` owns the shared Streamlit workflows and rendering logic.
+Demo-specific language belongs only in the hosted demo runtime and must state clearly that Demo Mode simulates visibility or workflow behavior and is not authentication. The starter runtimes should not render Demo Mode warnings, persona selectors, or demo-only contextual guidance.
 
-It receives a runtime factory:
+## Filters
 
-```python
-run_app(build_starter_runtime)
-```
+Place filters directly under the section they affect.
 
-or:
+Use horizontal filter rows when three or fewer related controls fit cleanly.
 
-```python
-run_app(build_demo_runtime)
-```
+Use specific labels such as:
 
-The core does not own identity selection or demo controls.
+- `Filter by application role`
+- `Filter by user type`
+- `Filter by record status`
+- `Filter by system type`
+- `Filter by system category`
 
-This prevents the starter and demo from becoming separate application implementations.
+Do not use a standalone `Filters` heading unless the entire screen is a filter-focused workflow.
 
-## Runtime context
+## Tables
 
-`modular/accessatlas/runtime.py` defines `RuntimeContext`.
+User-facing tables should:
 
-A runtime context supplies:
+- use friendly display labels where practical
+- hide row index values when the index has no user meaning
+- use a consistent column order
+- use `width="stretch"` for full-width tabular views unless content-width behavior is intentionally required
+- remain detailed work surfaces rather than decorative summaries
 
-```text
-current_user
-visible_tabs
-users
-systems
-access
-system_admins
-runtime_name
-is_demo
-section_guidance_renderer
-```
+Use `show_dataframe()` for standard read-only application tables when possible so table defaults remain centralized.
 
-Future authentication modules can resolve the same context contract without rewriting workflow pages.
+Editable tables may preserve internal field names in code where action logic depends on them.
 
-## Runtime implementations
+## Metrics and Summaries
 
-### `starter_runtime.py`
+Use `st.metric()` for a small set of operational summary values.
 
-Provides the clean starter behavior.
+Metrics should answer a clear governance question, such as:
 
-It:
+- How many users are visible?
+- How many systems are in scope?
+- How many records need review?
+- How many compliance records are expired or expiring?
 
-1. resolves the configured application identity;
-2. determines visible sections from the application role;
-3. applies the current role-scope rules; and
-4. returns a runtime context without demo UI.
+Do not turn every count into a metric tile. A wall of tiles is merely a spreadsheet wearing cufflinks.
 
-### `demo_runtime.py`
+## Cards
 
-Provides the hosted preview behavior.
+Use selected-record cards for single-entity review.
 
-It:
+Card titles should identify the selected record clearly.
 
-1. renders the persona selector;
-2. resolves the selected synthetic user;
-3. determines visible sections;
-4. applies the same role-scope rules used by the starter;
-5. renders demo scope information; and
-6. attaches demo-only contextual guidance.
+Prefer tables or compact grouped summaries when many repeated cards would create excessive vertical length.
 
+## Color Semantics
 
-## Structured application logging
+Use Streamlit status elements consistently:
 
-`modular/accessatlas/logging_config.py` configures AccessAtlas operational logs.
+- Success/green: current, compliant, successfully applied
+- Warning/yellow: attention needed or expiring soon
+- Error/red: expired, invalid, noncompliant, or blocked
+- Info/blue: explanatory, scope, or demo-only guidance
+- Neutral/gray: historical or inactive context
 
-Application logs are separate from governance audit events:
+Do not rely on color alone to communicate status.
 
-- **application logs** support troubleshooting, runtime visibility, data-loading diagnostics, and processing failures;
-- **audit events** record meaningful governance actions and belong to the separate audit-event model.
+## Empty States
 
-The logging module uses the Python standard `logging` package and emits JSON lines by default.
+Empty-state text should explain why nothing is shown or what the state means.
 
-Configuration is controlled through:
+Prefer:
 
-```text
-ACCESSATLAS_LOG_LEVEL
-ACCESSATLAS_LOG_FORMAT
-```
+> No records require follow-up for the selected filters.
 
-Supported log formats are:
+Prefer:
 
-```text
-json
-text
-```
+> This system has no recorded administrator assignments.
 
-The default is:
+Avoid:
 
-```text
-ACCESSATLAS_LOG_LEVEL=INFO
-ACCESSATLAS_LOG_FORMAT=json
-```
+> No records.
 
-The logger is configured idempotently so Streamlit reruns do not add duplicate handlers.
+Avoid treating a valid empty state as an error.
 
-Runtime context is attached after the starter or demo runtime resolves. Current structured fields include:
+## Reconciliation Workflows
 
-```text
-event
-runtime
-application_role
-fields
-```
+Both reconciliation workflows should follow the same mental model:
 
-Application logs deliberately avoid display names, email addresses, and governance action details that belong in the audit model.
+1. Select or establish reconciliation scope
+2. Upload or load external records
+3. Validate the input
+4. Compare external and current records
+5. Summarize change types
+6. Review the queue
+7. Select applicable actions
+8. Apply current-session updates
+9. Review results
 
-Initial operational events cover:
+The queue should make the recommended action and change type easy to scan.
 
-- application run start
-- reference-data loading
-- runtime and visible-scope resolution
-- application-section rendering
-- upload schema validation
-- reconciliation comparison completion
-- reconciliation action processing
-- reconciliation key-resolution failures
-- reference-data load failures
+System access reconciliation must preserve single-system scope for missing-record/inactivation evaluation.
 
+Use action language consistently:
 
-## Single-file publishing
+- `Add access record`
+- `Inactivate`
+- `Update`
 
-The modular implementation remains the canonical engineering source.
+Historical records should be inactivated rather than deleted.
 
-Build the root starter with:
+## Role-Aware Interface Rules
 
-```bash
-python tools/build_single_file.py
-```
+The current shared application section visibility is:
 
-Verify synchronization with:
+- User: My Access
+- Manager: Dashboard, My Access, Manage Access, Access Reconciliation
+- System Administrator: Dashboard, My Access, Manage Access, Access Reconciliation
+- Super Administrator: all sections
 
-```bash
-python tools/build_single_file.py --check
-```
+System Administrator views must remain limited to administered-system scope.
 
-The generated root `app.py` bundles:
+User self-service must remain limited to the current user's own record.
 
-- shared application modules
-- runtime context
-- starter runtime
-- shared application core
-- starter entry point
+The hosted demo uses synthetic personas to preview these rules. The starter runtime resolves a current application identity without rendering the demo selector.
 
-The demo runtime is deliberately excluded from the generated root application.
+These UI and reference scope rules are not a production authorization boundary. Production authorization belongs in the backend and data-access layer.
 
-## Hosted demo deployment
+## Governance Audit History
 
-The Streamlit-hosted preview should use:
+Governance Audit History is an administrative review surface, not an operational application-log viewer.
 
-```text
-modular/demo_app.py
-```
+Use it to show:
 
-The root `app.py` should remain the recommended quick-start path in the README.
+- event identity and time
+- event type and action
+- actor identity and role
+- affected entity
+- target user and system when applicable
+- outcome
+- source
+- concise summary
+- structured change detail
 
-## Governance audit events
+Keep the primary table scan-friendly. Detailed `changes_json` belongs in an event-level expander or detail view rather than the main table.
 
-Governance audit history is implemented separately from structured application logging.
+Do not mix structured application logs into Governance Audit History.
 
-```text
-Operational event
-    └── logging_config.py
-        └── runtime/process troubleshooting
+The reference UI should state clearly that audit history is session-backed. Production audit storage may require stronger immutability, retention, and access controls.
 
-Governance action
-    └── audit.py
-        └── append-oriented audit event
-```
 
-`modular/accessatlas/audit.py` defines:
+## Streamlit API Conventions
 
-- `AuditEvent`
-- `AuditStore`
-- `SessionAuditStore`
-- audit actor/runtime context
-- event creation and recording helpers
-- dataframe access for review and future export
+Use current Streamlit width parameters:
 
-The shared application core sets audit actor context after the starter or demo runtime resolves the current user.
+- `width="stretch"` in place of deprecated `use_container_width=True`
+- `width="content"` in place of deprecated `use_container_width=False`
 
-The default session-backed store is deliberate for the reference application:
+Centralize repeated display behavior in helpers where doing so improves consistency without obscuring the workflow.
 
-- hosted demo actions do not persist
-- no public test activity accumulates
-- no hosted database is required
-- the event model remains demonstrable
+Prefer small, explicit helpers over broad framework-like abstraction. Shared UI behavior belongs in the modular source; the generated single-file starter should remain readable after publishing.
 
-The `AuditStore` protocol is the production extension point. A persistent implementation may write to an append-oriented database table, governed event store, or another controlled audit repository.
+## Documentation Alignment
 
-Production implementations should define retention, immutability, access control, evidence requirements, and archival behavior according to their own governance and regulatory context.
+When a visible UI label or runtime behavior changes, review at minimum:
 
-Audit event change detail is serialized into `changes_json`. The reference model records actor, target, entity, system, outcome, source, summary, and runtime context without using the operational log stream as governance history.
+- `README.md`
+- `CHANGELOG.md`
+- `ROADMAP.md` when roadmap status changes
+- `docs/MODULAR_ARCHITECTURE.md` when entry points, runtime boundaries, or publishing behavior change
+- `docs/UI_STYLE_GUIDE.md`
+- user guides under `docs/user-guides/`
+- implementation notes when the changed concept is architectural or data-related
 
-
-## Maintenance rule
-
-Shared application changes belong in:
-
-```text
-modular/accessatlas/
-```
-
-Starter runtime behavior belongs in:
-
-```text
-modular/accessatlas/starter_runtime.py
-```
-
-Demo-only behavior belongs in:
-
-```text
-modular/accessatlas/demo_runtime.py
-```
-
-After shared or starter changes:
-
-```bash
-python tools/build_single_file.py
-```
-
-Commit the modular source and generated root `app.py` together.
-
-Demo-only changes do not require rebuilding root `app.py` unless shared application behavior also changed.
+The repository implementation is the source of truth for current labels. Historical design discussions explain why choices were made but should not preserve retired vocabulary in current-user documentation.

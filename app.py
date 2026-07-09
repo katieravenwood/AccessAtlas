@@ -396,6 +396,232 @@ def log_exception(
     )
 
 
+# === Shared module: accessatlas/audit.py ===
+from contextvars import ContextVar
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+import json
+from typing import Any, Protocol
+from uuid import uuid4
+
+import pandas as pd
+
+
+_AUDIT_STATE_KEY = "governance_audit_events"
+_AUDIT_ACTOR_USER_ID: ContextVar[str] = ContextVar(
+    "accessatlas_audit_actor_user_id",
+    default="",
+)
+_AUDIT_ACTOR_ROLE: ContextVar[str] = ContextVar(
+    "accessatlas_audit_actor_role",
+    default="",
+)
+_AUDIT_RUNTIME: ContextVar[str] = ContextVar(
+    "accessatlas_audit_runtime",
+    default="unknown",
+)
+
+
+@dataclass(frozen=True)
+class AuditEvent:
+    """One immutable governance action record."""
+
+    audit_event_id: str
+    occurred_at: str
+    event_type: str
+    action: str
+    actor_user_id: str
+    actor_role: str
+    runtime: str
+    entity_type: str
+    entity_id: str
+    target_user_id: str
+    system_id: str
+    outcome: str
+    source: str
+    summary: str
+    changes_json: str
+
+    def to_record(self) -> dict[str, str]:
+        """Return a tabular event record."""
+        return asdict(self)
+
+
+class AuditStore(Protocol):
+    """Storage contract for append-oriented governance audit events."""
+
+    def append(self, event: AuditEvent) -> None:
+        """Append one immutable audit event."""
+
+    def list_events(self) -> list[AuditEvent]:
+        """Return audit events in append order."""
+
+
+class SessionAuditStore:
+    """Streamlit session-backed reference audit store.
+
+    A state mapping may be injected for tests or alternative session containers.
+    When omitted, the store resolves Streamlit session state lazily.
+    """
+
+    def __init__(
+        self,
+        state_key: str = _AUDIT_STATE_KEY,
+        state: dict[str, Any] | None = None,
+    ):
+        self.state_key = state_key
+        self._state = state
+
+    def _state_mapping(self):
+        if self._state is not None:
+            return self._state
+
+        import streamlit as st
+
+        return st.session_state
+
+    def _initialize(self) -> None:
+        state = self._state_mapping()
+        if self.state_key not in state:
+            state[self.state_key] = []
+
+    def append(self, event: AuditEvent) -> None:
+        self._initialize()
+        self._state_mapping()[self.state_key].append(event.to_record())
+
+    def list_events(self) -> list[AuditEvent]:
+        self._initialize()
+        return [
+            AuditEvent(**record)
+            for record in self._state_mapping()[self.state_key]
+        ]
+
+
+def set_audit_actor_context(
+    actor_user_id: str,
+    actor_role: str,
+    runtime: str,
+) -> None:
+    """Set actor and runtime context used by subsequent governance events."""
+    _AUDIT_ACTOR_USER_ID.set(str(actor_user_id or ""))
+    _AUDIT_ACTOR_ROLE.set(str(actor_role or ""))
+    _AUDIT_RUNTIME.set(str(runtime or "unknown"))
+
+
+def reset_audit_actor_context() -> None:
+    """Reset governance audit actor context."""
+    _AUDIT_ACTOR_USER_ID.set("")
+    _AUDIT_ACTOR_ROLE.set("")
+    _AUDIT_RUNTIME.set("unknown")
+
+
+def _safe_json(value: Any) -> str:
+    """Serialize audit change details predictably."""
+    return json.dumps(
+        value or {},
+        default=str,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def create_audit_event(
+    *,
+    event_type: str,
+    action: str,
+    entity_type: str,
+    entity_id: str = "",
+    target_user_id: str = "",
+    system_id: str = "",
+    outcome: str = "success",
+    source: str = "AccessAtlas",
+    summary: str,
+    changes: dict[str, Any] | None = None,
+) -> AuditEvent:
+    """Create one governance audit event from the active actor context."""
+    occurred_at = datetime.now(timezone.utc).isoformat()
+    event_id = f"AUD-{datetime.now(timezone.utc).year}-{uuid4().hex[:12].upper()}"
+
+    return AuditEvent(
+        audit_event_id=event_id,
+        occurred_at=occurred_at,
+        event_type=str(event_type),
+        action=str(action),
+        actor_user_id=_AUDIT_ACTOR_USER_ID.get(),
+        actor_role=_AUDIT_ACTOR_ROLE.get(),
+        runtime=_AUDIT_RUNTIME.get(),
+        entity_type=str(entity_type),
+        entity_id=str(entity_id or ""),
+        target_user_id=str(target_user_id or ""),
+        system_id=str(system_id or ""),
+        outcome=str(outcome),
+        source=str(source),
+        summary=str(summary),
+        changes_json=_safe_json(changes),
+    )
+
+
+def record_audit_event(
+    *,
+    event_type: str,
+    action: str,
+    entity_type: str,
+    entity_id: str = "",
+    target_user_id: str = "",
+    system_id: str = "",
+    outcome: str = "success",
+    source: str = "AccessAtlas",
+    summary: str,
+    changes: dict[str, Any] | None = None,
+    store: AuditStore | None = None,
+) -> AuditEvent:
+    """Create and append one governance audit event."""
+    audit_store = store or SessionAuditStore()
+    event = create_audit_event(
+        event_type=event_type,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        target_user_id=target_user_id,
+        system_id=system_id,
+        outcome=outcome,
+        source=source,
+        summary=summary,
+        changes=changes,
+    )
+    audit_store.append(event)
+    return event
+
+
+def get_audit_events(store: AuditStore | None = None) -> pd.DataFrame:
+    """Return governance audit history as a display/export-ready dataframe."""
+    audit_store = store or SessionAuditStore()
+    records = [event.to_record() for event in audit_store.list_events()]
+
+    columns = [
+        "audit_event_id",
+        "occurred_at",
+        "event_type",
+        "action",
+        "actor_user_id",
+        "actor_role",
+        "runtime",
+        "entity_type",
+        "entity_id",
+        "target_user_id",
+        "system_id",
+        "outcome",
+        "source",
+        "summary",
+        "changes_json",
+    ]
+
+    if not records:
+        return pd.DataFrame(columns=columns)
+
+    return pd.DataFrame(records, columns=columns)
+
+
 # === Shared module: accessatlas/compliance.py ===
 from datetime import date
 
@@ -769,6 +995,7 @@ from datetime import date
 import pandas as pd
 import streamlit as st
 
+
 def initialize_user_update_state():
     """Initialize session state used for demo self-service updates."""
     if "user_compliance_updates" not in st.session_state:
@@ -794,14 +1021,34 @@ def update_user_compliance_dates(
     annual_training_date,
     biennial_training_date,
     access_agreement_date,
+    *,
+    audit_action="update_compliance_dates",
+    audit_source="Self Service",
 ):
-    """Store user-submitted compliance date updates in session state."""
+    """Store user-submitted compliance date updates and record the governance action."""
     initialize_user_update_state()
-    st.session_state["user_compliance_updates"][user_id] = {
+
+    previous_values = st.session_state["user_compliance_updates"].get(user_id, {}).copy()
+    new_values = {
         "annual_training_date": annual_training_date,
         "biennial_training_date": biennial_training_date,
         "access_agreement_date": access_agreement_date,
     }
+    st.session_state["user_compliance_updates"][user_id] = new_values
+
+    return record_audit_event(
+        event_type="user_compliance",
+        action=audit_action,
+        entity_type="user",
+        entity_id=user_id,
+        target_user_id=user_id,
+        source=audit_source,
+        summary="User compliance dates updated.",
+        changes={
+            "before": previous_values,
+            "after": new_values,
+        },
+    )
 
 def initialize_editable_user_state(users):
     """Initialize session-state backed user records for demo user management."""
@@ -872,6 +1119,16 @@ def add_user_record(
         [current_users, pd.DataFrame([new_user])],
         ignore_index=True,
     )
+    record_audit_event(
+        event_type="user_record",
+        action="create_user",
+        entity_type="user",
+        entity_id=user_id,
+        target_user_id=user_id,
+        source="Direct User Entry",
+        summary="User governance record created.",
+        changes={"after": new_user},
+    )
     return "added"
 
 def initialize_editable_access_state(access):
@@ -915,6 +1172,7 @@ import logging
 
 import pandas as pd
 import streamlit as st
+
 
 
 
@@ -1079,14 +1337,6 @@ def apply_reconciliation_action(access_df, row):
 
     return access_df, "skipped"
 
-def generate_audit_event_id():
-    """Generate a synthetic audit event ID for demo reconciliation actions."""
-    if "audit_event_counter" not in st.session_state:
-        st.session_state["audit_event_counter"] = 1
-
-    audit_event_id = f"AUD-{date.today().year}-{st.session_state['audit_event_counter']:06d}"
-    st.session_state["audit_event_counter"] += 1
-    return audit_event_id
 
 def build_reconciliation_change_summary(row, outcome):
     """Return a human-readable summary of what changed for a reconciliation row."""
@@ -1116,18 +1366,42 @@ def build_reconciliation_change_summary(row, outcome):
     return "No change summary available."
 
 def build_reconciliation_action_result(row, outcome):
-    """Return a display-friendly action result record for one applied action."""
+    """Return a display-friendly action result and record a successful governance event."""
     result_labels = {
         "added": "Success",
         "inactivated": "Success",
         "updated": "Success",
         "skipped": "Skipped",
     }
+    change_summary = build_reconciliation_change_summary(row, outcome)
+    audit_event_id = ""
+
+    if outcome != "skipped":
+        event = record_audit_event(
+            event_type="access_reconciliation",
+            action=f"reconciliation_{outcome}",
+            entity_type="access_assignment",
+            target_user_id=row.get("user_id", ""),
+            system_id=row.get("system_id", ""),
+            source="System Access Reconciliation",
+            summary=change_summary,
+            changes={
+                "recommended_action": row.get("recommended_action"),
+                "change_type": row.get("change_type"),
+                "resource_type": row.get("resource_type"),
+                "resource_name": row.get("resource_name"),
+                "permission_name": row.get("permission_name"),
+                "before_status": row.get("current_access_status"),
+                "after_status": row.get("uploaded_access_status"),
+                "source_system_record_id": row.get("source_system_record_id"),
+            },
+        )
+        audit_event_id = event.audit_event_id
 
     return {
-        "audit_event_id": generate_audit_event_id() if outcome != "skipped" else "",
+        "audit_event_id": audit_event_id,
         "action_result": result_labels.get(outcome, "Unknown"),
-        "changes_made": build_reconciliation_change_summary(row, outcome),
+        "changes_made": change_summary,
         "recommended_action": row.get("recommended_action"),
         "change_type": row.get("change_type"),
         "user_id": row.get("user_id"),
@@ -1300,16 +1574,18 @@ def apply_training_date_actions(selected_rows):
 
     for _, row in selected_rows.iterrows():
         if row["recommended_action"] == "Update date records":
-            update_user_compliance_dates(
+            audit_event = update_user_compliance_dates(
                 row["user_id"],
                 row["uploaded_annual_training_date"],
                 row["uploaded_biennial_training_date"],
                 row["uploaded_access_agreement_date"],
+                audit_action="reconcile_compliance_dates",
+                audit_source="Training and Agreement Reconciliation",
             )
             counts["updated"] += 1
             results.append(
                 {
-                    "audit_event_id": generate_audit_event_id(),
+                    "audit_event_id": audit_event.audit_event_id,
                     "action_result": "Success",
                     "changes_made": row.get("changes_identified", "Date records updated."),
                     "recommended_action": row["recommended_action"],
@@ -1325,9 +1601,21 @@ def apply_training_date_actions(selected_rows):
         if row["recommended_action"] == "Inactivate user record":
             outcome = inactivate_user_record(row["user_id"])
             counts["inactivated" if outcome == "inactivated" else "skipped"] += 1
+            audit_event_id = ""
+            if outcome == "inactivated":
+                audit_event_id = record_audit_event(
+                    event_type="user_record",
+                    action="inactivate_user",
+                    entity_type="user",
+                    entity_id=row["user_id"],
+                    target_user_id=row["user_id"],
+                    source="Training and Agreement Reconciliation",
+                    summary="User record status set to Inactive.",
+                    changes={"record_status": {"before": row.get("current_record_status"), "after": "Inactive"}},
+                ).audit_event_id
             results.append(
                 {
-                    "audit_event_id": generate_audit_event_id() if outcome == "inactivated" else "",
+                    "audit_event_id": audit_event_id,
                     "action_result": "Success" if outcome == "inactivated" else "Skipped",
                     "changes_made": "User record status set to Inactive." if outcome == "inactivated" else "User record was not changed.",
                     "recommended_action": row["recommended_action"],
@@ -1538,6 +1826,7 @@ def run_app(runtime_factory):
     """Run AccessAtlas using the supplied runtime-context factory."""
     configure_logging()
     reset_runtime_log_context()
+    reset_audit_actor_context()
     log_event(
         logger,
         logging.INFO,
@@ -1653,6 +1942,11 @@ def run_app(runtime_factory):
     set_runtime_log_context(
         runtime_name=runtime.runtime_name,
         application_role=str(runtime.current_user["application_role"]),
+    )
+    set_audit_actor_context(
+        actor_user_id=str(runtime.current_user["user_id"]),
+        actor_role=str(runtime.current_user["application_role"]),
+        runtime=runtime.runtime_name,
     )
     log_event(
         logger,
@@ -2529,16 +2823,39 @@ def run_app(runtime_factory):
                 [current_access, pd.DataFrame([record])],
                 ignore_index=True,
             )
+            record_audit_event(
+                event_type="access_assignment",
+                action="create_access",
+                entity_type="access_assignment",
+                entity_id=access_id,
+                target_user_id=user_id,
+                system_id=system_id,
+                source="Direct Access Entry",
+                summary="Access assignment created.",
+                changes={"after": record},
+            )
             return "added"
 
         match = current_access["access_id"] == access_id
         if not match.any():
             return "not_found"
 
+        before_record = current_access.loc[match].iloc[0].to_dict()
         for column_name, value in record.items():
             current_access.loc[match, column_name] = value
 
         st.session_state["editable_access_assignments"] = current_access
+        record_audit_event(
+            event_type="access_assignment",
+            action="update_access",
+            entity_type="access_assignment",
+            entity_id=access_id,
+            target_user_id=user_id,
+            system_id=system_id,
+            source="Direct Access Entry",
+            summary="Access assignment updated.",
+            changes={"before": before_record, "after": record},
+        )
         return "updated"
 
 
@@ -3680,15 +3997,145 @@ def run_app(runtime_factory):
         render_access_reconciliation_tab()
 
 
+    def render_audit_history_tab():
+        """Render session-backed governance audit history for Super Administrators."""
+        st.subheader("Governance Audit History")
+        st.caption(
+            "Review governance actions recorded during the current Streamlit session. "
+            "The reference audit store is append-oriented and session-backed; production "
+            "deployments should use controlled persistent audit storage."
+        )
+
+        audit_events = get_audit_events()
+
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        metric_col1.metric("Audit Events", len(audit_events))
+        metric_col2.metric(
+            "Event Types",
+            audit_events["event_type"].nunique() if not audit_events.empty else 0,
+        )
+        metric_col3.metric(
+            "Actors",
+            audit_events["actor_user_id"].replace("", pd.NA).nunique()
+            if not audit_events.empty
+            else 0,
+        )
+
+        if audit_events.empty:
+            st.info(
+                "No governance actions have been recorded in the current session. "
+                "Create or update a user, update compliance dates, change an access "
+                "assignment, or apply a reconciliation action to generate audit history."
+            )
+            return
+
+        filter_col1, filter_col2, filter_col3 = st.columns(3)
+        with filter_col1:
+            event_type_filter = st.multiselect(
+                "Filter by event type",
+                sorted(audit_events["event_type"].dropna().unique()),
+                key="audit_event_type_filter",
+            )
+        with filter_col2:
+            action_filter = st.multiselect(
+                "Filter by action",
+                sorted(audit_events["action"].dropna().unique()),
+                key="audit_action_filter",
+            )
+        with filter_col3:
+            outcome_filter = st.multiselect(
+                "Filter by outcome",
+                sorted(audit_events["outcome"].dropna().unique()),
+                key="audit_outcome_filter",
+            )
+
+        filtered_events = audit_events.copy()
+        if event_type_filter:
+            filtered_events = filtered_events[
+                filtered_events["event_type"].isin(event_type_filter)
+            ]
+        if action_filter:
+            filtered_events = filtered_events[
+                filtered_events["action"].isin(action_filter)
+            ]
+        if outcome_filter:
+            filtered_events = filtered_events[
+                filtered_events["outcome"].isin(outcome_filter)
+            ]
+
+        display_columns = [
+            "audit_event_id",
+            "occurred_at",
+            "event_type",
+            "action",
+            "actor_user_id",
+            "actor_role",
+            "entity_type",
+            "entity_id",
+            "target_user_id",
+            "system_id",
+            "outcome",
+            "source",
+            "summary",
+        ]
+        show_dataframe(
+            filtered_events[display_columns].sort_values(
+                "occurred_at",
+                ascending=False,
+            ),
+            width="stretch",
+        )
+
+        with st.expander("View selected audit event details"):
+            event_options = filtered_events.copy()
+            event_options["event_label"] = (
+                event_options["audit_event_id"].astype(str)
+                + " — "
+                + event_options["action"].astype(str)
+                + " — "
+                + event_options["summary"].astype(str)
+            )
+            selected_event_label = st.selectbox(
+                "Select audit event",
+                event_options["event_label"].tolist(),
+                key="selected_audit_event",
+            )
+            selected_event = event_options[
+                event_options["event_label"] == selected_event_label
+            ].iloc[0]
+
+            st.write(
+                f"""
+                **Audit Event ID:** {selected_event['audit_event_id']}  
+                **Occurred At:** {selected_event['occurred_at']}  
+                **Actor User ID:** {selected_event['actor_user_id'] or 'Not resolved'}  
+                **Actor Role:** {selected_event['actor_role'] or 'Not resolved'}  
+                **Runtime:** {selected_event['runtime']}  
+                **Entity:** {selected_event['entity_type']} / {selected_event['entity_id'] or 'Not supplied'}  
+                **Target User ID:** {selected_event['target_user_id'] or 'Not supplied'}  
+                **System ID:** {selected_event['system_id'] or 'Not supplied'}  
+                **Source:** {selected_event['source']}  
+                **Outcome:** {selected_event['outcome']}
+                """
+            )
+            st.markdown("#### Change Detail")
+            st.code(selected_event["changes_json"], language="json")
+
+
     def render_administration_section():
         """Render administrative and compliance workflows for Super Administrators."""
         st.subheader("AccessAtlas App Admin")
         section_caption(
-            "Review compliance monitoring details and system administrator assignment coverage."
+            "Review compliance monitoring, system administrator assignment coverage, "
+            "and governance audit history."
         )
 
-        compliance_tab, admins_tab = st.tabs(
-            ["Compliance Monitoring", "System Administrator Assignments"]
+        compliance_tab, admins_tab, audit_tab = st.tabs(
+            [
+                "Compliance Monitoring",
+                "System Administrator Assignments",
+                "Governance Audit History",
+            ]
         )
 
         with compliance_tab:
@@ -3696,6 +4143,9 @@ def run_app(runtime_factory):
 
         with admins_tab:
             render_system_admins_tab()
+
+        with audit_tab:
+            render_audit_history_tab()
 
 
     TAB_RENDERERS = {

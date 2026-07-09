@@ -10,6 +10,25 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- `modular/accessatlas/audit.py` with:
+  - immutable `AuditEvent` model
+  - replaceable `AuditStore` protocol
+  - session-backed append-oriented `SessionAuditStore`
+  - actor/runtime audit context
+  - deterministic JSON change-detail serialization
+  - audit history dataframe access
+- Governance audit events for:
+  - user record creation
+  - self-service compliance date updates
+  - training and agreement reconciliation updates
+  - compliance-driven user inactivation
+  - direct access assignment creation and update
+  - system access reconciliation add, update, and inactivation actions
+- Governance Audit History under AccessAtlas App Admin for Super Administrators.
+- Audit-history metrics, filters, chronological event review, and event-level JSON change detail.
+- `tests/test_audit.py` covering actor context, replaceable stores, stable schema, serialization, and append order.
+
+
 - Canonical modular application source under `modular/`.
 - Shared application core in `modular/accessatlas/app_core.py`.
 - `RuntimeContext` contract for resolved identity, role-visible sections, scoped governance datasets, runtime type, and optional runtime-specific guidance.
@@ -38,6 +57,14 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - `tests/test_logging.py` covering logger idempotency, JSON event fields, runtime context, and invalid configuration fallback.
 
 ### Changed
+
+- Replaced reconciliation-only synthetic `audit_event_id` generation with real governance audit events.
+- Reconciliation result rows now reference the audit event created for the applied governance action.
+- Separated operational structured logging from governance history at both the data-model and UI layers.
+- Added actor and runtime context initialization after the application runtime resolves.
+- Added governance audit history to the Super Administrator administrative workflow.
+- Updated the single-file builder to include the audit module in the generated starter.
+
 
 - Reframed `modular/` as the canonical engineering source while keeping root `app.py` as the easy quick-start distribution.
 - Generalized role-scope logic from demo-specific naming to application-level scope behavior.

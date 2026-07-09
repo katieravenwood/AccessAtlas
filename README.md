@@ -455,6 +455,50 @@ access_agreement_date
 
 ---
 
+## Data Exports
+
+AccessAtlas provides scoped CSV downloads from the workflow where each dataset is reviewed.
+
+Available exports include:
+
+- filtered users
+- filtered systems
+- scoped access assignments
+- system administrator assignments
+- filtered compliance detail
+- compliance follow-up records
+- system access reconciliation results
+- training and agreement reconciliation results
+- filtered governance audit history
+
+Exports use the current role and record scope. A System Administrator therefore exports only records available within that administrator's application scope; the export helper does not bypass the shared scope model.
+
+CSV is the baseline export format for portability.
+
+The export preparation module is:
+
+```text
+modular/accessatlas/exports.py
+```
+
+It provides:
+
+- stable column selection
+- stable sorting when requested
+- UTF-8 CSV output with a byte-order mark for spreadsheet compatibility
+- no dataframe index column
+- filesystem-friendly export filenames
+- protection against formula-style CSV cell execution for text values beginning with `=`, `+`, `-`, or `@`
+
+Successful downloads generate:
+
+- an operational `data_export_downloaded` application log event; and
+- a governance `data_export / export_dataset` audit event containing the export name, record count, column count, and filename.
+
+The exported governance records themselves are not copied into the application log or export audit event.
+
+---
+
 ## Governance Audit History
 
 AccessAtlas maintains a separate governance audit-event model for meaningful record actions.
@@ -983,7 +1027,6 @@ The current 1.0.0 engineering work has established:
 The remaining 1.0.0 engineering priorities are:
 
 - a governance audit-event model
-- data export capability
 - broader automated test coverage
 - linting and formatting checks
 - migration and deployment guidance

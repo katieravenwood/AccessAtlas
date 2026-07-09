@@ -139,23 +139,29 @@ The event schema and storage contract are designed for migration to controlled p
 
 Administrator assignment changes and system catalog changes should emit events when those write workflows are introduced.
 
-### 5. Add data exports — Next implementation step
+### 5. Add data exports — Completed
 
-Provide CSV export capability for key governance datasets and review results.
+AccessAtlas now provides scoped CSV downloads directly in the workflows where governance datasets are reviewed.
 
-Initial export targets should include:
+Current exports include:
 
-- users
-- systems
-- access assignments
+- filtered users
+- filtered systems
+- scoped access assignments
 - system administrator assignments
+- filtered compliance detail
 - compliance follow-up records
-- reconciliation results
-- audit history
+- system access reconciliation results
+- training and agreement reconciliation results
+- filtered governance audit history
 
-CSV remains the baseline export format for portability.
+The reusable export-preparation module provides stable CSV output, optional column selection and sorting, UTF-8 spreadsheet compatibility, and formula-style text sanitization.
 
-### 6. Expand automated tests — Planned for 1.0.0
+Exports inherit the current application role and record scope.
+
+Successful downloads generate an operational application event and a governance audit event without copying exported record contents into either event stream.
+
+### 6. Expand automated tests — Next implementation step
 
 Current automated coverage includes reconciliation behavior, modular/source synchronization, source compilation, and starter/demo runtime-separation contracts.
 
@@ -482,7 +488,6 @@ The public demo should continue to reset tester changes and remain inexpensive t
 
 ## Remaining release requirements
 
-- data export capability
 - broader automated test coverage
 - linting and formatting checks
 - documented migration extension points

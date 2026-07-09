@@ -28,6 +28,7 @@ MODULE_ORDER = [
     "logging_config.py",
     "audit.py",
     "compliance.py",
+    "exports.py",
     "data.py",
     "navigation.py",
     "presentation.py",

@@ -10,6 +10,12 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- `modular/accessatlas/exports.py` with reusable CSV export preparation and artifact metadata.
+- Scoped CSV downloads for users, systems, access assignments, administrator assignments, compliance detail, compliance follow-up, reconciliation results, and governance audit history.
+- Export safeguards for formula-style text values that may otherwise be interpreted as spreadsheet formulas.
+- Operational `data_export_downloaded` events and governance `data_export / export_dataset` audit events.
+- `tests/test_exports.py` covering UTF-8 output, index removal, stable sorting and column selection, missing-column validation, formula-style text sanitization, and source-data immutability.
+
 - `modular/accessatlas/audit.py` with:
   - immutable `AuditEvent` model
   - replaceable `AuditStore` protocol
@@ -57,6 +63,11 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - `tests/test_logging.py` covering logger idempotency, JSON event fields, runtime context, and invalid configuration fallback.
 
 ### Changed
+
+- Data exports are surfaced in the workflow where each dataset is reviewed instead of through a single unrestricted export screen.
+- Exported datasets inherit the current role and record scope.
+- CSV remains the baseline portable export format for the 1.0.0 starter.
+- Data export downloads now participate in both operational logging and governance audit history without writing exported record contents to either event stream.
 
 - Replaced reconciliation-only synthetic `audit_event_id` generation with real governance audit events.
 - Reconciliation result rows now reference the audit event created for the applied governance action.

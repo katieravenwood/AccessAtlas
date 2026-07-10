@@ -10,6 +10,21 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- Reorganized permanent documentation around product overview, application architecture, data access, deployment, integrations, governance patterns, and role-specific guides.
+- `docs/ARCHITECTURE.md` as the current whole-application architecture reference.
+- `docs/DEPLOYMENT.md` with hosting-neutral production deployment considerations and checklist.
+- PostgreSQL and Snowflake repository implementation guides under `docs/integrations/`.
+- Current role guides for User, Manager, System Administrator, and Super Administrator.
+- Documentation screenshot conventions and the planned documentation image directory structure.
+
+- Repository protocols for users, systems, access assignments, and system administrator assignments.
+- Canonical repository DataFrame schemas and normalization helpers.
+- Session-backed reference repository implementations seeded from the existing CSV datasets.
+- `RepositoryContainer` and repository factory extension point for application runtimes.
+- Active audit-store context so governance audit events use the runtime repository container.
+- `docs/DATA_ACCESS.md` with PostgreSQL and Snowflake replacement patterns.
+- Repository behavior and runtime-boundary tests.
+
 - Explicit `jinja2==3.1.6` runtime dependency for pandas `Styler` support used by compliance table presentation.
 - `tests/test_runtime_dependencies.py` to exercise the pandas `.style` accessor in the declared application environment.
 
@@ -81,6 +96,20 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - `tests/test_logging.py` covering logger idempotency, JSON event fields, runtime context, and invalid configuration fallback.
 
 ### Changed
+
+- Rewrote the README as the project front door rather than a complete technical encyclopedia.
+- Replaced `docs/MODULAR_ARCHITECTURE.md` with `docs/ARCHITECTURE.md`.
+- Replaced `docs/POSTGRES_NOTES.md` and `docs/SNOWFLAKE_NOTES.md` with platform-specific integration guides.
+- Replaced the obsolete Access Reviewer guide with the current Manager role guide.
+- Rewrote System Administrator and Super Administrator guidance around the current task-based navigation.
+- Reworked governance-pattern documentation to distinguish conceptual patterns from visible application labels and to include governance audit events.
+- Reframed the roadmap from an engineering-foundation backlog to a public-reference release-readiness plan.
+- Aligned current-state documentation to repository-backed persistence, `Access Management Summary Stats`, current role names, current top-level navigation, and the distinction between reconciliation and access review.
+
+- Streamlit workflows now obtain governed entity data through repositories rather than loading CSV data or mutating editable entity session-state tables directly.
+- User creation, compliance updates, direct access changes, and applied reconciliation results now persist through repository methods.
+- Runtime contexts now carry the resolved repository container.
+- The single-file builder now bundles nested repository modules and strips package-internal imports throughout bundled source.
 
 - Removed Dashboard bar-chart visuals and the nested dashboard-detail expanders.
 - Renamed the Dashboard supporting summary section to `Access Management Summary Stats`.

@@ -1,385 +1,300 @@
 # AccessAtlas Super Administrator Guide
 
-## Introduction
+This guide describes the current AccessAtlas experience for the **Super Administrator** application role.
 
-This guide provides an overview of the responsibilities and workflows available to Super Administrators within AccessAtlas.
+The Super Administrator can review the complete governance dataset available to the active repository container and can access all application sections.
 
-Super Administrators are responsible for maintaining the governance platform itself. They oversee user records, system records, administrator assignments, compliance monitoring, and reconciliation activities across all tracked systems.
+## Super Administrator Role Scope
 
-Unlike System Administrators, whose responsibilities are limited to specific systems, Super Administrators have visibility across the entire governance environment.
+The Super Administrator can access:
 
----
+```text
+Dashboard
+My Access
+Manage Access
+Access Reconciliation
+AccessAtlas App Admin
+```
 
-## Responsibilities
+The reference role-scope model does not limit the Super Administrator to a specific manager or administered-system assignment.
 
-Typical Super Administrator responsibilities include:
+A production deployment should still enforce Super Administrator authorization below the UI.
 
-* Maintaining the central user registry
-* Maintaining the systems catalog
-* Managing administrative assignments
-* Monitoring compliance status
-* Reviewing reconciliation results
-* Coordinating governance reporting
-* Supporting governance audits
-* Monitoring overall platform data quality
+## Dashboard
 
----
+The Dashboard provides an organization-wide summary of the repository data available to the current runtime.
 
-## AccessAtlas Navigation
+Metrics include:
 
-The application is organized into six primary sections:
+- Visible Users
+- Visible Systems
+- Access Records
+- Items Needing Review
+- Expired / Expiring Compliance
+- Pending Reconciliation Actions
+- Active Compliance Follow-Up
 
-1. Overview
-2. Users
-3. Systems
-4. System Admins
-5. Compliance
-6. Access Reconciliation
+`Access Management Summary Stats` contains:
 
-Each section supports a different governance workflow.
+- User Record Status
+- Compliance Status
+- Access Records by System Type
+- Access Records by Resource Type
+- Access Records by Access Status
 
----
+## My Access
 
-## Overview Dashboard
+My Access provides the Super Administrator's own governance record.
 
-The Overview dashboard provides a high-level summary of governance activity across the platform.
+Use:
 
-The dashboard displays:
+- **My Record** to review profile, compliance, access, and administrative assignments.
+- **Update My Certification and Agreement Dates** to update the current user's reference compliance dates.
 
-* Total users
-* Tracked systems
-* Access assignments
-* System administrator assignments
-* Compliance status summaries
-* User record status summaries
-* Access assignment summaries
+## Manage Access
 
-### Typical Uses
+### Managed Users
 
-Super Administrators may use the dashboard to:
+Managed Users provides the complete visible User Management Registry.
 
-* Monitor overall governance activity
-* Identify compliance issues
-* Review access growth trends
-* Verify administrative coverage
+Use filters for:
 
----
+- application role
+- user type
+- record status
 
-## User Registry Management
+Select a user to review the Selected User Access Profile.
 
-The Users section provides access to the Central User Registry.
+The profile includes:
 
-### Typical Activities
+- user governance information
+- training and agreement dates
+- access metrics
+- detailed access assignments
+- system administrator assignments
 
-#### Review User Information
+The filtered user dataset can be exported as CSV.
 
-Administrators can review:
+### Managed Systems
 
-* User identifiers
-* Contact information
-* Departments
-* Managers
-* User types
-* Compliance status
+Managed Systems provides the complete visible System Catalog.
 
-#### Review User Access
+Use filters for:
 
-Administrators can:
+- system type
+- system category
+- record status
 
-* View all access assignments for a user
-* Review systems accessed
-* Review assigned permissions
-* Review administrator assignments
+Select a system to review the Selected System Access Profile.
 
-#### Review User Governance Profile
+The profile includes:
 
-The User Governance Profile provides a consolidated view of:
+- system owner and administrator group
+- resource scope
+- access model
+- tracking method
+- users with access
+- system administrators
+- resources and permissions
 
-* User information
-* Access metrics
-* Compliance status
-* Administrative responsibilities
+The filtered system dataset can be exported as CSV.
 
-### Common Super Admin Questions
+### Edit / Add Access
 
-Examples include:
+This work area contains:
 
-* What systems does a user have access to?
-* Is the user compliant with required training?
-* Who manages the user?
-* Which systems does the user administer?
+```text
+Add / Edit Access
+Add User
+```
 
----
+#### Add / Edit Access
 
-## Systems Catalog Management
+Create a new access assignment or edit an existing assignment.
 
-The Systems section provides access to the Systems Catalog.
+Access assignments model:
 
-### Typical Systems Catalog Management Activities
+```text
+User -> System -> Resource -> Permission
+```
 
-#### Review System Information
+Successful creates and updates are persisted through the active Access Assignment repository and recorded as governance audit events.
 
-Administrators can review:
+Scoped access assignments can be exported as CSV.
 
-* System type
-* System category
-* Access model
-* Tracking method
-* System owner
-* Administrative group
+#### Add User
 
-#### Review Access Assignments
+Create a new user governance record and, where applicable, an initial access assignment.
 
-Administrators can:
-
-* View all users with access
-* Review permissions assigned
-* Review resource-level access
-
-#### Review Administrative Coverage
-
-Administrators can:
-
-* Identify assigned administrators
-* Verify ownership coverage
-* Review governance accountability
-
-### Common Questions
-
-Examples include:
-
-* Who has access to this system?
-* Which permissions exist within this system?
-* Who administers the system?
-* Does the system have assigned ownership?
-
----
-
-## Administrative Assignment Management
-
-The System Admins section provides visibility into administrative responsibility.
-
-### Typical Administrative Assignment Management Activities
-
-#### Review Administrator Assignments
-
-Administrators can:
-
-* View administrator assignments
-* Review assignment status
-* Review assignment history
-
-#### Review Coverage
-
-Administrators can:
-
-* Identify systems with assigned administrators
-* Identify systems lacking administrative coverage
-
-### Common Administrator Assignment Review Questions
-
-Examples include:
-
-* Who administers a specific system?
-* Which systems are managed by a specific administrator?
-* Are there systems without administrative coverage?
-
----
-
-## Compliance Monitoring
-
-The Compliance section provides visibility into governance-related compliance requirements.
-
-### Compliance Statuses
-
-AccessAtlas supports:
-
-* Current
-* Expiring Soon
-* Expired
-
-### Typical Administrator Assignment Review Activities
-
-#### Monitor Compliance
-
-Administrators can:
-
-* Review compliance summaries
-* Monitor upcoming expirations
-* Identify overdue requirements
-
-#### Review Follow-Up Queue
-
-Administrators can:
-
-* Identify active users requiring attention
-* Prioritize remediation activities
-
-#### Analyze Trends
-
-Administrators can review compliance summaries by:
-
-* Department
-* User Type
-
-### Common Administrator Compliance Review Questions
-
-Examples include:
-
-* Which users require follow-up?
-* Which departments have the most compliance issues?
-* How many users have expired requirements?
-
----
+User creation is persisted through the active User repository and recorded as a governance audit event.
 
 ## Access Reconciliation
 
-The Access Reconciliation section supports comparison of governance records against authoritative access sources.
+### System Access Export File Upload
 
-### Purpose
+The Super Administrator can reconcile any visible governed system.
 
-Over time, governance records may diverge from operational systems.
+The workflow is:
 
-Reconciliation helps identify:
+1. Select one system.
+2. Upload a complete source-system access export.
+3. Validate required fields and selected-system scope.
+4. Review uploaded records.
+5. Generate the comparison.
+6. Review summary statistics and the Reconciliation Queue.
+7. Select actions.
+8. Apply selected actions.
+9. Review action results.
 
-* Missing access records
-* New access assignments
-* Status changes
-* Potential governance discrepancies
+Recommended actions are:
 
-### Typical Workflow
+```text
+Add access record
+Inactivate
+Update
+No action
+```
 
-#### Step 1: Obtain an Authoritative Access Export
+Reconciliation results can be exported as CSV.
 
-Examples include:
+### Training Certificate Date and Agreement Reconciliation
 
-* Application user exports
-* Platform role exports
-* Database permission exports
-* Dashboard access exports
+This workflow compares external user compliance dates with the current user repository.
 
-#### Step 2: Upload the Export
+It evaluates:
 
-Upload a CSV file using the expected schema.
+- annual training date
+- biennial training date
+- access agreement date
 
-#### Step 3: Validate the File
+Selected actions may update compliance dates or inactivate user records.
 
-AccessAtlas validates:
+Training reconciliation results can be exported as CSV.
 
-* Required columns
-* Data structure
+## AccessAtlas App Admin
 
-#### Step 4: Review Reconciliation Results
+AccessAtlas App Admin contains three administrative work areas.
 
-Results are classified into categories such as:
+### Compliance Monitoring
 
-* New Access in Upload
-* Access Not Found in Upload
-* Status Changed
-* No Change
+Compliance Monitoring provides organization-wide compliance review.
 
-#### Step 5: Review the Action Queue
+Use it to review:
 
-The Action Queue highlights records requiring review.
+- current, expiring, and expired compliance counts
+- active records requiring follow-up
+- filtered compliance detail
+- follow-up records
+- summary views by department and user type
 
-#### Step 6: Coordinate Remediation
+Available exports include filtered compliance detail and compliance follow-up records.
 
-Remediation actions are typically performed in source systems rather than within AccessAtlas itself.
+### System Administrator Assignments
 
----
+This work area reviews administrative responsibility.
 
-## Governance Reporting
+Use filters for:
 
-Super Administrators often use AccessAtlas as a reporting platform.
+- administrator role
+- assignment status
+- system type
+- system category
 
-Examples include:
+The current UI supports:
 
-* User access inventories
-* System access inventories
-* Compliance reports
-* Administrative coverage reports
-* Reconciliation reports
+- System Administrator Assignments
+- Admin Record Review
+- System Record Review
+- Admin Coverage by System
+- All System Administrator Assignments
 
-Reports can support:
+Administrator assignment data can be exported as CSV.
 
-* Governance reviews
-* Internal audits
-* Compliance audits
-* Access certification activities
+### Governance Audit History
 
----
+Governance Audit History reviews meaningful governance actions recorded through the active AuditStore.
 
-## Data Governance Best Practices
+The current reference view includes:
 
-Super Administrators should follow several governance practices.
+- Audit Events
+- Event Types
+- Actors
 
-### Maintain Historical Records
+Filters are available for:
 
-Avoid deleting records when possible.
+- event type
+- action
+- outcome
 
-Use inactive status designations to preserve audit history.
+The event table is newest-first.
 
-### Review Administrative Coverage of Tracked Systems
+Select an event to review Change Detail.
 
-Ensure all tracked systems have assigned administrators.
+Governance audit history can be exported as CSV.
 
-### Monitor Compliance Regularly
+The reference `SessionAuditStore` is disposable and is not a production immutable audit repository.
 
-Review compliance metrics and follow-up queues on a regular schedule.
+## Operational Logging vs Audit Events
 
-### Perform Reconciliation Routinely
+These records have different purposes.
 
-Regular reconciliation helps maintain confidence in governance data.
+```text
+Application logging
+    How is the software behaving?
 
-### Document Governance Decisions
+Governance audit events
+    What governance action happened to a governed record?
+```
 
-Maintain documentation for governance processes, ownership assignments, and remediation decisions.
+Super Administrators review governance audit events in the application.
 
----
+Operational logs remain in the Streamlit process or hosting environment.
 
-## Troubleshooting
+## Data Exports
 
-### Missing User Information
+AccessAtlas places exports in the workflow where each governed dataset is reviewed.
 
-Verify that the user exists within the Central User Registry.
+Current export surfaces include:
 
-### Missing System Information
+- filtered users
+- filtered systems
+- scoped access assignments
+- administrator assignments
+- compliance detail
+- compliance follow-up
+- access reconciliation results
+- training reconciliation results
+- governance audit history
 
-Verify that the system exists within the Systems Catalog.
+Exports preserve current role scope and active filters.
 
-### Missing Administrator Assignments
+Successful exports generate an operational application event and a governance audit event without copying exported row contents into those event streams.
 
-Review the System Admins section and verify assignment records.
+## Reference Repository Behavior
 
-### Reconciliation Upload Errors
+The default public reference repositories are:
 
-Verify that uploaded files contain all required reconciliation columns.
+```text
+CSV-seeded
+session-backed
+disposable
+```
 
-### Unexpected Reconciliation Results
+Current-session changes do not modify the source CSV files.
 
-Verify:
+A persistent deployment can replace the repository factory with PostgreSQL, Snowflake, or another implementation.
 
-* User identifiers
-* System identifiers
-* Resource names
-* Permission names
-* Access status values
+## Production Administration Note
 
-Discrepancies in any of these values may produce unexpected reconciliation results.
+The Super Administrator role is powerful.
 
----
+Production deployments should define:
 
-## Summary
+- approved identity and authentication
+- explicit assignment of Super Administrator authority
+- backend authorization
+- persistent repository permissions
+- audit-event retention
+- operational monitoring
 
-Super Administrators oversee the governance environment as a whole.
-
-Their responsibilities include:
-
-* User governance
-* System governance
-* Administrative accountability
-* Compliance monitoring
-* Access reconciliation
-* Governance reporting
-
-Together, these activities help organizations maintain accurate, auditable, and trustworthy access governance records across their technology landscape.
+Do not rely on the visible Streamlit role selector or hidden controls as a production security boundary.

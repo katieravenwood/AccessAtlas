@@ -1,342 +1,343 @@
-# Governance Patterns
+# AccessAtlas Governance Patterns
 
-## 1. Introduction
+AccessAtlas demonstrates a set of connected access-governance patterns rather than a single identity, database, or application technology.
 
-AccessAtlas is a reference implementation that demonstrates common access governance patterns used across organizations of all sizes.
+The patterns describe the governance layer around access. They do not replace authentication, authorization enforcement, provisioning, or formal access approval processes.
 
-While the application uses a simplified architecture and synthetic data, the governance concepts represented in the system are applicable to a wide variety of environments including business applications, data platforms, databases, dashboards, collaboration sites, and cloud services.
+## Governance Model
 
-This document explains the governance patterns represented in AccessAtlas and the business problems they are intended to address.
+AccessAtlas uses two primary relationships.
 
----
+### User access
 
-## 2. Central User Registry
+```text
+User
+  |
+  v
+System
+  |
+  v
+Resource
+  |
+  v
+Permission
+```
 
-### 2.1 Business Problem
+This relationship can represent:
 
-Organizations often maintain user information across multiple disconnected systems.
+- application access
+- application roles
+- Snowflake roles or grants
+- database, schema, or table permissions
+- dashboard or report access
+- hosting-site access
+- collaboration-site or group membership
+
+### System administration
+
+```text
+User
+  |
+  v
+System
+  |
+  v
+Administrative Role
+```
+
+System administration is intentionally separate from user access.
+
+A person may administer a system without the same permission model used for ordinary resource access. One user may administer multiple systems, and one system may have multiple administrators.
+
+## Centralized User Registry
+
+**Concept:** Maintain a common governance record for identities that may receive access.
+
+The AccessAtlas screen is:
+
+```text
+Manage Access
+    ->
+Managed Users
+    ->
+User Management Registry
+```
+
+The registry can represent:
+
+- employees
+- contractors
+- vendors
+- consultants
+- service accounts
+
+The user record provides a common key for access, system administration, manager scope, and compliance information.
+
+A centralized governance registry does not need to replace an enterprise identity source. A production repository may map identity-provider or human-resources records into the AccessAtlas canonical user contract.
+
+## System and Resource Cataloging
+
+**Concept:** Maintain a platform-neutral catalog of governed systems and the resource patterns they contain.
+
+The AccessAtlas screen is:
+
+```text
+Manage Access
+    ->
+Managed Systems
+    ->
+System Catalog
+```
+
+A system record may describe:
+
+- an application
+- a database
+- a cloud data platform
+- a reporting platform
+- a collaboration platform
+- another controlled environment
+
+Access assignments then provide resource and permission detail.
+
+This separates the question:
+
+> What systems are governed?
+
+from:
+
+> Who has which permission to which resource?
+
+## Access Cataloging
+
+**Concept:** Represent access through one shared relationship.
+
+```text
+User -> System -> Resource -> Permission
+```
+
+An access assignment can describe:
+
+- an application role
+- a database role
+- a schema privilege
+- a table privilege
+- a dashboard permission
+- a site membership
+- another resource-specific entitlement
+
+The model is intentionally generic. A repository implementation may map platform-specific fields into the canonical AccessAtlas access-assignment schema.
+
+## Administrative Responsibility Tracking
+
+**Concept:** Record who is responsible for administering a governed system.
+
+The AccessAtlas administrative screen is:
+
+```text
+AccessAtlas App Admin
+    ->
+System Administrator Assignments
+```
+
+Administrative assignments support questions such as:
+
+- Which systems have active administrators?
+- Which administrators are responsible for multiple systems?
+- Does a system have a coverage gap?
+- Who should participate in reconciliation or governance follow-up?
+
+Administrative responsibility is not inferred from ordinary access assignments.
+
+## Compliance Monitoring
+
+**Concept:** Associate governance requirements with user records and derive current status.
+
+The reference model tracks:
+
+- annual training
+- biennial training
+- access agreement
+
+AccessAtlas derives:
+
+```text
+Current
+Expiring Soon
+Expired
+```
+
+and identifies active users requiring follow-up.
+
+The current fields are reference examples. The long-term product direction is a configurable compliance-requirements model.
+
+## Access Reconciliation
+
+**Concept:** Compare the governance inventory with a source-system record set.
+
+Reconciliation asks:
+
+> Does the AccessAtlas governance record match the source?
+
+The system access workflow:
+
+1. selects one governed system;
+2. accepts a complete access export for that system;
+3. validates the input schema and system scope;
+4. compares source records with current access assignments;
+5. classifies differences;
+6. presents recommended actions;
+7. applies selected actions through the repository boundary;
+8. records governance audit events.
+
+Recommended actions are:
+
+```text
+Add access record
+Inactivate
+Update
+No action
+```
+
+The one-system scope is a governance safeguard. A record should be recommended for inactivation only when it is absent from a complete comparison set for the system being reviewed.
+
+## Compliance-Date Reconciliation
+
+**Concept:** Compare externally supplied governance dates with the central user record.
+
+The current workflow compares:
+
+- annual training date
+- biennial training date
+- access agreement date
+
+The workflow uses the same review-and-apply pattern as access reconciliation.
+
+This pattern is useful where training, certification, agreement, or acknowledgement records are maintained in a separate source.
+
+## Inactive-Not-Delete Record Retention
+
+**Concept:** Preserve governance context when current access or a current user record becomes inactive.
+
+AccessAtlas uses `Inactive` rather than deletion for the principal governance examples.
+
+This supports questions such as:
+
+- Did the user previously have access?
+- When was an assignment revoked?
+- Was a user record active when an action occurred?
+- What changed during reconciliation?
+
+Inactive record retention is not the same as a complete audit history.
+
+## Governance Audit Events
+
+**Concept:** Record meaningful governance actions separately from current record state.
+
+AccessAtlas audit events answer:
+
+> What governance action happened to a governed record?
 
 Examples include:
 
-* Human Resources systems
-* Active Directory environments
-* Identity providers
-* Business applications
-* Databases
-* Reporting platforms
+- user creation
+- compliance-date update
+- access assignment creation
+- access assignment update
+- reconciliation-driven inactivation
+- training reconciliation update
+- data export
 
-As systems grow, it becomes difficult to answer basic questions such as:
+This is distinct from inactive record retention.
 
-* Who has access?
-* What department do they belong to?
-* Who manages them?
-* Are they still active?
-* Are they compliant with organizational requirements?
+```text
+Record history
+    preserves state and prior relationships
 
-### 2.2 Governance Pattern
+Audit-event history
+    records governance actions and actor/runtime context
+```
 
-A Central User Registry provides a single inventory of users who may have access to governed systems.
+The reference `SessionAuditStore` is disposable. A production deployment should use controlled persistent storage appropriate to its evidence and retention requirements.
 
-The registry becomes the authoritative location for governance-related user information.
+## Governance Reporting and Export
 
-Example attributes include:
+**Concept:** Make governance records portable without bypassing role and record scope.
 
-* User ID
-* Name
-* Email Address
-* Department
-* Manager
-* User Type
-* Record Status
-* Compliance Information
-
-### 2.3 Benefits
-
-* Improved visibility
-* Simplified reporting
-* Consistent user identification
-* Reduced duplication
-* Easier auditing
-
----
-
-## 3. Access Cataloging
-
-### 3.1 Business Problem
-
-Users often have access to multiple systems, each with different permission models.
+AccessAtlas exposes CSV exports in the workflow where a dataset is reviewed.
 
 Examples include:
 
-* Application roles
-* Database permissions
-* Dashboard access
-* Platform roles
-* Site memberships
+- filtered users
+- filtered systems
+- scoped access assignments
+- administrator assignments
+- compliance detail and follow-up
+- reconciliation results
+- audit history
 
-Without a centralized inventory, understanding access relationships becomes difficult.
+The export layer uses the current scoped and filtered dataset.
 
-### 3.2 Governance Pattern
+This supports:
 
-Access Cataloging maintains a centralized inventory of user access assignments across governed systems.
+- audit preparation
+- operational follow-up
+- external analysis
+- evidence collection
+- transition to broader reporting platforms
 
-AccessAtlas models access using:
+## Reconciliation vs Access Review
 
-```text
-User → System → Resource → Permission
-```
+These are related but distinct governance activities.
 
-Examples:
-
-```text
-User → Dashboard Platform → Executive Dashboard → Viewer
-
-User → Reporting Database → analytics_schema → Read
-
-User → Cloud Data Platform → ROLE_DATA_READER → Data Reader
-```
-
-### 3.3 Benefits
-
-* Centralized visibility
-* Consistent reporting
-* Simplified reviews
-* Better audit readiness
-* Improved access transparency
-
----
-
-## 4. Administrative Responsibility Tracking
-
-### 4.1 Business Problem
-
-Organizations frequently know who has access but do not consistently track who is responsible for managing that access.
-
-This can lead to:
-
-* Unclear ownership
-* Delayed issue resolution
-* Governance gaps
-* Increased operational risk
-
-### 4.2 Governance Pattern
-
-Administrative Responsibility Tracking identifies individuals responsible for governing specific systems.
-
-AccessAtlas models administrative responsibility separately from user access.
-
-Pattern:
+### Reconciliation
 
 ```text
-User → System → Administrative Role
+Question:
+Does the governance record match the source?
 ```
 
-Examples:
+### Access review
 
 ```text
-Jordan Smith → Reporting Platform → System Administrator
-
-Taylor Jones → Data Warehouse → Platform Administrator
+Question:
+Should the user still retain the access?
 ```
 
-A user may administer multiple systems, and a system may have multiple administrators.
+AccessAtlas currently implements reconciliation.
 
-### 4.3 Benefits
+The governance inventory, administrator assignments, compliance status, and audit history may support an organization's access-review process, but formal retained-access decisions remain outside the current core application.
 
-* Clear accountability
-* Defined ownership
-* Improved support processes
-* Better governance oversight
+## Connected Governance Model
 
----
-
-## 5. Compliance Monitoring
-
-### 5.1 Business Problem
-
-Organizations often require users to complete periodic activities before retaining access to governed systems.
-
-Examples include:
-
-* Security training
-* Privacy training
-* Confidentiality agreements
-* Acceptable use acknowledgements
-* Policy attestations
-
-Tracking these activities manually can become difficult as organizations grow.
-
-### 5.2 Governance Pattern
-
-Compliance Monitoring tracks completion and expiration of governance-related requirements.
-
-Typical compliance states include:
-
-* Current
-* Expiring Soon
-* Expired
-
-Compliance information can be associated with:
-
-* Employees
-* Contractors
-* Vendors
-* Consultants
-* Service Accounts
-
-### 5.3 Benefits
-
-* Improved visibility
-* Reduced compliance risk
-* Simplified reporting
-* Better audit readiness
-* Proactive follow-up workflows
-
----
-
-## 6. Access Reconciliation
-
-### 6.1 Business Problem
-
-Access records maintained in governance systems often drift from the actual access maintained in operational systems.
-
-Examples include:
-
-* Access removed from a system but not from governance records
-* New users added without governance updates
-* Role changes not reflected in governance inventories
-
-Over time, discrepancies accumulate and reduce confidence in governance reporting.
-
-### 6.2 Governance Pattern
-
-Access Reconciliation compares governance records against authoritative source systems.
-
-Typical process:
+The AccessAtlas governance capabilities are connected rather than strictly sequential.
 
 ```text
-Current Access Records
-          +
-Authoritative Access Export
-          ↓
-Validation
-          ↓
-Comparison
-          ↓
-Classification
-          ↓
-Review
-          ↓
-Remediation
+                Users
+                  |
+          +-------+-------+
+          |               |
+          v               v
+       Access         Administration
+      Assignments      Assignments
+          |               |
+          +-------+-------+
+                  |
+                  v
+               Systems
+                  |
+          +-------+-------+
+          |               |
+          v               v
+      Compliance      Reconciliation
+          |               |
+          +-------+-------+
+                  |
+                  v
+            Audit Events
+                  |
+                  v
+        Reporting and Export
 ```
 
-Common reconciliation outcomes include:
-
-* New Access in Upload
-* Access Not Found in Upload
-* Status Changed
-* No Change
-
-### 6.3 Benefits
-
-* Improved data quality
-* Reduced access drift
-* Better reporting accuracy
-* Increased confidence in governance data
-* Stronger audit support
-
----
-
-## 7. Audit-Friendly Record Retention
-
-### 7.1 Business Problem
-
-Organizations frequently remove records when access is revoked.
-
-While operationally simple, deletion can create challenges for:
-
-* Audits
-* Investigations
-* Historical reporting
-* Governance reviews
-
-### 7.2 Governance Pattern
-
-Instead of deleting governance records, organizations retain historical records and mark them inactive.
-
-Examples:
-
-```text
-Active
-Inactive
-Archived
-```
-
-This preserves historical context while clearly distinguishing current records from historical records.
-
-### 7.3 Benefits
-
-* Historical traceability
-* Improved audit support
-* Better reporting
-* Reduced information loss
-
----
-
-## 8. Governance Reporting
-
-### 8.1 Business Problem
-
-Governance data often exists across multiple systems and formats, making reporting difficult.
-
-Leaders frequently need answers to questions such as:
-
-* How many users have access?
-* Which systems have administrators assigned?
-* Which users require compliance follow-up?
-* Which systems have outstanding reconciliation issues?
-
-### 8.2 Governance Pattern
-
-Governance Reporting aggregates governance data into operational and management views.
-
-Examples include:
-
-* User summaries
-* System summaries
-* Compliance dashboards
-* Administrative coverage reports
-* Reconciliation action queues
-
-### 8.3 Benefits
-
-* Improved decision-making
-* Increased visibility
-* Faster issue identification
-* Better governance oversight
-
----
-
-## 9. How These Patterns Work Together
-
-Each governance pattern addresses a different aspect of access governance.
-
-Together they form a governance framework:
-
-```text
-Central User Registry
-          ↓
-Access Cataloging
-          ↓
-Administrative Responsibility
-          ↓
-Compliance Monitoring
-          ↓
-Access Reconciliation
-          ↓
-Governance Reporting
-```
-
-AccessAtlas demonstrates these patterns in a simplified and technology-neutral manner so organizations can adapt them to their own environments and governance requirements.
-
-The specific technologies may change, but the governance concepts remain broadly applicable across applications, databases, cloud platforms, dashboards, collaboration environments, and other managed systems.
+The public reference application demonstrates how these patterns can share one governance model while remaining separate from platform-specific access enforcement.

@@ -161,24 +161,29 @@ Exports inherit the current application role and record scope.
 
 Successful downloads generate an operational application event and a governance audit event without copying exported record contents into either event stream.
 
-### 6. Expand automated tests — Next implementation step
+### 6. Expand automated tests — Completed
 
-Current automated coverage includes reconciliation behavior, modular/source synchronization, source compilation, and starter/demo runtime-separation contracts.
+The automated test suite now protects the principal deterministic business rules and distribution contracts.
 
-Broaden coverage for:
+Coverage includes:
 
-- reconciliation matching and action classification
-- single-system reconciliation scope
-- compliance status calculations
-- role and system scope logic
-- audit-event generation
-- export preparation
-- data normalization and validation
-- starter identity resolution
+- compliance calculations, expiration rules, follow-up records, and date normalization
+- role-based user, system, access, and administrator assignment scope
+- navigation helpers and role visibility behavior
+- starter identity configuration and fallback resolution
+- session-backed user and access state helpers
+- synthetic identifier generation and access-key matching
+- reconciliation comparison and action edge cases
+- training and agreement reconciliation outcomes
+- audit-event creation, storage contracts, and audited write outcomes
+- CSV export preparation and spreadsheet safeguards
+- structured logging configuration
+- starter/demo runtime separation
+- generated single-file synchronization and compilation
 
-Tests should continue to focus first on business logic that can be exercised independently of Streamlit rendering.
+The suite remains intentionally centered on reusable business logic rather than reproducing Streamlit rendering behavior.
 
-### 7. Add linting and formatting — Planned for 1.0.0
+### 7. Add linting and formatting — Next implementation step
 
 Introduce a lightweight, documented code-quality baseline.
 
@@ -488,7 +493,6 @@ The public demo should continue to reset tester changes and remain inexpensive t
 
 ## Remaining release requirements
 
-- broader automated test coverage
 - linting and formatting checks
 - documented migration extension points
 - current README, changelog, roadmap, architecture, and UI documentation

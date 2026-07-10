@@ -80,7 +80,7 @@ def reconcile(current_access, upload_df, selected_system_id=None):
     source_record_lookup = {}
     if "source_system_record_id" in upload.columns:
         source_record_lookup = (
-            upload.set_index(RECONCILIATION_KEY_COLUMNS)["source_system_record_id"]
+            upload.set_index(key_cols)["source_system_record_id"]
             .to_dict()
         )
 

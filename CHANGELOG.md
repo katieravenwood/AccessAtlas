@@ -10,6 +10,15 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- Broader automated test coverage for compliance rules, role scope, navigation, starter identity resolution, session-backed state helpers, reconciliation edge cases, and audit-integrated write outcomes.
+- `tests/test_compliance.py`.
+- `tests/test_scope.py`.
+- `tests/test_navigation.py`.
+- `tests/test_starter_runtime.py`.
+- `tests/test_state.py`.
+- `tests/test_reconciliation_edges.py`.
+- Streamlit test bootstrap fallback in `tests/conftest.py` so pure unit tests can run when Streamlit is not installed.
+
 - `modular/accessatlas/exports.py` with reusable CSV export preparation and artifact metadata.
 - Scoped CSV downloads for users, systems, access assignments, administrator assignments, compliance detail, compliance follow-up, reconciliation results, and governance audit history.
 - Export safeguards for formula-style text values that may otherwise be interpreted as spreadsheet formulas.
@@ -63,6 +72,10 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - `tests/test_logging.py` covering logger idempotency, JSON event fields, runtime context, and invalid configuration fallback.
 
 ### Changed
+
+- Reconciliation source-record lookup now uses the resolved comparison key columns, preventing optional display-name columns from causing key errors.
+- Removed an unused Streamlit import from the starter runtime so identity and runtime tests remain focused on actual dependencies.
+- Expanded the 1.0.0 test strategy around deterministic business rules and distribution contracts rather than UI implementation details.
 
 - Data exports are surfaced in the workflow where each dataset is reviewed instead of through a single unrestricted export screen.
 - Exported datasets inherit the current role and record scope.

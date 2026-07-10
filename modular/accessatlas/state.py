@@ -7,10 +7,12 @@ import streamlit as st
 
 from accessatlas.audit import record_audit_event
 
+
 def initialize_user_update_state():
     """Initialize session state used for demo self-service updates."""
     if "user_compliance_updates" not in st.session_state:
         st.session_state["user_compliance_updates"] = {}
+
 
 def apply_user_compliance_updates(users):
     """Apply in-session user compliance updates to the user dataset."""
@@ -26,6 +28,7 @@ def apply_user_compliance_updates(users):
             users.loc[user_mask, column_name] = pd.Timestamp(value)
 
     return users
+
 
 def update_user_compliance_dates(
     user_id,
@@ -61,29 +64,28 @@ def update_user_compliance_dates(
         },
     )
 
+
 def initialize_editable_user_state(users):
     """Initialize session-state backed user records for demo user management."""
     if "editable_users" not in st.session_state:
         st.session_state["editable_users"] = users.copy()
+
 
 def get_editable_users(users):
     """Return session-state user records, initializing them if needed."""
     initialize_editable_user_state(users)
     return st.session_state["editable_users"].copy()
 
+
 def generate_next_user_id(users_df):
     """Generate the next synthetic user ID."""
     existing_numbers = (
-        users_df["user_id"]
-        .dropna()
-        .astype(str)
-        .str.extract(r"(\d+)$")[0]
-        .dropna()
-        .astype(int)
+        users_df["user_id"].dropna().astype(str).str.extract(r"(\d+)$")[0].dropna().astype(int)
     )
 
     next_number = 1 if existing_numbers.empty else existing_numbers.max() + 1
     return f"USR{next_number:05d}"
+
 
 def add_user_record(
     user_id,
@@ -126,10 +128,15 @@ def add_user_record(
         "updated_date": today,
     }
 
-    st.session_state["editable_users"] = pd.concat(
-        [current_users, pd.DataFrame([new_user])],
-        ignore_index=True,
-    )
+    new_user_frame = pd.DataFrame([new_user])
+
+    if current_users.empty:
+        st.session_state["editable_users"] = new_user_frame.reindex(columns=current_users.columns)
+    else:
+        st.session_state["editable_users"] = pd.concat(
+            [current_users, new_user_frame],
+            ignore_index=True,
+        )
     record_audit_event(
         event_type="user_record",
         action="create_user",
@@ -142,29 +149,28 @@ def add_user_record(
     )
     return "added"
 
+
 def initialize_editable_access_state(access):
     """Initialize session-state backed access assignments for demo CRUD actions."""
     if "editable_access_assignments" not in st.session_state:
         st.session_state["editable_access_assignments"] = access.copy()
+
 
 def get_editable_access_assignments(access):
     """Return session-state access assignments, initializing them if needed."""
     initialize_editable_access_state(access)
     return st.session_state["editable_access_assignments"].copy()
 
+
 def generate_next_access_id(access_df):
     """Generate the next synthetic access assignment ID."""
     existing_numbers = (
-        access_df["access_id"]
-        .dropna()
-        .astype(str)
-        .str.extract(r"(\d+)$")[0]
-        .dropna()
-        .astype(int)
+        access_df["access_id"].dropna().astype(str).str.extract(r"(\d+)$")[0].dropna().astype(int)
     )
 
     next_number = 1 if existing_numbers.empty else existing_numbers.max() + 1
     return f"A{next_number:03d}"
+
 
 def access_key_mask(access_df, row):
     """Return a boolean mask matching an access row by the reconciliation key."""

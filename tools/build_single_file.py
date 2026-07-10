@@ -17,7 +17,6 @@ import argparse
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MODULAR_ROOT = ROOT / "modular"
 PACKAGE_ROOT = MODULAR_ROOT / "accessatlas"
@@ -84,10 +83,7 @@ def _excluded_line_numbers(source: str) -> set[int]:
             and node.module is not None
             and node.module.startswith("accessatlas")
         )
-        is_future_import = (
-            isinstance(node, ast.ImportFrom)
-            and node.module == "__future__"
-        )
+        is_future_import = isinstance(node, ast.ImportFrom) and node.module == "__future__"
 
         if is_module_docstring or is_internal_import or is_future_import:
             excluded.update(range(node.lineno, node.end_lineno + 1))
@@ -151,8 +147,7 @@ def main() -> int:
             return 1
         if OUTPUT_PATH.read_text(encoding="utf-8") != generated:
             print(
-                "Root app.py is out of sync with modular/. "
-                "Run: python tools/build_single_file.py"
+                "Root app.py is out of sync with modular/. Run: python tools/build_single_file.py"
             )
             return 1
         print("Root app.py is in sync with the canonical modular source.")

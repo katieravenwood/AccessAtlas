@@ -10,6 +10,15 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Added
 
+- Explicit `jinja2==3.1.6` runtime dependency for pandas `Styler` support used by compliance table presentation.
+- `tests/test_runtime_dependencies.py` to exercise the pandas `.style` accessor in the declared application environment.
+
+- `pyproject.toml` with the repository Ruff linting and formatting baseline.
+- `requirements-dev.txt` for local and CI development dependencies.
+- Ruff format and lint checks in the CI quality job.
+- `tests/test_dashboard_contract.py` protecting the simplified Dashboard summary-table contract.
+- `.gitignore` entries for Python, pytest, and Ruff caches.
+
 - Broader automated test coverage for compliance rules, role scope, navigation, starter identity resolution, session-backed state helpers, reconciliation edge cases, and audit-integrated write outcomes.
 - `tests/test_compliance.py`.
 - `tests/test_scope.py`.
@@ -73,6 +82,13 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 
 ### Changed
 
+- Removed Dashboard bar-chart visuals and the nested dashboard-detail expanders.
+- Renamed the Dashboard supporting summary section to `Access Management Summary Stats`.
+- Kept the five source summary tables directly visible on the Dashboard.
+- Applied Ruff formatting and import ordering across canonical modular source, tests, and build tooling.
+- CI now checks formatting, linting, single-file synchronization, and tests as one code-quality sequence.
+- The generated root `app.py` remains excluded from direct Ruff checks and is validated through the existing build synchronization contract.
+
 - Reconciliation source-record lookup now uses the resolved comparison key columns, preventing optional display-name columns from causing key errors.
 - Removed an unused Streamlit import from the starter runtime so identity and runtime tests remain focused on actual dependencies.
 - Expanded the 1.0.0 test strategy around deterministic business rules and distribution contracts rather than UI implementation details.
@@ -112,6 +128,10 @@ AccessAtlas has not yet published a tagged release. The dated sections below rec
 - Added structured exception logging for reference-data load failures and reconciliation key-resolution failures.
 
 ### Fixed
+
+- Prevented compliance summary rendering from failing in fresh environments where Jinja was not installed transitively.
+
+- Removed the pandas empty-frame concatenation warning from new-user creation by handling the empty editable-user registry explicitly.
 
 - Prevented demo-only persona and sidebar behavior from leaking into the generated quick-start starter.
 - Added synchronization checks to prevent root `app.py` from silently drifting from canonical modular source.

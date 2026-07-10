@@ -1,7 +1,6 @@
 """Tests for AccessAtlas role and record-scope rules."""
 
 import pandas as pd
-
 from accessatlas.scope import (
     apply_role_scope,
     get_admin_system_ids,
@@ -67,9 +66,7 @@ def test_manager_report_ids_return_direct_reports_only():
 def test_super_administrator_scope_contains_all_users_and_systems():
     users, systems, access, system_admins = _datasets()
 
-    scope = get_role_scope(
-        users, systems, access, system_admins, _user(users, "SUPER")
-    )
+    scope = get_role_scope(users, systems, access, system_admins, _user(users, "SUPER"))
 
     assert set(scope["user_ids"]) == set(users["user_id"])
     assert set(scope["system_ids"]) == set(systems["system_id"])
@@ -78,9 +75,7 @@ def test_super_administrator_scope_contains_all_users_and_systems():
 def test_manager_scope_contains_self_direct_reports_and_their_systems():
     users, systems, access, system_admins = _datasets()
 
-    scope = get_role_scope(
-        users, systems, access, system_admins, _user(users, "MGR")
-    )
+    scope = get_role_scope(users, systems, access, system_admins, _user(users, "MGR"))
 
     assert set(scope["user_ids"]) == {"MGR", "REPORT1", "REPORT2"}
     assert set(scope["system_ids"]) == {"SYS1", "SYS2"}
@@ -89,9 +84,7 @@ def test_manager_scope_contains_self_direct_reports_and_their_systems():
 def test_system_administrator_scope_is_limited_to_active_administered_systems():
     users, systems, access, system_admins = _datasets()
 
-    scope = get_role_scope(
-        users, systems, access, system_admins, _user(users, "ADMIN")
-    )
+    scope = get_role_scope(users, systems, access, system_admins, _user(users, "ADMIN"))
 
     assert scope["system_ids"] == ["SYS1"]
     assert set(scope["user_ids"]) == {"MGR", "REPORT1"}
@@ -100,9 +93,7 @@ def test_system_administrator_scope_is_limited_to_active_administered_systems():
 def test_user_scope_contains_only_self_and_own_systems():
     users, systems, access, system_admins = _datasets()
 
-    scope = get_role_scope(
-        users, systems, access, system_admins, _user(users, "OTHER")
-    )
+    scope = get_role_scope(users, systems, access, system_admins, _user(users, "OTHER"))
 
     assert scope["user_ids"] == ["OTHER"]
     assert scope["system_ids"] == ["SYS3"]
@@ -125,9 +116,7 @@ def test_apply_role_scope_filters_all_four_datasets_for_system_admin():
 def test_user_registry_hidden_only_for_user_role():
     assert should_show_user_registry(pd.Series({"application_role": "User"})) is False
     assert should_show_user_registry(pd.Series({"application_role": "Manager"})) is True
-    assert should_show_user_registry(
-        pd.Series({"application_role": "System Administrator"})
-    ) is True
-    assert should_show_user_registry(
-        pd.Series({"application_role": "Super Administrator"})
-    ) is True
+    assert (
+        should_show_user_registry(pd.Series({"application_role": "System Administrator"})) is True
+    )
+    assert should_show_user_registry(pd.Series({"application_role": "Super Administrator"})) is True

@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+
 def _find_project_root():
     """Find the nearest parent containing the shared AccessAtlas data directory."""
     current_path = Path(__file__).resolve().parent

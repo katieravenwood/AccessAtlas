@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from dataclasses import dataclass
 from typing import Iterable
 
 import pandas as pd
 
 from accessatlas.logging_config import get_logger, log_exception
-
 
 logger = get_logger(__name__)
 
@@ -59,30 +58,23 @@ def prepare_export_dataframe(
     if columns is not None:
         requested_columns = list(columns)
         missing_columns = [
-            column for column in requested_columns
-            if column not in export_frame.columns
+            column for column in requested_columns if column not in export_frame.columns
         ]
         if missing_columns:
             raise ValueError(
-                "Export columns are missing from the dataframe: "
-                + ", ".join(missing_columns)
+                "Export columns are missing from the dataframe: " + ", ".join(missing_columns)
             )
         export_frame = export_frame[requested_columns]
 
     if sort_by is not None:
-        sort_columns = [
-            column for column in sort_by
-            if column in export_frame.columns
-        ]
+        sort_columns = [column for column in sort_by if column in export_frame.columns]
         if sort_columns:
             export_frame = export_frame.sort_values(
                 sort_columns,
                 kind="stable",
             )
 
-    object_columns = export_frame.select_dtypes(
-        include=["object", "string"]
-    ).columns
+    object_columns = export_frame.select_dtypes(include=["object", "string"]).columns
     for column in object_columns:
         export_frame[column] = export_frame[column].map(_sanitize_csv_value)
 

@@ -4,7 +4,6 @@ import json
 
 import pandas as pd
 import streamlit as st
-
 from accessatlas.audit import get_audit_events, set_audit_actor_context
 from accessatlas.state import (
     access_key_mask,
@@ -24,9 +23,7 @@ def setup_function():
 
 
 def test_generate_next_user_id_handles_mixed_and_missing_identifiers():
-    users = pd.DataFrame(
-        {"user_id": ["USR00002", "legacy", None, "USR00010"]}
-    )
+    users = pd.DataFrame({"user_id": ["USR00002", "legacy", None, "USR00010"]})
 
     assert generate_next_user_id(users) == "USR00011"
 
@@ -52,10 +49,7 @@ def test_get_editable_access_assignments_returns_copy_of_session_state():
     returned = get_editable_access_assignments(access)
     returned.loc[0, "access_status"] = "Inactive"
 
-    assert (
-        st.session_state["editable_access_assignments"].loc[0, "access_status"]
-        == "Active"
-    )
+    assert st.session_state["editable_access_assignments"].loc[0, "access_status"] == "Active"
 
 
 def test_update_compliance_dates_applies_override_and_records_audit_event():
@@ -86,9 +80,7 @@ def test_update_compliance_dates_applies_override_and_records_audit_event():
 
 
 def test_add_user_record_rejects_duplicate_without_audit_event():
-    st.session_state["editable_users"] = pd.DataFrame(
-        [{"user_id": "USR00001"}]
-    )
+    st.session_state["editable_users"] = pd.DataFrame([{"user_id": "USR00001"}])
 
     result = add_user_record(
         "USR00001",

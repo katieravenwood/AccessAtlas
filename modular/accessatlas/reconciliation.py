@@ -1,13 +1,12 @@
 """AccessAtlas application module."""
 
-from datetime import date
 import logging
+from datetime import date
 
 import pandas as pd
 import streamlit as st
 
 from accessatlas.audit import record_audit_event
-
 from accessatlas.compliance import normalize_date_value, uploaded_dates_compliance_status
 from accessatlas.config import RECONCILIATION_KEY_COLUMNS, TRAINING_RECONCILIATION_DATE_COLUMNS
 from accessatlas.logging_config import get_logger, log_event
@@ -18,16 +17,12 @@ from accessatlas.state import (
     update_user_compliance_dates,
 )
 
-
 logger = get_logger(__name__)
+
 
 def validate_upload(upload_df, required_columns):
     """Return a list of required columns missing from an uploaded file."""
-    missing_columns = [
-        column
-        for column in required_columns
-        if column not in upload_df.columns
-    ]
+    missing_columns = [column for column in required_columns if column not in upload_df.columns]
     log_event(
         logger,
         logging.WARNING if missing_columns else logging.INFO,
@@ -39,6 +34,7 @@ def validate_upload(upload_df, required_columns):
         is_valid=not missing_columns,
     )
     return missing_columns
+
 
 def reconcile(current_access, upload_df, selected_system_id=None):
     """Compare current access assignments to an uploaded access export."""
@@ -53,7 +49,9 @@ def reconcile(current_access, upload_df, selected_system_id=None):
     # Some exports include `first_name`/`last_name`, but the canonical
     # access assignments data may not. Use the intersection to avoid
     # KeyError from set_index when columns are missing.
-    key_cols = [c for c in RECONCILIATION_KEY_COLUMNS if c in current.columns and c in upload.columns]
+    key_cols = [
+        c for c in RECONCILIATION_KEY_COLUMNS if c in current.columns and c in upload.columns
+    ]
 
     # If no intersection, fall back to the canonical identifier set
     # that the reference data uses (user_id + system + resource + permission).
@@ -72,17 +70,15 @@ def reconcile(current_access, upload_df, selected_system_id=None):
         )
         raise KeyError(
             "Reconciliation cannot proceed: no matching key columns found in current and uploaded data. "
-            f"Expected one of {RECONCILIATION_KEY_COLUMNS} or fallback {fallback}.")
+            f"Expected one of {RECONCILIATION_KEY_COLUMNS} or fallback {fallback}."
+        )
 
     current_key = current.set_index(key_cols)["access_status"].to_dict()
     upload_key = upload.set_index(key_cols)["access_status"].to_dict()
 
     source_record_lookup = {}
     if "source_system_record_id" in upload.columns:
-        source_record_lookup = (
-            upload.set_index(key_cols)["source_system_record_id"]
-            .to_dict()
-        )
+        source_record_lookup = upload.set_index(key_cols)["source_system_record_id"].to_dict()
 
     rows = []
     all_keys = sorted(set(current_key.keys()) | set(upload_key.keys()))
@@ -139,6 +135,7 @@ def reconcile(current_access, upload_df, selected_system_id=None):
     )
     return comparison
 
+
 def apply_reconciliation_action(access_df, row):
     """Apply one reconciliation recommendation to the canonical access table."""
     access_df = access_df.copy()
@@ -192,10 +189,7 @@ def build_reconciliation_change_summary(row, outcome):
         )
 
     if outcome == "inactivated":
-        return (
-            "Access Status: "
-            f"{row.get('current_access_status')} → Inactive."
-        )
+        return f"Access Status: {row.get('current_access_status')} → Inactive."
 
     if outcome == "updated":
         return (
@@ -207,6 +201,7 @@ def build_reconciliation_change_summary(row, outcome):
         return "No record was changed. The action was skipped."
 
     return "No change summary available."
+
 
 def build_reconciliation_action_result(row, outcome):
     """Return a display-friendly action result and record a successful governance event."""
@@ -260,6 +255,7 @@ def build_reconciliation_action_result(row, outcome):
         "source_system_record_id": row.get("source_system_record_id"),
     }
 
+
 def apply_reconciliation_actions(access_df, selected_rows):
     """Apply selected reconciliation actions and return updated access data, counts, and result rows."""
     updated_access = access_df.copy()
@@ -303,6 +299,7 @@ def apply_reconciliation_actions(access_df, selected_rows):
     )
     return updated_access, counts, result_dataframe
 
+
 def inactivate_user_record(user_id):
     """Mark one user record inactive in the session-state user registry."""
     current_users = st.session_state["editable_users"].copy()
@@ -316,6 +313,7 @@ def inactivate_user_record(user_id):
     st.session_state["editable_users"] = current_users
     return "inactivated"
 
+
 def reconcile_training_dates(current_users, upload_df):
     """Compare current user compliance dates to an uploaded date export."""
     current = current_users.copy()
@@ -325,8 +323,12 @@ def reconcile_training_dates(current_users, upload_df):
         current[column] = current[column].apply(normalize_date_value)
         upload[column] = upload[column].apply(normalize_date_value)
 
-    current_lookup = current.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict("index")
-    upload_lookup = upload.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict("index")
+    current_lookup = current.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict(
+        "index"
+    )
+    upload_lookup = upload.set_index("user_id")[TRAINING_RECONCILIATION_DATE_COLUMNS].to_dict(
+        "index"
+    )
     current_status_lookup = current.set_index("user_id")["record_status"].to_dict()
 
     rows = []
@@ -359,9 +361,8 @@ def reconcile_training_dates(current_users, upload_df):
             if uploaded_compliance == "Expired":
                 change_type = "User Remains Out of Compliance"
                 recommended_action = "Inactivate user record"
-                changes = (
-                    "Uploaded dates confirm the user remains out of compliance. "
-                    + ("; ".join(changed_fields) if changed_fields else "No date changes provided.")
+                changes = "Uploaded dates confirm the user remains out of compliance. " + (
+                    "; ".join(changed_fields) if changed_fields else "No date changes provided."
                 )
             elif changed_fields:
                 change_type = "Date Changed"
@@ -381,12 +382,8 @@ def reconcile_training_dates(current_users, upload_df):
         }
 
         for column in TRAINING_RECONCILIATION_DATE_COLUMNS:
-            row[f"current_{column}"] = (
-                current_values.get(column, "") if current_values else ""
-            )
-            row[f"uploaded_{column}"] = (
-                uploaded_values.get(column, "") if uploaded_values else ""
-            )
+            row[f"current_{column}"] = current_values.get(column, "") if current_values else ""
+            row[f"uploaded_{column}"] = uploaded_values.get(column, "") if uploaded_values else ""
 
         rows.append(row)
 
@@ -407,6 +404,7 @@ def reconcile_training_dates(current_users, upload_df):
         change_counts=change_counts,
     )
     return comparison
+
 
 def apply_training_date_actions(selected_rows):
     """Apply selected training date reconciliation actions to session state."""
@@ -454,13 +452,20 @@ def apply_training_date_actions(selected_rows):
                     target_user_id=row["user_id"],
                     source="Training and Agreement Reconciliation",
                     summary="User record status set to Inactive.",
-                    changes={"record_status": {"before": row.get("current_record_status"), "after": "Inactive"}},
+                    changes={
+                        "record_status": {
+                            "before": row.get("current_record_status"),
+                            "after": "Inactive",
+                        }
+                    },
                 ).audit_event_id
             results.append(
                 {
                     "audit_event_id": audit_event_id,
                     "action_result": "Success" if outcome == "inactivated" else "Skipped",
-                    "changes_made": "User record status set to Inactive." if outcome == "inactivated" else "User record was not changed.",
+                    "changes_made": "User record status set to Inactive."
+                    if outcome == "inactivated"
+                    else "User record was not changed.",
                     "recommended_action": row["recommended_action"],
                     "change_type": row["change_type"],
                     "user_id": row["user_id"],

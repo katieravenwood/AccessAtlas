@@ -3,7 +3,6 @@
 from datetime import date
 
 import pandas as pd
-
 from accessatlas.compliance import (
     add_expirations,
     compliance_status,

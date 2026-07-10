@@ -1,4 +1,5 @@
 streamlit==1.58.0
 pandas==3.0.3
+jinja2==3.1.6
 pyarrow==24.0.0
 pytest==9.0.3

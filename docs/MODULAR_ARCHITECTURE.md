@@ -246,6 +246,41 @@ modular/demo_app.py
 
 The root `app.py` should remain the recommended quick-start path in the README.
 
+## Code quality boundary
+
+Ruff is the shared formatter and linter for canonical Python source, tests, and build tooling.
+
+Configuration is defined in:
+
+```text
+pyproject.toml
+```
+
+Development dependencies are defined in:
+
+```text
+requirements-dev.txt
+```
+
+The quality boundary is:
+
+```text
+modular/
+tests/
+tools/
+```
+
+The generated root `app.py` is intentionally excluded from direct Ruff checks because module bundling places repeated imports after executable module content. Formatting and linting the generated artifact would therefore create noise around the bundling mechanism rather than improve the canonical source.
+
+The generated distribution remains protected by:
+
+```bash
+python tools/build_single_file.py --check
+```
+
+CI runs formatter checks, lint checks, the distribution synchronization check, and the full automated test suite.
+
+
 ## Test strategy
 
 The test suite protects business-rule and architecture boundaries rather than reproducing Streamlit rendering.

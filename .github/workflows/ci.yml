@@ -7,7 +7,7 @@ on:
     branches: [dev]
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -21,10 +21,18 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Install dependencies
+      - name: Install development dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Check formatting
+        run: |
+          ruff format --check modular tests tools
+
+      - name: Run lint checks
+        run: |
+          ruff check modular tests tools
 
       - name: Verify single-file distribution
         run: |

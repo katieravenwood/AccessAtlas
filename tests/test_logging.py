@@ -8,8 +8,6 @@ import logging
 from accessatlas.logging_config import (
     LOGGER_NAMESPACE,
     configure_logging,
-    get_logger,
-    log_event,
     reset_runtime_log_context,
     set_runtime_log_context,
 )
@@ -18,9 +16,7 @@ from accessatlas.logging_config import (
 def _accessatlas_handlers():
     logger = logging.getLogger(LOGGER_NAMESPACE)
     return [
-        handler
-        for handler in logger.handlers
-        if getattr(handler, "_accessatlas_handler", False)
+        handler for handler in logger.handlers if getattr(handler, "_accessatlas_handler", False)
     ]
 
 

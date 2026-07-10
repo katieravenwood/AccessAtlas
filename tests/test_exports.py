@@ -4,7 +4,6 @@ from io import BytesIO
 
 import pandas as pd
 import pytest
-
 from accessatlas.exports import (
     prepare_csv_export,
     prepare_export_dataframe,

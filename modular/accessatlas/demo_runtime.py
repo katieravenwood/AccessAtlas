@@ -12,7 +12,6 @@ from accessatlas.navigation import get_visible_tabs
 from accessatlas.runtime import RuntimeContext
 from accessatlas.scope import apply_role_scope
 
-
 logger = get_logger(__name__)
 
 
@@ -154,10 +153,10 @@ def build_demo_runtime(
     st.sidebar.markdown("### Current Demo User")
     st.sidebar.write(
         f"""
-        **Name:** {current_user['display_name']}  
-        **Role:** {current_user['application_role']}  
-        **User Type:** {current_user['user_type']}  
-        **Department:** {current_user['department']}
+        **Name:** {current_user["display_name"]}  
+        **Role:** {current_user["application_role"]}  
+        **User Type:** {current_user["user_type"]}  
+        **Department:** {current_user["department"]}
         """
     )
 

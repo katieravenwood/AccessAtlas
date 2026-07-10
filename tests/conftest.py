@@ -1,9 +1,8 @@
 """Pytest configuration for the modular AccessAtlas package."""
 
-from pathlib import Path
 import sys
 import types
-
+from pathlib import Path
 
 MODULAR_ROOT = Path(__file__).resolve().parents[1] / "modular"
 if str(MODULAR_ROOT) not in sys.path:

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import json
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-import json
 from typing import Any, Protocol
 from uuid import uuid4
 
 import pandas as pd
-
 
 _AUDIT_STATE_KEY = "governance_audit_events"
 _AUDIT_ACTOR_USER_ID: ContextVar[str] = ContextVar(
@@ -96,10 +95,7 @@ class SessionAuditStore:
 
     def list_events(self) -> list[AuditEvent]:
         self._initialize()
-        return [
-            AuditEvent(**record)
-            for record in self._state_mapping()[self.state_key]
-        ]
+        return [AuditEvent(**record) for record in self._state_mapping()[self.state_key]]
 
 
 def set_audit_actor_context(

@@ -2,7 +2,6 @@
 
 import pandas as pd
 import pytest
-
 from accessatlas.starter_runtime import (
     STARTER_USER_ID_ENV,
     _resolve_starter_user,
@@ -102,9 +101,7 @@ def test_build_starter_runtime_returns_scoped_non_demo_context(monkeypatch):
             {"user_id": "USR00001", "system_id": "SYS1"},
         ]
     )
-    system_admins = pd.DataFrame(
-        columns=["user_id", "system_id", "assignment_status"]
-    )
+    system_admins = pd.DataFrame(columns=["user_id", "system_id", "assignment_status"])
 
     runtime = build_starter_runtime(users, systems, access, system_admins)
 

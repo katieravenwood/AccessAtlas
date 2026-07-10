@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -17,9 +16,7 @@ def test_generated_starter_contains_no_demo_sidebar_controls():
 
 def test_demo_runtime_retains_demo_controls():
     """The modular hosted demo must keep the persona selector and scope preview."""
-    source = (
-        ROOT / "modular" / "accessatlas" / "demo_runtime.py"
-    ).read_text(encoding="utf-8")
+    source = (ROOT / "modular" / "accessatlas" / "demo_runtime.py").read_text(encoding="utf-8")
     assert 'st.sidebar.title("Demo Mode")' in source
     assert '"View app as"' in source
     assert "Current Demo User" in source

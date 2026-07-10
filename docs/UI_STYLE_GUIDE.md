@@ -47,11 +47,36 @@ Each major top-level section should generally follow this order:
 
 1. Section title
 2. One-sentence workflow caption
-3. Summary metrics or visual summary, when useful
+3. Summary metrics or summary tables, when useful
 4. Primary work area
 5. Supporting tables, cards, or detail views
 
 Do not add headings solely to create visual weight.
+
+## Dashboard Summary Presentation
+
+Keep the Dashboard focused on operational metrics and compact source summaries.
+
+The Dashboard should retain the top-level metric tiles and use:
+
+```text
+Access Management Summary Stats
+```
+
+as the heading for the supporting summary tables.
+
+Current summary tables are:
+
+- User Record Status
+- Compliance Status
+- Access Records by System Type
+- Access Records by Resource Type
+- Access Records by Access Status
+
+Do not add decorative charts to the Dashboard when the same information is communicated more clearly by the source summary tables.
+
+Do not wrap the current summary tables in `View dashboard details` or `View source summary tables` expanders. The summary tables are part of the Dashboard's primary information surface.
+
 
 ## Heading Hierarchy
 

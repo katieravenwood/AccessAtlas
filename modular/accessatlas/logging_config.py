@@ -7,14 +7,13 @@ administrative actions.
 
 from __future__ import annotations
 
-from contextvars import ContextVar
-from datetime import datetime, timezone
 import json
 import logging
 import os
 import sys
+from contextvars import ContextVar
+from datetime import datetime, timezone
 from typing import Any, Mapping
-
 
 LOG_LEVEL_ENV = "ACCESSATLAS_LOG_LEVEL"
 LOG_FORMAT_ENV = "ACCESSATLAS_LOG_FORMAT"
@@ -23,7 +22,9 @@ DEFAULT_LOG_FORMAT = "json"
 LOGGER_NAMESPACE = "accessatlas"
 
 _runtime_name: ContextVar[str] = ContextVar("accessatlas_runtime_name", default="unresolved")
-_application_role: ContextVar[str] = ContextVar("accessatlas_application_role", default="unresolved")
+_application_role: ContextVar[str] = ContextVar(
+    "accessatlas_application_role", default="unresolved"
+)
 
 _RESERVED_RECORD_FIELDS = set(logging.makeLogRecord({}).__dict__) | {
     "message",
@@ -130,12 +131,8 @@ def configure_logging(
     logger.setLevel(_normalize_log_level(level or os.getenv(LOG_LEVEL_ENV)))
     logger.propagate = False
 
-    selected_format = _normalize_log_format(
-        output_format or os.getenv(LOG_FORMAT_ENV)
-    )
-    formatter: logging.Formatter = (
-        JsonFormatter() if selected_format == "json" else TextFormatter()
-    )
+    selected_format = _normalize_log_format(output_format or os.getenv(LOG_FORMAT_ENV))
+    formatter: logging.Formatter = JsonFormatter() if selected_format == "json" else TextFormatter()
 
     handler = next(
         (

@@ -117,7 +117,7 @@ Current operational events cover:
 
 Application logs remain explicitly separate from governance audit events.
 
-### 4. Add audit logging and an audit-event model — Next implementation step
+### 4. Add audit logging and an audit-event model — Completed
 
 AccessAtlas now includes a modular governance audit-event model and replaceable audit-store contract.
 
@@ -183,20 +183,22 @@ Coverage includes:
 
 The suite remains intentionally centered on reusable business logic rather than reproducing Streamlit rendering behavior.
 
-### 7. Add linting and formatting — Next implementation step
+### 7. Add linting and formatting — Completed
 
-Introduce a lightweight, documented code-quality baseline.
+AccessAtlas now uses Ruff as the lightweight linting and formatting baseline for canonical source, tests, and build tooling.
 
-The repository should include automated checks for:
+Repository configuration is defined in `pyproject.toml`, with development dependencies in `requirements-dev.txt`.
 
-- formatting
-- linting
-- tests
-- single-file distribution synchronization
+The CI quality job runs:
 
-The same checks should run in CI.
+- `ruff format --check modular tests tools`
+- `ruff check modular tests tools`
+- `python tools/build_single_file.py --check`
+- `pytest -q`
 
-### 8. Define migration support — Planned for 1.0.0
+The generated root `app.py` is excluded from direct Ruff checks because it is a build artifact. Code quality is enforced against the canonical modular source, and the existing synchronization check verifies that the generated starter matches that source.
+
+### 8. Define migration support — Next implementation step
 
 Document and establish clear data-layer extension points for moving from synthetic CSV files to persistent storage.
 

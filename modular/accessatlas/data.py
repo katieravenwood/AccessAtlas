@@ -8,8 +8,8 @@ import streamlit as st
 from accessatlas.config import DATA_DIR
 from accessatlas.logging_config import get_logger, log_event, log_exception
 
-
 logger = get_logger(__name__)
+
 
 @st.cache_data
 def load_csv(filename, date_columns=None):
@@ -40,6 +40,7 @@ def load_csv(filename, date_columns=None):
         column_count=len(dataframe.columns),
     )
     return dataframe
+
 
 @st.cache_data
 def load_data():
@@ -75,9 +76,6 @@ def load_data():
         logging.INFO,
         "reference_data_ready",
         "Reference datasets are ready for the application.",
-        dataset_counts={
-            name: len(dataframe)
-            for name, dataframe in datasets.items()
-        },
+        dataset_counts={name: len(dataframe) for name, dataframe in datasets.items()},
     )
     return datasets

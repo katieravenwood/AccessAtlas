@@ -455,6 +455,54 @@ access_agreement_date
 
 ---
 
+## Code Quality Checks
+
+AccessAtlas uses Ruff as the shared linting and formatting baseline for canonical source, tests, and build tooling.
+
+Install development dependencies with:
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Run the formatter:
+
+```bash
+ruff format modular tests tools
+```
+
+Run lint checks:
+
+```bash
+ruff check modular tests tools
+```
+
+Verify formatting without changing files:
+
+```bash
+ruff format --check modular tests tools
+```
+
+The generated root `app.py` is intentionally excluded from direct Ruff formatting and linting. It is rebuilt from the canonical modular source and protected by the single-file synchronization check.
+
+The CI quality job runs, in order:
+
+1. Ruff format check
+2. Ruff lint check
+3. generated single-file synchronization check
+4. pytest
+
+Run the full local validation sequence with:
+
+```bash
+ruff format --check modular tests tools
+ruff check modular tests tools
+python tools/build_single_file.py --check
+pytest -q
+```
+
+---
+
 ## Automated Test Coverage
 
 The AccessAtlas test suite now covers the principal non-UI business rules and distribution contracts.
@@ -1053,12 +1101,12 @@ The current 1.0.0 engineering work has established:
 - a starter identity extension point
 - disposable, session-backed demo changes
 - structured application logging with JSON or text output
+- a governance audit-event model and current-session audit history
+- scoped CSV data exports
+- broader automated test coverage
+- Ruff linting and formatting checks enforced in CI
 
-The remaining 1.0.0 engineering priorities are:
-
-- a governance audit-event model
-- linting and formatting checks
-- migration and deployment guidance
+The remaining 1.0.0 engineering priority is migration support, with deployment guidance retained as a stretch goal.
 
 Notifications remain the first planned functional module after the 1.0.0 foundation.
 

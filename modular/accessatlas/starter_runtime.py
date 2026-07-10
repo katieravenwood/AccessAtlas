@@ -12,7 +12,6 @@ from accessatlas.navigation import get_visible_tabs
 from accessatlas.runtime import RuntimeContext
 from accessatlas.scope import apply_role_scope
 
-
 STARTER_USER_ID_ENV = "ACCESSATLAS_USER_ID"
 
 
@@ -40,8 +39,7 @@ def _resolve_starter_user(users: pd.DataFrame) -> pd.Series:
         return matching_users.iloc[0]
 
     super_admins = users[
-        (users["application_role"] == "Super Administrator")
-        & (users["record_status"] == "Active")
+        (users["application_role"] == "Super Administrator") & (users["record_status"] == "Active")
     ]
     if not super_admins.empty:
         log_event(
@@ -65,7 +63,9 @@ def _resolve_starter_user(users: pd.DataFrame) -> pd.Series:
         return active_users.sort_values("user_id").iloc[0]
 
     if users.empty:
-        raise ValueError("The user dataset is empty; AccessAtlas cannot resolve a starter identity.")
+        raise ValueError(
+            "The user dataset is empty; AccessAtlas cannot resolve a starter identity."
+        )
 
     log_event(
         logger,

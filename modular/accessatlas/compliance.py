@@ -4,15 +4,18 @@ from datetime import date
 
 import pandas as pd
 
-from accessatlas.config import ANNUAL_TRAINING_VALID_YEARS, BIENNIAL_TRAINING_VALID_YEARS, EXPIRING_SOON_DAYS
+from accessatlas.config import (
+    ANNUAL_TRAINING_VALID_YEARS,
+    BIENNIAL_TRAINING_VALID_YEARS,
+    EXPIRING_SOON_DAYS,
+)
+
 
 def compliance_status(row):
     """Return compliance status based on training expiration rules."""
     today_ts = pd.Timestamp(date.today())
 
-    annual_exp = row["annual_training_date"] + pd.DateOffset(
-        years=ANNUAL_TRAINING_VALID_YEARS
-    )
+    annual_exp = row["annual_training_date"] + pd.DateOffset(years=ANNUAL_TRAINING_VALID_YEARS)
     biennial_exp = row["biennial_training_date"] + pd.DateOffset(
         years=BIENNIAL_TRAINING_VALID_YEARS
     )
@@ -26,17 +29,19 @@ def compliance_status(row):
 
     return "Current"
 
+
 def add_expirations(users):
     """Add expiration dates and compliance status fields to the user dataset."""
     users = users.copy()
     users["annual_training_expiration"] = users["annual_training_date"] + pd.DateOffset(
         years=ANNUAL_TRAINING_VALID_YEARS
     )
-    users["biennial_training_expiration"] = users[
-        "biennial_training_date"
-    ] + pd.DateOffset(years=BIENNIAL_TRAINING_VALID_YEARS)
+    users["biennial_training_expiration"] = users["biennial_training_date"] + pd.DateOffset(
+        years=BIENNIAL_TRAINING_VALID_YEARS
+    )
     users["compliance_status"] = users.apply(compliance_status, axis=1)
     return users
+
 
 def get_expired_follow_up_records(user_records):
     """Return individual expired compliance records needing follow-up."""
@@ -67,11 +72,13 @@ def get_expired_follow_up_records(user_records):
 
     return pd.DataFrame(follow_up_rows)
 
+
 def normalize_date_value(value):
     """Return a normalized date string for comparison and display."""
     if pd.isna(value) or value == "":
         return ""
     return str(pd.to_datetime(value).date())
+
 
 def uploaded_dates_compliance_status(uploaded_values):
     """Return compliance status based on uploaded training and agreement dates."""

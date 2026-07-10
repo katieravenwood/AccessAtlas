@@ -13,8 +13,8 @@ This module provides:
 - Access reconciliation workflows
 """
 
-from datetime import date
 import logging
+from datetime import date
 
 import pandas as pd
 import streamlit as st
@@ -30,10 +30,10 @@ from accessatlas.compliance import (
     get_expired_follow_up_records,
 )
 from accessatlas.config import (
-    DATA_DIR,
     ANNUAL_TRAINING_VALID_YEARS,
     BIENNIAL_TRAINING_VALID_YEARS,
     COMPLIANCE_COLUMNS,
+    DATA_DIR,
     RECONCILIATION_REQUIRED_COLUMNS,
     TAB_LABELS,
     TRAINING_RECONCILIATION_DATE_COLUMNS,
@@ -50,17 +50,16 @@ from accessatlas.logging_config import (
     set_runtime_log_context,
 )
 from accessatlas.navigation import (
-    get_visible_tabs,
     section_label,
     section_name_from_label,
 )
 from accessatlas.presentation import (
     apply_multiselect_filter,
     count_by,
+    display_table,
     filter_caption,
     get_display_name,
     section_caption,
-    display_table,
     show_dataframe,
     system_profile_markdown,
     user_profile_markdown,
@@ -85,7 +84,6 @@ from accessatlas.state import (
     initialize_user_update_state,
     update_user_compliance_dates,
 )
-
 
 logger = get_logger(__name__)
 
@@ -158,19 +156,6 @@ def run_app(runtime_factory):
 
         return artifact
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     def render_self_service_update_form(selected_user):
         """Render a self-service form for updating training and agreement dates."""
         st.markdown("### Update My Certification and Agreement Dates")
@@ -229,85 +214,6 @@ def run_app(runtime_factory):
                 "or clearing session state will reset the sample CSV-backed data."
             )
             st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     data = load_data()
     initialize_user_update_state()
@@ -383,41 +289,39 @@ def run_app(runtime_factory):
         c3.metric("Access Records", len(access))
         c4.metric("System Admin Assignments", len(system_admins))
         c5.metric(
-        "Expired / Expiring",
-        len(users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]),
+            "Expired / Expiring",
+            len(users[users["compliance_status"].isin(["Expired", "Expiring Soon"])]),
         )
 
         st.markdown("### User Record Status")
         st.dataframe(
-        count_by(users, "record_status", "users"), 
-        width='stretch',
+            count_by(users, "record_status", "users"),
+            width="stretch",
         )
 
         st.markdown("### Compliance Status")
         st.dataframe(
-        count_by(users, "compliance_status", "users"), 
-        width='stretch',
+            count_by(users, "compliance_status", "users"),
+            width="stretch",
         )
 
         st.markdown("### Access Records by System Type")
         st.dataframe(
-        count_by(access_with_systems, "system_type"), 
-        width='stretch',
+            count_by(access_with_systems, "system_type"),
+            width="stretch",
         )
 
         st.markdown("### Access Records by Resource Type")
         st.dataframe(
-        count_by(access_with_systems, "resource_type"), 
-        width='stretch',
+            count_by(access_with_systems, "resource_type"),
+            width="stretch",
         )
 
         st.markdown("### Access Records by Access Status")
         st.dataframe(
-        count_by(access, "access_status"), 
-        width='stretch',
+            count_by(access, "access_status"),
+            width="stretch",
         )
-
-
 
     def render_selected_user_profile(selected_user_id, user_selection_enabled=True):
         """Render an individual user's governance profile."""
@@ -429,13 +333,12 @@ def run_app(runtime_factory):
             on="system_id",
             how="left",
         )
-        selected_admin_assignments = (
-            system_admins[system_admins["user_id"] == selected_user_id]
-            .merge(
-                systems[["system_id", "system_name", "system_type", "system_category"]],
-                on="system_id",
-                how="left",
-            )
+        selected_admin_assignments = system_admins[
+            system_admins["user_id"] == selected_user_id
+        ].merge(
+            systems[["system_id", "system_name", "system_type", "system_category"]],
+            on="system_id",
+            how="left",
         )
 
         st.markdown(f"#### {selected_user['display_name']}")
@@ -468,7 +371,7 @@ def run_app(runtime_factory):
                     },
                 ]
             ),
-            width='stretch',
+            width="stretch",
         )
 
         st.markdown("### Access by System")
@@ -481,20 +384,17 @@ def run_app(runtime_factory):
                     ["system_id", "system_name", "system_type"],
                     "access_records",
                 ),
-                width='stretch',
+                width="stretch",
             )
 
         st.markdown("### Detailed Access Assignments")
-        show_dataframe(selected_access, 
-                    width='stretch')
+        show_dataframe(selected_access, width="stretch")
 
         st.markdown("### Administrative Assignments")
         if selected_admin_assignments.empty:
             st.info("This user is not assigned as an administrator for any tracked systems.")
         else:
-            show_dataframe(selected_admin_assignments, 
-                        width='stretch')
-
+            show_dataframe(selected_admin_assignments, width="stretch")
 
     def render_my_record_tab():
         """Render the self-service individual user record tab."""
@@ -522,7 +422,6 @@ def run_app(runtime_factory):
             selected_user = users[users["user_id"] == current_user_id].iloc[0]
             render_self_service_update_form(selected_user)
 
-
     def render_users_tab():
         st.subheader("User Management Registry")
 
@@ -532,9 +431,7 @@ def run_app(runtime_factory):
                 "System Administrator demo account."
             )
         elif current_user["application_role"] == "Manager":
-            st.caption(
-                "Showing users within the current Manager review scope."
-            )
+            st.caption("Showing users within the current Manager review scope.")
 
         filter_col1, filter_col2, filter_col3 = st.columns(3)
         with filter_col1:
@@ -563,7 +460,7 @@ def run_app(runtime_factory):
 
         st.dataframe(
             user_view[USER_DISPLAY_COLUMNS],
-            width='stretch',
+            width="stretch",
         )
         render_csv_export_button(
             user_view,
@@ -581,7 +478,6 @@ def run_app(runtime_factory):
             key="selected_user_id",
         )
         render_selected_user_profile(selected_user_id)
-
 
     def render_systems_tab():
         st.subheader("System Catalog")
@@ -615,8 +511,7 @@ def run_app(runtime_factory):
         )
         system_view = apply_multiselect_filter(system_view, "record_status", system_status_filter)
 
-        show_dataframe(system_view, 
-                    width='stretch')
+        show_dataframe(system_view, width="stretch")
         render_csv_export_button(
             system_view,
             export_name="accessatlas_systems",
@@ -628,7 +523,7 @@ def run_app(runtime_factory):
 
         st.markdown("### Selected System Access Profile")
         selected_system_id = st.selectbox(
-            "Select system ID", 
+            "Select system ID",
             systems["system_id"],
             key="selected_system_id",
         )
@@ -639,13 +534,12 @@ def run_app(runtime_factory):
             on="user_id",
             how="left",
         )
-        selected_system_admins = (
-            system_admins[system_admins["system_id"] == selected_system_id]
-            .merge(
-                all_users[["user_id", "display_name", "email", "department"]],
-                on="user_id",
-                how="left",
-            )
+        selected_system_admins = system_admins[
+            system_admins["system_id"] == selected_system_id
+        ].merge(
+            all_users[["user_id", "display_name", "email", "department"]],
+            on="user_id",
+            how="left",
         )
 
         st.markdown(f"#### {selected_system['system_name']}")
@@ -678,15 +572,14 @@ def run_app(runtime_factory):
                         "source",
                     ]
                 ],
-                width='stretch',
+                width="stretch",
             )
 
         st.markdown("### System Administrators")
         if selected_system_admins.empty:
             st.info("No system administrator assignments are currently recorded for this system.")
         else:
-            st.dataframe(selected_system_admins, 
-                        width='stretch')
+            st.dataframe(selected_system_admins, width="stretch")
 
         st.markdown("### Resources and Permissions")
         if selected_system_access.empty:
@@ -698,19 +591,16 @@ def run_app(runtime_factory):
                     ["resource_type", "resource_name", "permission_name", "access_status"],
                     "assigned_users",
                 ),
-                width='stretch',
+                width="stretch",
             )
-
 
     def compliance_detail_styler(dataframe):
         """Return a styled compliance dataframe with readable noncompliance highlighting."""
+
         def style_row(row):
             status = row.get("Compliance Status", row.get("compliance_status"))
             if status in ["Expired", "Expiring Soon"]:
-                return [
-                    "background-color: #fff7bf; color: #111111;"
-                    for _ in row
-                ]
+                return ["background-color: #fff7bf; color: #111111;" for _ in row]
             return ["" for _ in row]
 
         def style_date(value):
@@ -737,14 +627,11 @@ def run_app(runtime_factory):
             if column in dataframe.columns
         ]
 
-        return (
-            dataframe.style
-            .apply(style_row, axis=1)
-            .map(style_date, subset=date_columns)
-        )
+        return dataframe.style.apply(style_row, axis=1).map(style_date, subset=date_columns)
 
-
-    def render_labeled_metric_card(title, subtitle=None, metric_label=None, metric_value=None, detail_rows=None):
+    def render_labeled_metric_card(
+        title, subtitle=None, metric_label=None, metric_value=None, detail_rows=None
+    ):
         """Render a compact card using Streamlit-native bordered containers."""
         with st.container(border=True):
             st.markdown(f"### {title}")
@@ -755,7 +642,6 @@ def run_app(runtime_factory):
             if detail_rows:
                 for label, value in detail_rows:
                     st.write(f"**{label}:** {value}")
-
 
     def render_compliance_summary_cards(group_column, title):
         """Render compact compliance summaries by department or user type."""
@@ -790,9 +676,8 @@ def run_app(runtime_factory):
         st.dataframe(
             summary_df.style.apply(style_summary, axis=None),
             hide_index=True,
-            width='stretch',
+            width="stretch",
         )
-
 
     def render_admin_coverage_cards(coverage):
         """Render admin coverage by system as a compact summary table."""
@@ -802,9 +687,7 @@ def run_app(runtime_factory):
             st.info("No system administrator coverage records are available.")
             return
 
-        coverage_view = coverage[
-            ["system_id", "system_name", "admin_assignment_count"]
-        ].rename(
+        coverage_view = coverage[["system_id", "system_name", "admin_assignment_count"]].rename(
             columns={
                 "admin_assignment_count": "active_admin_assignments",
             }
@@ -813,9 +696,8 @@ def run_app(runtime_factory):
         st.dataframe(
             display_table(coverage_view),
             hide_index=True,
-            width='stretch',
+            width="stretch",
         )
-
 
     def render_record_summary_card(title, subtitle, rows):
         """Render a compact single-record style summary card using native containers."""
@@ -825,30 +707,25 @@ def run_app(runtime_factory):
             detail_rows=rows,
         )
 
-
     def build_system_admin_view():
         """Return the joined system administrator assignment view."""
-        return (
-            system_admins.merge(
-                all_users[["user_id", "display_name", "email", "department"]],
-                on="user_id",
-                how="left",
-            )
-            .merge(
-                systems[
-                    [
-                        "system_id",
-                        "system_name",
-                        "system_type",
-                        "system_category",
-                        "record_status",
-                    ]
-                ],
-                on="system_id",
-                how="left",
-            )
+        return system_admins.merge(
+            all_users[["user_id", "display_name", "email", "department"]],
+            on="user_id",
+            how="left",
+        ).merge(
+            systems[
+                [
+                    "system_id",
+                    "system_name",
+                    "system_type",
+                    "system_category",
+                    "record_status",
+                ]
+            ],
+            on="system_id",
+            how="left",
         )
-
 
     def render_system_admin_assignments_overview(admin_view):
         """Render assignment overview, coverage cards, filters, and assignment table."""
@@ -930,9 +807,7 @@ def run_app(runtime_factory):
             admin_system_category_filter,
         )
 
-        show_dataframe(filtered_admin_view, width='stretch')
-
-
+        show_dataframe(filtered_admin_view, width="stretch")
 
     def render_admin_assignment_cards(records, card_title_field):
         """Render administrator assignment records as stacked cards."""
@@ -998,7 +873,6 @@ def run_app(runtime_factory):
                 for column in visible_fields[midpoint:]:
                     field_col2.write(f"**{label_map.get(column, column)}:** {record.get(column)}")
 
-
     def render_admin_record_review(admin_view):
         """Render administrator-centered record review."""
         st.subheader("Admin Record Review")
@@ -1038,7 +912,6 @@ def run_app(runtime_factory):
             card_title_field="system_name",
         )
 
-
     def render_system_record_review(admin_view):
         """Render system-centered administrator assignment review."""
         st.subheader("System Record Review")
@@ -1053,16 +926,12 @@ def run_app(runtime_factory):
             system_options,
             key="selected_admin_system",
         )
-        selected_admin_system_id = systems[
-            systems["system_name"] == selected_admin_system
-        ].iloc[0]["system_id"]
-        system_admin_detail = admin_view[
-            admin_view["system_id"] == selected_admin_system_id
+        selected_admin_system_id = systems[systems["system_name"] == selected_admin_system].iloc[0][
+            "system_id"
         ]
+        system_admin_detail = admin_view[admin_view["system_id"] == selected_admin_system_id]
 
-        selected_system_record = systems[
-            systems["system_id"] == selected_admin_system_id
-        ].iloc[0]
+        selected_system_record = systems[systems["system_id"] == selected_admin_system_id].iloc[0]
         render_record_summary_card(
             selected_system_record["system_name"],
             selected_system_record["system_id"],
@@ -1081,7 +950,6 @@ def run_app(runtime_factory):
                 system_admin_detail,
                 card_title_field="display_name",
             )
-
 
     def render_system_admins_tab():
         st.subheader("System Administrator Assignments")
@@ -1113,7 +981,6 @@ def run_app(runtime_factory):
         with system_record_tab:
             render_system_record_review(admin_view)
 
-
     def render_compliance_tab():
         st.subheader("Compliance Monitoring")
 
@@ -1121,10 +988,7 @@ def run_app(runtime_factory):
         expiring_count = len(users[users["compliance_status"] == "Expiring Soon"])
         expired_count = len(users[users["compliance_status"] == "Expired"])
         follow_up_count = len(
-            users[
-                (users["compliance_status"] != "Current")
-                & (users["record_status"] == "Active")
-            ]
+            users[(users["compliance_status"] != "Current") & (users["record_status"] == "Active")]
         )
 
         cm1, cm2, cm3, cm4 = st.columns(4)
@@ -1140,9 +1004,7 @@ def run_app(runtime_factory):
             render_compliance_summary_cards("department", "Compliance by Department")
 
         st.markdown("### Compliance Detail")
-        filter_caption(
-            "Filter the records below by compliance status, department, or user type."
-        )
+        filter_caption("Filter the records below by compliance status, department, or user type.")
         filter_col1, filter_col2, filter_col3 = st.columns(3)
         with filter_col1:
             compliance_filter = st.multiselect(
@@ -1170,7 +1032,7 @@ def run_app(runtime_factory):
 
         st.dataframe(
             compliance_detail_styler(display_table(comp[COMPLIANCE_COLUMNS])),
-            width='stretch',
+            width="stretch",
         )
         render_csv_export_button(
             comp,
@@ -1186,16 +1048,14 @@ def run_app(runtime_factory):
         st.caption(
             "This queue lists each expired compliance item separately so follow-up is tied to the specific record requiring action."
         )
-        follow_up = get_expired_follow_up_records(
-            users[users["record_status"] == "Active"]
-        )
+        follow_up = get_expired_follow_up_records(users[users["record_status"] == "Active"])
         if follow_up.empty:
             st.success("No expired active user compliance records currently require follow-up.")
         else:
             st.dataframe(
                 display_table(follow_up),
                 hide_index=True,
-                width='stretch',
+                width="stretch",
             )
             render_csv_export_button(
                 follow_up,
@@ -1205,8 +1065,6 @@ def run_app(runtime_factory):
                 sort_by=["display_name", "user_id", "compliance_item"],
                 help_text="Exports active compliance records that currently require follow-up.",
             )
-
-
 
     def get_allowed_management_systems():
         """Return systems available for direct access management for the current role."""
@@ -1218,7 +1076,6 @@ def run_app(runtime_factory):
 
         return systems.iloc[0:0].copy()
 
-
     def get_user_options_for_access_management():
         """Return user records available for access management for the current role."""
         if current_user["application_role"] == "Super Administrator":
@@ -1228,7 +1085,6 @@ def run_app(runtime_factory):
             return users.copy()
 
         return users.iloc[0:0].copy()
-
 
     def apply_single_access_record_change(
         mode,
@@ -1299,7 +1155,6 @@ def run_app(runtime_factory):
         )
         return "updated"
 
-
     def render_add_user_form(allowed_systems):
         """Render a demo form for adding one user and optional initial access."""
         st.subheader("Add User")
@@ -1350,7 +1205,9 @@ def run_app(runtime_factory):
                 manager_labels,
                 key="add_user_manager",
             )
-            department = st.text_input("Department", value="General Operations", key="add_user_department")
+            department = st.text_input(
+                "Department", value="General Operations", key="add_user_department"
+            )
             user_type = st.selectbox(
                 "User type",
                 ["Employee", "Contractor", "Vendor", "Consultant", "Service Account"],
@@ -1403,7 +1260,16 @@ def run_app(runtime_factory):
                 )
                 resource_type = st.selectbox(
                     "Resource type",
-                    ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"],
+                    [
+                        "Application",
+                        "Role",
+                        "Schema",
+                        "Table",
+                        "Dashboard",
+                        "Site",
+                        "Folder",
+                        "Other",
+                    ],
                     key="add_user_initial_resource_type",
                 )
                 resource_name = st.text_input(
@@ -1442,7 +1308,9 @@ def run_app(runtime_factory):
             return
 
         if add_initial_access and (not resource_name or not permission_name):
-            st.error("Resource name and permission name are required for the initial access assignment.")
+            st.error(
+                "Resource name and permission name are required for the initial access assignment."
+            )
             return
 
         manager_user_id = ""
@@ -1492,7 +1360,6 @@ def run_app(runtime_factory):
         st.success("User added for this current session.")
         st.rerun()
 
-
     def render_add_edit_access_form():
         """Render direct single-record add/edit access management workflow."""
         st.subheader("Add / Edit Access")
@@ -1506,7 +1373,9 @@ def run_app(runtime_factory):
         allowed_users = get_user_options_for_access_management()
 
         if allowed_systems.empty or allowed_users.empty:
-            st.warning("No users or systems are available for management in the current role scope.")
+            st.warning(
+                "No users or systems are available for management in the current role scope."
+            )
             return
 
         mode = st.radio(
@@ -1549,7 +1418,7 @@ def run_app(runtime_factory):
                         on="user_id",
                         how="left",
                     ),
-                    width='stretch',
+                    width="stretch",
                 )
 
         selected_existing = None
@@ -1613,9 +1482,13 @@ def run_app(runtime_factory):
 
         if selected_existing is not None:
             if selected_existing["user_id"] in user_options["user_id"].tolist():
-                default_user_index = user_options["user_id"].tolist().index(selected_existing["user_id"])
+                default_user_index = (
+                    user_options["user_id"].tolist().index(selected_existing["user_id"])
+                )
             if selected_existing["system_id"] in system_options["system_id"].tolist():
-                default_system_index = system_options["system_id"].tolist().index(selected_existing["system_id"])
+                default_system_index = (
+                    system_options["system_id"].tolist().index(selected_existing["system_id"])
+                )
             default_resource_type = selected_existing["resource_type"]
             default_resource_name = selected_existing["resource_name"]
             default_permission_name = selected_existing["permission_name"]
@@ -1650,9 +1523,27 @@ def run_app(runtime_factory):
                 "Resource type",
                 ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"],
                 index=(
-                    ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"]
-                    .index(default_resource_type)
-                    if default_resource_type in ["Application", "Role", "Schema", "Table", "Dashboard", "Site", "Folder", "Other"]
+                    [
+                        "Application",
+                        "Role",
+                        "Schema",
+                        "Table",
+                        "Dashboard",
+                        "Site",
+                        "Folder",
+                        "Other",
+                    ].index(default_resource_type)
+                    if default_resource_type
+                    in [
+                        "Application",
+                        "Role",
+                        "Schema",
+                        "Table",
+                        "Dashboard",
+                        "Site",
+                        "Folder",
+                        "Other",
+                    ]
                     else 7
                 ),
                 key="direct_resource_type",
@@ -1708,9 +1599,9 @@ def run_app(runtime_factory):
             )
 
         if submitted:
-            selected_user_id = user_options[
-                user_options["user_label"] == selected_user_label
-            ].iloc[0]["user_id"]
+            selected_user_id = user_options[user_options["user_label"] == selected_user_label].iloc[
+                0
+            ]["user_id"]
             selected_system_id = system_options[
                 system_options["system_label"] == selected_system_label
             ].iloc[0]["system_id"]
@@ -1739,7 +1630,6 @@ def run_app(runtime_factory):
                 st.success(f"Access record {outcome} for this current session.")
                 st.rerun()
 
-
     def render_user_access_management_tab():
         """Render direct add/edit workflows for users and access assignments."""
         st.subheader("Edit / Add Access")
@@ -1755,20 +1645,6 @@ def run_app(runtime_factory):
 
         with user_tab:
             render_add_user_form(allowed_systems)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def render_system_access_export_reconciliation_tab():
         st.subheader("System Access Export File Upload")
@@ -1799,7 +1675,7 @@ def run_app(runtime_factory):
                         ],
                     }
                 ),
-                width='stretch',
+                width="stretch",
             )
             st.write(
                 """
@@ -1826,10 +1702,7 @@ def run_app(runtime_factory):
 
         missing_columns = validate_upload(uploaded_df, RECONCILIATION_REQUIRED_COLUMNS)
         if missing_columns:
-            st.error(
-                "Uploaded file is missing required columns: "
-                + ", ".join(missing_columns)
-            )
+            st.error("Uploaded file is missing required columns: " + ", ".join(missing_columns))
             st.stop()
 
         st.success("Uploaded file contains all required reconciliation columns.")
@@ -1840,18 +1713,16 @@ def run_app(runtime_factory):
             system_options,
             key="reconciliation_scope",
         )
-        selected_system_name = systems[
-            systems["system_id"] == selected_system
-        ].iloc[0]["system_name"]
+        selected_system_name = systems[systems["system_id"] == selected_system].iloc[0][
+            "system_name"
+        ]
 
         st.caption(
             f"Access export uploads are evaluated for one system at a time. "
             f"This run is scoped to **{selected_system_name} ({selected_system})**."
         )
 
-        scoped_uploaded_df = uploaded_df[
-            uploaded_df["system_id"] == selected_system
-        ].copy()
+        scoped_uploaded_df = uploaded_df[uploaded_df["system_id"] == selected_system].copy()
 
         if scoped_uploaded_df.empty:
             st.warning(
@@ -1870,25 +1741,22 @@ def run_app(runtime_factory):
         st.markdown("### Uploaded Access Export")
         st.dataframe(
             scoped_uploaded_df,
-            width='stretch',
+            width="stretch",
         )
 
         result = reconcile(access, scoped_uploaded_df, selected_system_id=selected_system)
-        result_with_system = (
-            result.merge(
-                all_users[["user_id", "first_name", "last_name"]],
-                on="user_id",
-                how="left",
-            )
-            .merge(
-                systems[["system_id", "system_name"]],
-                on="system_id",
-                how="left",
-            )
+        result_with_system = result.merge(
+            all_users[["user_id", "first_name", "last_name"]],
+            on="user_id",
+            how="left",
+        ).merge(
+            systems[["system_id", "system_name"]],
+            on="system_id",
+            how="left",
         )
-        result_with_system["recommended_action"] = result_with_system[
-            "recommended_action"
-        ].apply(display_recommended_action)
+        result_with_system["recommended_action"] = result_with_system["recommended_action"].apply(
+            display_recommended_action
+        )
 
         st.markdown("### Reconciliation Summary")
         summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
@@ -1915,13 +1783,13 @@ def run_app(runtime_factory):
             st.markdown("#### Summary by Change Type")
             show_dataframe(
                 count_by(result_with_system, "change_type"),
-                width='stretch',
+                width="stretch",
             )
 
             st.markdown("#### Summary by Resource Type")
             show_dataframe(
                 count_by(result_with_system, "resource_type"),
-                width='stretch',
+                width="stretch",
             )
 
         st.markdown("### Reconciliation Queue")
@@ -1966,13 +1834,11 @@ def run_app(runtime_factory):
             ]
             queue_columns = [
                 column for column in queue_column_order if column in action_queue.columns
-            ] + [
-                column for column in action_queue.columns if column not in queue_column_order
-            ]
+            ] + [column for column in action_queue.columns if column not in queue_column_order]
             action_queue = action_queue[queue_columns]
             editable_action_queue = st.data_editor(
                 action_queue,
-                width='stretch',
+                width="stretch",
                 hide_index=True,
                 key="reconciliation_action_queue_editor",
                 column_config={
@@ -1982,14 +1848,12 @@ def run_app(runtime_factory):
                         default=False,
                     )
                 },
-                disabled=[
-                    column for column in action_queue.columns if column != "apply_action"
-                ],
+                disabled=[column for column in action_queue.columns if column != "apply_action"],
             )
 
-            selected_actions = editable_action_queue[
-                editable_action_queue["apply_action"] == True
-            ].drop(columns=["apply_action"])
+            selected_actions = editable_action_queue[editable_action_queue["apply_action"]].drop(
+                columns=["apply_action"]
+            )
 
             st.caption(
                 "Recommended actions update the canonical access assignment table for "
@@ -2054,7 +1918,7 @@ def run_app(runtime_factory):
             ]
             st.dataframe(
                 action_results[visible_action_result_columns],
-                width='stretch',
+                width="stretch",
             )
             render_csv_export_button(
                 action_results,
@@ -2071,10 +1935,6 @@ def run_app(runtime_factory):
                 "Select records in the Reconciliation Queue and click Apply Recommended Actions "
                 "to populate action results."
             )
-
-
-
-
 
     def render_training_date_reconciliation_tab():
         """Render training certificate and agreement date reconciliation workflow."""
@@ -2100,7 +1960,7 @@ def run_app(runtime_factory):
                         ],
                     }
                 ),
-                width='stretch',
+                width="stretch",
             )
 
         uploaded_training_file = st.file_uploader(
@@ -2126,10 +1986,7 @@ def run_app(runtime_factory):
             TRAINING_RECONCILIATION_REQUIRED_COLUMNS,
         )
         if missing_columns:
-            st.error(
-                "Uploaded file is missing required columns: "
-                + ", ".join(missing_columns)
-            )
+            st.error("Uploaded file is missing required columns: " + ", ".join(missing_columns))
             st.stop()
 
         scoped_training_upload_df = training_upload_df[
@@ -2143,7 +2000,7 @@ def run_app(runtime_factory):
             )
 
         st.markdown("### Uploaded Training Date Export")
-        show_dataframe(scoped_training_upload_df, width='stretch')
+        show_dataframe(scoped_training_upload_df, width="stretch")
 
         training_result = reconcile_training_dates(users, scoped_training_upload_df)
         training_result = training_result.merge(
@@ -2156,9 +2013,13 @@ def run_app(runtime_factory):
         summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
         change_counts = training_result["change_type"].value_counts().to_dict()
         summary_col1.metric("Date Changes", change_counts.get("Date Changed", 0))
-        summary_col2.metric("Review Inactivation", change_counts.get("User Remains Out of Compliance", 0))
+        summary_col2.metric(
+            "Review Inactivation", change_counts.get("User Remains Out of Compliance", 0)
+        )
         summary_col3.metric("No Change", change_counts.get("No Change", 0))
-        summary_col4.metric("Missing in Registry", change_counts.get("User Not Found in AccessAtlas", 0))
+        summary_col4.metric(
+            "Missing in Registry", change_counts.get("User Not Found in AccessAtlas", 0)
+        )
 
         st.markdown("### Training Date Reconciliation Queue")
         st.caption(
@@ -2182,7 +2043,9 @@ def run_app(runtime_factory):
         )
 
         if training_queue.empty:
-            st.success("No training date reconciliation records require follow-up for the selected filters.")
+            st.success(
+                "No training date reconciliation records require follow-up for the selected filters."
+            )
         else:
             training_queue.insert(0, "apply_action", False)
             queue_column_order = [
@@ -2203,13 +2066,11 @@ def run_app(runtime_factory):
             ]
             queue_columns = [
                 column for column in queue_column_order if column in training_queue.columns
-            ] + [
-                column for column in training_queue.columns if column not in queue_column_order
-            ]
+            ] + [column for column in training_queue.columns if column not in queue_column_order]
 
             editable_training_queue = st.data_editor(
                 training_queue[queue_columns],
-                width='stretch',
+                width="stretch",
                 hide_index=True,
                 key="training_reconciliation_queue_editor",
                 column_config={
@@ -2219,13 +2080,11 @@ def run_app(runtime_factory):
                         default=False,
                     )
                 },
-                disabled=[
-                    column for column in queue_columns if column != "apply_action"
-                ],
+                disabled=[column for column in queue_columns if column != "apply_action"],
             )
 
             selected_training_actions = editable_training_queue[
-                editable_training_queue["apply_action"] == True
+                editable_training_queue["apply_action"]
             ].drop(columns=["apply_action"])
 
             if st.button(
@@ -2260,7 +2119,7 @@ def run_app(runtime_factory):
                 "No training date reconciliation actions have been applied yet in this current session."
             )
         else:
-            show_dataframe(training_action_results, width='stretch')
+            show_dataframe(training_action_results, width="stretch")
             render_csv_export_button(
                 training_action_results,
                 export_name="accessatlas_training_reconciliation_results",
@@ -2269,7 +2128,6 @@ def run_app(runtime_factory):
                 sort_by=["user_id", "audit_event_id"],
                 help_text="Exports action results from the most recent training and agreement reconciliation run.",
             )
-
 
     def render_access_reconciliation_tab():
         """Render access and training reconciliation workflow tabs."""
@@ -2286,8 +2144,6 @@ def run_app(runtime_factory):
         with training_dates_tab:
             render_training_date_reconciliation_tab()
 
-
-
     def render_dashboard_section():
         """Render a streamlined role-aware dashboard."""
         st.subheader("Dashboard")
@@ -2302,10 +2158,7 @@ def run_app(runtime_factory):
             pending_reconciliation = 0
 
         active_follow_up = len(
-            users[
-                (users["compliance_status"] != "Current")
-                & (users["record_status"] == "Active")
-            ]
+            users[(users["compliance_status"] != "Current") & (users["record_status"] == "Active")]
         )
 
         expired_or_expiring = len(
@@ -2343,81 +2196,37 @@ def run_app(runtime_factory):
                 "and AccessAtlas App Admin for compliance and administrative coverage."
             )
 
-        with st.expander("View dashboard details", expanded=True):
-            st.caption("Visual summaries for the records visible to the current application role.")
+        st.markdown("### Access Management Summary Stats")
 
-            chart_col1, chart_col2 = st.columns(2)
-            with chart_col1:
-                st.markdown("### Compliance Status")
-                st.bar_chart(
-                    count_by(users, "compliance_status", "users"),
-                    x="compliance_status",
-                    y="users",
-                )
+        st.markdown("#### User Record Status")
+        show_dataframe(
+            count_by(users, "record_status", "users"),
+            width="stretch",
+        )
 
-            with chart_col2:
-                st.markdown("### User Record Status")
-                st.bar_chart(
-                    count_by(users, "record_status", "users"),
-                    x="record_status",
-                    y="users",
-                )
+        st.markdown("#### Compliance Status")
+        show_dataframe(
+            count_by(users, "compliance_status", "users"),
+            width="stretch",
+        )
 
-            chart_col3, chart_col4 = st.columns(2)
-            with chart_col3:
-                st.markdown("### Access Records by System Type")
-                st.bar_chart(
-                    count_by(access_with_systems, "system_type", "records"),
-                    x="system_type",
-                    y="records",
-                )
+        st.markdown("#### Access Records by System Type")
+        show_dataframe(
+            count_by(access_with_systems, "system_type"),
+            width="stretch",
+        )
 
-            with chart_col4:
-                st.markdown("### Access Records by Resource Type")
-                st.bar_chart(
-                    count_by(access_with_systems, "resource_type", "records"),
-                    x="resource_type",
-                    y="records",
-                )
+        st.markdown("#### Access Records by Resource Type")
+        show_dataframe(
+            count_by(access_with_systems, "resource_type"),
+            width="stretch",
+        )
 
-            st.markdown("### Access Records by Access Status")
-            st.bar_chart(
-                count_by(access, "access_status", "records"),
-                x="access_status",
-                y="records",
-            )
-
-            with st.expander("View source summary tables"):
-                st.markdown("#### User Record Status")
-                show_dataframe(
-                    count_by(users, "record_status", "users"),
-                    width='stretch',
-                )
-
-                st.markdown("#### Compliance Status")
-                show_dataframe(
-                    count_by(users, "compliance_status", "users"),
-                    width='stretch',
-                )
-
-                st.markdown("#### Access Records by System Type")
-                show_dataframe(
-                    count_by(access_with_systems, "system_type"),
-                    width='stretch',
-                )
-
-                st.markdown("#### Access Records by Resource Type")
-                show_dataframe(
-                    count_by(access_with_systems, "resource_type"),
-                    width='stretch',
-                )
-
-                st.markdown("#### Access Records by Access Status")
-                show_dataframe(
-                    count_by(access, "access_status"),
-                    width='stretch',
-                )
-
+        st.markdown("#### Access Records by Access Status")
+        show_dataframe(
+            count_by(access, "access_status"),
+            width="stretch",
+        )
 
     def render_manage_access_section():
         """Render user/system access workflows in a streamlined task section."""
@@ -2454,7 +2263,6 @@ def run_app(runtime_factory):
                     "and Super Administrator application roles."
                 )
 
-
     def render_review_changes_section():
         """Render reconciliation and action queue workflows."""
         st.subheader("Access Reconciliation")
@@ -2462,7 +2270,6 @@ def run_app(runtime_factory):
             "Review uploaded access and compliance exports, inspect differences, and apply recommended current-session updates."
         )
         render_access_reconciliation_tab()
-
 
     def render_audit_history_tab():
         """Render session-backed governance audit history for Super Administrators."""
@@ -2518,17 +2325,11 @@ def run_app(runtime_factory):
 
         filtered_events = audit_events.copy()
         if event_type_filter:
-            filtered_events = filtered_events[
-                filtered_events["event_type"].isin(event_type_filter)
-            ]
+            filtered_events = filtered_events[filtered_events["event_type"].isin(event_type_filter)]
         if action_filter:
-            filtered_events = filtered_events[
-                filtered_events["action"].isin(action_filter)
-            ]
+            filtered_events = filtered_events[filtered_events["action"].isin(action_filter)]
         if outcome_filter:
-            filtered_events = filtered_events[
-                filtered_events["outcome"].isin(outcome_filter)
-            ]
+            filtered_events = filtered_events[filtered_events["outcome"].isin(outcome_filter)]
 
         display_columns = [
             "audit_event_id",
@@ -2581,21 +2382,20 @@ def run_app(runtime_factory):
 
             st.write(
                 f"""
-                **Audit Event ID:** {selected_event['audit_event_id']}  
-                **Occurred At:** {selected_event['occurred_at']}  
-                **Actor User ID:** {selected_event['actor_user_id'] or 'Not resolved'}  
-                **Actor Role:** {selected_event['actor_role'] or 'Not resolved'}  
-                **Runtime:** {selected_event['runtime']}  
-                **Entity:** {selected_event['entity_type']} / {selected_event['entity_id'] or 'Not supplied'}  
-                **Target User ID:** {selected_event['target_user_id'] or 'Not supplied'}  
-                **System ID:** {selected_event['system_id'] or 'Not supplied'}  
-                **Source:** {selected_event['source']}  
-                **Outcome:** {selected_event['outcome']}
+                **Audit Event ID:** {selected_event["audit_event_id"]}  
+                **Occurred At:** {selected_event["occurred_at"]}  
+                **Actor User ID:** {selected_event["actor_user_id"] or "Not resolved"}  
+                **Actor Role:** {selected_event["actor_role"] or "Not resolved"}  
+                **Runtime:** {selected_event["runtime"]}  
+                **Entity:** {selected_event["entity_type"]} / {selected_event["entity_id"] or "Not supplied"}  
+                **Target User ID:** {selected_event["target_user_id"] or "Not supplied"}  
+                **System ID:** {selected_event["system_id"] or "Not supplied"}  
+                **Source:** {selected_event["source"]}  
+                **Outcome:** {selected_event["outcome"]}
                 """
             )
             st.markdown("#### Change Detail")
             st.code(selected_event["changes_json"], language="json")
-
 
     def render_administration_section():
         """Render administrative and compliance workflows for Super Administrators."""
@@ -2621,7 +2421,6 @@ def run_app(runtime_factory):
 
         with audit_tab:
             render_audit_history_tab()
-
 
     TAB_RENDERERS = {
         "Dashboard": render_dashboard_section,

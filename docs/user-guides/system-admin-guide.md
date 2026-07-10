@@ -59,6 +59,8 @@ Use:
 
 ### Managed Users
 
+![Managed Users](docs/images/screenshots/05-managed-users.png)
+
 Managed Users shows only users available within the current administered-system scope.
 
 Use the User Management Registry filters to narrow by:
@@ -78,6 +80,8 @@ Review:
 - administrator assignments
 
 ### Managed Systems
+
+![Managed Systems](docs/images/screenshots/04-managed-systems.png)
 
 Managed Systems is the principal system-centered review surface.
 
@@ -109,6 +113,8 @@ Add User
 
 #### Add / Edit Access
 
+![Add/Edit Access](docs/images/screenshots/07-edit-add-access.png)
+
 Use this workflow to create a new access assignment or edit an existing assignment.
 
 An access assignment represents:
@@ -123,6 +129,8 @@ Applied changes are persisted through the active Access Assignment repository an
 
 #### Add User
 
+![Add User](docs/images/screenshots/05-add-user.png)
+
 The Add User workflow demonstrates creation of a new governance user record and an optional initial access assignment.
 
 The active repository determines persistence behavior.
@@ -133,7 +141,11 @@ In the public reference implementation, repositories are CSV-seeded and session-
 
 ### System Access Export File Upload
 
+![System Access Export File Upload](docs/images/screenshots/06-access-reconciliation-queue.png)
+
 System access reconciliation is performed one system at a time.
+
+![System Access Reconciliation Workflow](../images/workflows/01-system-access-reconciliation.png)
 
 The recommended sequence is:
 
@@ -161,6 +173,8 @@ The selected-system restriction is important.
 An access record should be recommended for inactivation only when it is missing from a complete comparison set for the system being reviewed.
 
 ### Training Certificate Date and Agreement Reconciliation
+
+![Training Certificate Date and Agreement Reconciliation](docs/images/screenshots/09-training-reconciliation.png)
 
 This workflow compares external compliance dates with the scoped user registry.
 

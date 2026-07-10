@@ -8,20 +8,11 @@ The patterns describe the governance layer around access. They do not replace au
 
 AccessAtlas uses two primary relationships.
 
-### User access
+![AccessAtlas Conceptual Governance Model](../images/architecture/02-conceptual-governance-model.png)
 
-```text
-User
-  |
-  v
-System
-  |
-  v
-Resource
-  |
-  v
-Permission
-```
+The conceptual model above shows these governance capabilities as connected rather than strictly sequential. User and system records anchor both access and administrative assignments, while compliance and reconciliation create governance context that can produce audit events and downstream reporting or export.
+
+### User access
 
 This relationship can represent:
 
@@ -34,16 +25,6 @@ This relationship can represent:
 - collaboration-site or group membership
 
 ### System administration
-
-```text
-User
-  |
-  v
-System
-  |
-  v
-Administrative Role
-```
 
 System administration is intentionally separate from user access.
 
@@ -178,6 +159,8 @@ The current fields are reference examples. The long-term product direction is a 
 Reconciliation asks:
 
 > Does the AccessAtlas governance record match the source?
+
+![System Access Reconciliation Workflow](../images/workflows/01-system-access-reconciliation.png)
 
 The system access workflow:
 

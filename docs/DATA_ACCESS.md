@@ -6,20 +6,7 @@ The application is designed so the same governance workflows can operate against
 
 ## Architecture
 
-```text
-Streamlit workflow
-        |
-        v
-Governance logic
-        |
-        v
-Repository protocols
-        |
-        +-- session-backed reference repositories
-        +-- PostgreSQL repositories
-        +-- Snowflake repositories
-        +-- other organization-specific implementations
-```
+![Repository Replacement Pattern](images/architecture/03-repository-replacement-pattern.png)
 
 The repository layer answers a narrow question:
 

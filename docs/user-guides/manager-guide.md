@@ -27,6 +27,8 @@ The Manager role does not receive direct access-maintenance controls.
 
 ## Dashboard
 
+![AccessAtlas Dashboard](docs/images/screenshots/01-dashboard.png)
+
 The Dashboard summarizes the current visible scope.
 
 Metrics include:
@@ -56,9 +58,13 @@ Use:
 - **My Record** to review profile, compliance, access, and administrator assignments.
 - **Update My Certification and Agreement Dates** to maintain the current user's reference compliance dates.
 
+See the [User Guide](user-guide.md) for the My Access self-service workflow.
+
 ## Manage Access
 
 ### Managed Users
+
+![Managed Users](docs/images/screenshots/05-managed-users.png)
 
 Managed Users provides the scoped User Management Registry.
 
@@ -80,6 +86,8 @@ The profile includes:
 
 ### Managed Systems
 
+![Managed Systems](docs/images/screenshots/04-managed-systems.png)
+
 Managed Systems provides the scoped System Catalog.
 
 Select a visible system to review the Selected System Access Profile, including:
@@ -99,6 +107,8 @@ Direct add/edit access management is not available to the Manager role.
 The section is intended for System Administrators and Super Administrators.
 
 ## Access Reconciliation
+
+![Access Reconciliation](docs/images/screenshots/06-access-reconciliation-queue.png)
 
 The Manager role can inspect scoped reconciliation information.
 

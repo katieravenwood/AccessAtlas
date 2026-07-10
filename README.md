@@ -42,6 +42,32 @@ AccessAtlas currently demonstrates:
 
 All reference data is synthetic. The default starter and public demo use CSV-seeded, session-backed repositories, so current-session changes are disposable.
 
+## Application Preview
+
+### Role-aware governance overview
+
+![AccessAtlas Dashboard](docs/images/screenshots/01-dashboard.png)
+
+The Dashboard summarizes users, systems, access assignments, compliance concerns, and reconciliation activity within the current role scope.
+
+### User and access governance
+
+![Managed Users](docs/images/screenshots/05-managed-users.png)
+
+Managed Users combines a filterable User Management Registry with a detailed Selected User Access Profile.
+
+### Source-system reconciliation
+
+![Access Reconciliation Queue](docs/images/screenshots/06-access-reconciliation-queue.png)
+
+The reconciliation workflow compares a complete source-system export with the governance inventory and presents recommended actions for review.
+
+### Governance action history
+
+![Governance Audit History](docs/images/screenshots/14-governance-audit-history.png)
+
+Governance Audit History records meaningful actions separately from operational application logs.
+
 ## Application Workflows
 
 ### Dashboard
@@ -109,20 +135,7 @@ Unavailable sections are not rendered for the current application role.
 
 ## Architecture at a Glance
 
-```text
-Streamlit workflow
-        |
-        v
-Governance and scope logic
-        |
-        v
-Repository protocols
-        |
-        +-- Session-backed reference repositories
-        +-- PostgreSQL repository implementations
-        +-- Snowflake repository implementations
-        +-- Other organization-specific implementations
-```
+![AccessAtlas Application Architecture](docs/images/architecture/01-application-architecture.png)
 
 Operational application logs and governance audit events remain separate:
 

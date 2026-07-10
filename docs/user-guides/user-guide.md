@@ -23,6 +23,8 @@ The reference UI does not expose:
 
 ## My Access
 
+![My Access](../images/screenshots/02-my-access.png)
+
 My Access contains two tabs:
 
 ```text
@@ -93,6 +95,8 @@ User -> System -> Administrative Role
 A user may see administrator assignments in My Record if they are responsible for administering a governed system.
 
 ## Update My Certification and Agreement Dates
+
+![Update Certification and Agreement Dates](../images/screenshots/03-certification-date-update.png)
 
 This tab demonstrates self-service maintenance of:
 

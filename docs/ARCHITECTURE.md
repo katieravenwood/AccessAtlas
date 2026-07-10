@@ -4,29 +4,7 @@ AccessAtlas is a Streamlit reference application and deployable starter for acce
 
 ## Architecture Overview
 
-```text
-Entry point
-    |
-    v
-Runtime factory
-    |
-    v
-Shared Streamlit application core
-    |
-    +-------------------+
-    |                   |
-    v                   v
-Governance logic     Presentation helpers
-    |
-    v
-Repository protocols
-    |
-    +--------------------+--------------------+
-    |                    |                    |
-    v                    v                    v
-Session reference     PostgreSQL           Snowflake
-repositories          repositories         repositories
-```
+![AccessAtlas Application Architecture](images/architecture/01-application-architecture.png)
 
 Two additional cross-cutting concerns remain intentionally separate:
 
@@ -141,20 +119,7 @@ These rules demonstrate intended governance behavior. A production implementatio
 
 AccessAtlas workflow code receives persistence dependencies through a `RepositoryContainer`.
 
-```text
-Streamlit workflow
-        |
-        v
-governance logic
-        |
-        v
-repository protocol
-        |
-        +-- session-backed reference implementation
-        +-- PostgreSQL implementation
-        +-- Snowflake implementation
-        +-- other organization-specific implementation
-```
+![Repository Replacement Pattern](images/architecture/03-repository-replacement-pattern.png)
 
 Repository modules live under:
 
@@ -332,23 +297,7 @@ The reference `SessionAuditStore` is disposable and append-oriented. It is not a
 
 The canonical source and published distributions are:
 
-```text
-modular/accessatlas/
-        |
-        +-- shared application and business logic
-        |
-        +--> modular/app.py
-        |       clean modular starter
-        |
-        +--> modular/demo_app.py
-        |       hosted demo
-        |
-        +--> tools/build_single_file.py
-                |
-                v
-              app.py
-              generated quick-start starter
-```
+![AccessAtlas Starter and Demo Distribution](images/architecture/04-starter-demo-distribution.png)
 
 ### Clean starter
 

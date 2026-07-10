@@ -53,6 +53,8 @@ Use:
 
 ## Manage Access
 
+The Manage Access and Access Reconciliation workflows use the same core interfaces described in the [System Administrator Guide](system-admin-guide.md), with organization-wide rather than administered-system scope.
+
 ### Managed Users
 
 Managed Users provides the complete visible User Management Registry.
@@ -177,6 +179,8 @@ AccessAtlas App Admin contains three administrative work areas.
 
 ### Compliance Monitoring
 
+![Compliance Monitoring](docs/images/screenshots/10-compliance-monitoring.png)
+
 Compliance Monitoring provides organization-wide compliance review.
 
 Use it to review:
@@ -190,6 +194,8 @@ Use it to review:
 Available exports include filtered compliance detail and compliance follow-up records.
 
 ### System Administrator Assignments
+
+![System Administrator Assignments](docs/images/screenshots/11-system-admin-assignments.png)
 
 This work area reviews administrative responsibility.
 
@@ -210,7 +216,21 @@ The current UI supports:
 
 Administrator assignment data can be exported as CSV.
 
+#### Admin Record Review
+
+System administrator records can be viewed individually.
+
+![Admin Record Review](docs/images/screenshots/12-admin-record-review.png)
+
+#### System Record Review 
+
+System records can be reviewed individually.
+
+![System Record Review](docs/images/screenshots/13-system-record-review.png)
+
 ### Governance Audit History
+
+![Govnernance Audit History](docs/images/screenshots/14-governance-audit-history.png)
 
 Governance Audit History reviews meaningful governance actions recorded through the active AuditStore.
 

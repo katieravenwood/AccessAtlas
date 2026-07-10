@@ -331,8 +331,5 @@ def test_training_actions_inactivate_user_and_emit_user_record_event():
 
     assert counts == {"updated": 0, "inactivated": 1, "skipped": 0}
     assert results.iloc[0]["audit_event_id"].startswith("AUD-")
-    assert (
-        st.session_state["editable_users"].iloc[0]["record_status"]
-        == "Inactive"
-    )
+    assert st.session_state["editable_users"].iloc[0]["record_status"] == "Inactive"
     assert audit_events.iloc[0]["action"] == "inactivate_user"

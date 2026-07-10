@@ -37,7 +37,9 @@ TRAINING_RECONCILIATION_DATE_COLUMNS = [
     "access_agreement_date",
 ]
 
-TRAINING_RECONCILIATION_REQUIRED_COLUMNS = ["user_id"] + TRAINING_RECONCILIATION_DATE_COLUMNS
+TRAINING_RECONCILIATION_REQUIRED_COLUMNS = [
+    "user_id"
+] + TRAINING_RECONCILIATION_DATE_COLUMNS
 
 ROLE_VISIBLE_TABS = {
     "User": ["My Access"],
@@ -162,4 +164,3 @@ COLUMN_LABELS = {
     "user_type": "User Type",
     "users": "Users",
 }
-

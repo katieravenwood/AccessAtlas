@@ -1,369 +1,214 @@
 # AccessAtlas System Administrator Guide
 
-## Introduction
+This guide describes the current AccessAtlas experience for the **System Administrator** application role.
 
-This guide provides an overview of the responsibilities and workflows available to System Administrators within AccessAtlas.
+A System Administrator is scoped to systems assigned through active system administrator assignments.
 
-System Administrators are responsible for one or more governed systems that are tracked within AccessAtlas. They use the platform to review user access, monitor administrative coverage, support compliance activities, and participate in access reconciliation processes.
+## System Administrator Role Scope
 
-Unlike Super Administrators, System Administrators focus only on systems assigned to them and are not responsible for managing the overall governance platform.
+A System Administrator can access:
 
----
+```text
+Dashboard
+My Access
+Manage Access
+Access Reconciliation
+```
 
-## Responsibilities
+The current scope model provides:
 
-Typical System Administrator responsibilities include:
+- actively administered systems
+- users associated with those systems
+- access assignments associated with those systems and visible users
+- administrator assignments associated with the administered-system scope
 
-* Reviewing access assignments within assigned systems
-* Monitoring administrative coverage
-* Supporting access reviews
-* Participating in reconciliation activities
-* Supporting compliance and audit requests
-* Maintaining awareness of governance issues affecting assigned systems
+A System Administrator assigned to multiple systems receives the combined scope of those active assignments.
 
-System Administrators are generally not responsible for:
+Inactive administrator assignments do not expand scope.
 
-* Maintaining the Central User Registry
-* Managing the Systems Catalog
-* Managing platform-wide configuration
-* Managing governance policies
-* Administering the AccessAtlas application itself
+## Dashboard
 
----
+The Dashboard summarizes the current administered-system scope.
 
-## AccessAtlas Navigation
+Use the metrics to identify:
 
-System Administrators primarily interact with the following sections:
+- visible users and systems
+- access record volume
+- items needing review
+- compliance concerns
+- reconciliation actions
 
-1. Systems
-2. System Admins
-3. Compliance
-4. Access Reconciliation
+`Access Management Summary Stats` provides five source summary tables:
 
-The Overview dashboard may also be used for general monitoring.
+- User Record Status
+- Compliance Status
+- Access Records by System Type
+- Access Records by Resource Type
+- Access Records by Access Status
 
----
+## My Access
 
-## Overview Dashboard
+My Access provides the System Administrator's own governance record.
 
-The Overview dashboard provides a summary of governance activity across the environment.
+Use:
 
-System Administrators may use the dashboard to:
+- **My Record** to review personal compliance, access, and administrator assignments.
+- **Update My Certification and Agreement Dates** to maintain the current user's reference compliance dates.
 
-* Monitor overall governance activity
-* Review compliance summaries
-* Review access assignment counts
-* Monitor reconciliation activity
+## Manage Access
 
-While useful for situational awareness, most day-to-day work occurs in the Systems and Access Reconciliation sections.
+### Managed Users
 
----
+![Managed Users](docs/images/screenshots/05-managed-users.png)
 
-## Reviewing Assigned Systems
+Managed Users shows only users available within the current administered-system scope.
 
-The Systems section is the primary workspace for System Administrators.
+Use the User Management Registry filters to narrow by:
 
-### Locate Your System
+- application role
+- user type
+- record status
 
-Select a system from the Systems Catalog.
-
-Review:
-
-* System Name
-* System Type
-* Access Model
-* Resource Scope
-* System Owner
-* Administrative Group
-
-### Review Users with Access
-
-The Users with Access section displays:
-
-* Users assigned to the system
-* Resource-level assignments
-* Permission assignments
-* Access status information
-
-Typical review questions include:
-
-* Who currently has access?
-* What permissions have been assigned?
-* Are permissions appropriate for current business needs?
-
-### Review Resources and Permissions
-
-The Resources and Permissions section provides a summary of governed resources.
-
-Examples include:
-
-* Application roles
-* Database permissions
-* Platform roles
-* Dashboards
-* Collaboration sites
-
-This view helps administrators understand how access is distributed within a system.
-
----
-
-## Administrative Coverage
-
-The System Admins section helps administrators verify governance accountability.
-
-### Review Assigned Administrators
-
-Administrators can review:
-
-* Assigned administrators
-* Administrative roles
-* Assignment status
-
-### Confirm Administrative Coverage
-
-Administrative coverage should be reviewed periodically to ensure that:
-
-* All systems have assigned administrators
-* Administrative assignments remain current
-* Responsibility is clearly defined
-
-### Common Questions
-
-Examples include:
-
-* Who administers this system?
-* Are there backup administrators?
-* Are administrative assignments still valid?
-
----
-
-## Supporting Access Reviews
-
-Organizations often conduct periodic access reviews to validate user access.
-
-AccessAtlas supports these reviews by providing:
-
-* User inventories
-* Permission inventories
-* Resource-level access visibility
-* Administrative accountability information
-
-### Typical Access Review Activities
+Select a user to open the Selected User Access Profile.
 
 Review:
 
-* Users with access
-* Permissions assigned
-* Resource assignments
-* Access status
+- user governance attributes
+- training and agreement dates
+- access assignment metrics
+- detailed access assignments
+- administrator assignments
 
-Identify:
+### Managed Systems
 
-* Access that is no longer required
-* Access that appears inconsistent with business needs
-* Missing governance records
+![Managed Systems](docs/images/screenshots/04-managed-systems.png)
 
-Access changes are typically performed within source systems rather than within AccessAtlas.
+Managed Systems is the principal system-centered review surface.
 
----
+The System Catalog is limited to systems the current user actively administers.
 
-## Compliance Monitoring
+Select a system to open the Selected System Access Profile.
 
-System Administrators may be asked to support compliance-related reviews.
+Review:
 
-### Review Compliance Status
+- system type and category
+- owner and administrator group
+- resource scope
+- access model
+- tracking method
+- users with access
+- system administrators
+- resources and permissions
 
-Compliance information may include:
+### Edit / Add Access
 
-* Training completion
-* Policy acknowledgement
-* Agreement completion
+System Administrators can perform direct maintenance only within administered-system scope.
 
-### Monitor Follow-Up Items
+The work area contains:
 
-Users with compliance issues may appear in follow-up queues.
+```text
+Add / Edit Access
+Add User
+```
 
-Common statuses include:
+#### Add / Edit Access
 
-* Current
-* Expiring Soon
-* Expired
+![Add/Edit Access](docs/images/screenshots/07-edit-add-access.png)
 
-### Supporting Compliance Activities
+Use this workflow to create a new access assignment or edit an existing assignment.
 
-System Administrators may:
+An access assignment represents:
 
-* Verify user assignments
-* Assist with follow-up communications
-* Support audit requests
+```text
+User -> System -> Resource -> Permission
+```
 
-Compliance enforcement processes vary by organization.
+The System Administrator can select only systems and users available in the current application scope.
 
----
+Applied changes are persisted through the active Access Assignment repository and recorded as governance audit events.
+
+#### Add User
+
+![Add User](docs/images/screenshots/05-add-user.png)
+
+The Add User workflow demonstrates creation of a new governance user record and an optional initial access assignment.
+
+The active repository determines persistence behavior.
+
+In the public reference implementation, repositories are CSV-seeded and session-backed, so changes are disposable.
 
 ## Access Reconciliation
 
-Access Reconciliation is one of the most important governance activities for System Administrators.
+### System Access Export File Upload
 
-### Purpose
+![System Access Export File Upload](docs/images/screenshots/06-access-reconciliation-queue.png)
 
-Over time, governance records may differ from actual system access.
+System access reconciliation is performed one system at a time.
 
-Reconciliation identifies discrepancies between:
+![System Access Reconciliation Workflow](../images/workflows/01-system-access-reconciliation.png)
 
-* Governance records
-* Authoritative system exports
+The recommended sequence is:
 
-### Typical Workflow
+1. Select the system.
+2. Confirm that the source export is complete for that system.
+3. Upload the access export.
+4. Review schema validation and uploaded records.
+5. Review the reconciliation summary.
+6. Filter and inspect the Reconciliation Queue.
+7. Select recommended actions to apply.
+8. Apply current-session updates.
+9. Review Reconciliation Results.
 
-#### Step 1: Obtain a Current Access Export
+Recommended actions are:
 
-Examples include:
+```text
+Add access record
+Inactivate
+Update
+No action
+```
 
-* Application user exports
-* Platform role exports
-* Database permission exports
-* Dashboard access exports
+The selected-system restriction is important.
 
-#### Step 2: Upload the Export
+An access record should be recommended for inactivation only when it is missing from a complete comparison set for the system being reviewed.
 
-Upload the export file using the expected reconciliation schema.
+### Training Certificate Date and Agreement Reconciliation
 
-#### Step 3: Review Validation Results
+![Training Certificate Date and Agreement Reconciliation](docs/images/screenshots/09-training-reconciliation.png)
 
-Verify that:
+This workflow compares external compliance dates with the scoped user registry.
 
-* Required fields are present
-* Records are loaded successfully
+It evaluates:
 
-#### Step 4: Review Reconciliation Results
+- annual training date
+- biennial training date
+- access agreement date
 
-Results may include:
+Review differences before applying selected actions.
 
-* New Access in Upload
-* Access Not Found in Upload
-* Status Changed
-* No Change
+The workflow may update compliance dates or inactivate a user record where the selected recommendation calls for that action.
 
-#### Step 5: Review the Action Queue
+## Reconciliation vs Access Review
 
-Focus first on records requiring review.
+Reconciliation asks whether AccessAtlas matches the source.
 
-Common follow-up activities include:
+It does not decide whether a user should retain access.
 
-* Investigating unexpected access
-* Confirming access removals
-* Validating role changes
-* Coordinating updates with governance teams
+Formal access-review and approval processes remain outside the current core application.
 
-#### Step 6: Coordinate Remediation
+## System Administrator Limitations
 
-AccessAtlas identifies discrepancies but does not directly modify source systems.
+The System Administrator role cannot:
 
-Any required changes should be performed through approved organizational processes.
+- see systems outside active administrator assignments
+- manage access for out-of-scope systems
+- access AccessAtlas App Admin
+- administer organization-wide compliance
+- manage system administrator assignments
+- review Governance Audit History
 
----
+## Demo Mode Note
 
-## Supporting Audits
+The hosted demo simulates System Administrator scope through synthetic administrator assignments.
 
-System Administrators frequently support:
-
-* Internal audits
-* Compliance reviews
-* Access certification activities
-* Governance assessments
-
-AccessAtlas can assist by providing:
-
-* Access inventories
-* Permission inventories
-* Administrative assignment records
-* Reconciliation history
-
-### Best Practices
-
-When supporting audits:
-
-* Review data before sharing
-* Verify administrative assignments
-* Validate system ownership information
-* Ensure reconciliation activities are up to date
-
----
-
-## Governance Best Practices
-
-### Review Access Regularly
-
-Periodically review users, permissions, and resource assignments.
-
-### Maintain Administrative Coverage
-
-Ensure systems have assigned administrators and backup coverage where appropriate.
-
-### Participate in Reconciliation Activities
-
-Regular reconciliation improves governance accuracy and reduces access drift.
-
-### Escalate Governance Concerns
-
-Report:
-
-* Missing ownership
-* Inactive administrative coverage
-* Significant reconciliation discrepancies
-* Potential compliance concerns
-
-### Preserve Governance History
-
-When access is no longer required, organizations should generally retain historical governance records rather than deleting them.
-
-Inactive records provide important audit and reporting value.
-
----
-
-## Troubleshooting
-
-### Missing Users
-
-Verify that the user exists within the Central User Registry.
-
-### Missing Permissions
-
-Verify that the permission exists within the authoritative source system.
-
-### Missing Administrator Assignments
-
-Review assignment records within the System Admins section.
-
-### Upload Validation Errors
-
-Verify that uploaded reconciliation files contain all required columns.
-
-### Unexpected Reconciliation Results
-
-Verify:
-
-* User IDs
-* System IDs
-* Resource Names
-* Permission Names
-* Access Status Values
-
-Differences in these values may cause reconciliation discrepancies.
-
----
-
-## Summary
-
-System Administrators use AccessAtlas to govern the systems for which they are responsible.
-
-Their primary activities include:
-
-* Reviewing user access
-* Monitoring administrative coverage
-* Supporting compliance reviews
-* Participating in reconciliation activities
-* Supporting governance and audit processes
-
-These activities help maintain accurate, auditable, and trustworthy access records within the systems they administer.
+It is not authentication or a production authorization control.

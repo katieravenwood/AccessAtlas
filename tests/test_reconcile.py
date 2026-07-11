@@ -1,5 +1,6 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 
 
 def test_reconcile_smoke():
@@ -10,7 +11,10 @@ def test_reconcile_smoke():
     in the `data/` folder.
     """
     data_dir = Path(__file__).parent.parent / "data"
-    access = pd.read_csv(data_dir / "access_assignments.csv", parse_dates=["granted_date", "revoked_date"]) 
+    access = pd.read_csv(
+        data_dir / "access_assignments.csv",
+        parse_dates=["granted_date", "revoked_date"],
+    )
     uploaded = pd.read_csv(data_dir / "sample_access_upload.csv")
 
     KEYS = ["user_id", "system_id", "resource_type", "resource_name", "permission_name"]
@@ -30,7 +34,12 @@ def test_reconcile_smoke():
     upload_key = uploaded.set_index(key_cols)["access_status"].to_dict()
 
     all_keys = set(current_key.keys()) | set(upload_key.keys())
-    counts = {"Access Not Found in Upload": 0, "New Access in Upload": 0, "No Change": 0, "Status Changed": 0}
+    counts = {
+        "Access Not Found in Upload": 0,
+        "New Access in Upload": 0,
+        "No Change": 0,
+        "Status Changed": 0,
+    }
 
     for key in all_keys:
         current_status = current_key.get(key)

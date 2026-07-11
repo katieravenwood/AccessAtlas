@@ -162,4 +162,3 @@ COLUMN_LABELS = {
     "user_type": "User Type",
     "users": "Users",
 }
-

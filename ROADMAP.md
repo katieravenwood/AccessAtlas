@@ -1,243 +1,154 @@
 # AccessAtlas Roadmap
 
-AccessAtlas is evolving from a functional reference application into a deployable starter application for access-governance teams and data engineering organizations.
+AccessAtlas is evolving from a functional reference application into a polished deployable starter for access-governance teams and data engineering organizations.
 
-The project is intended to remain easy to evaluate, inexpensive to run, and straightforward to adapt. The public demo should demonstrate workflows without persisting tester changes or requiring a paid cloud backend. Production-oriented capabilities should be provided as modular components, implementation patterns, and extension points rather than forcing every deployment into a single architecture.
+The project is intended to remain easy to evaluate, inexpensive to run, and straightforward to adapt. The public demo should demonstrate workflows without persisting tester changes or requiring a paid cloud backend.
 
 This roadmap uses **Now / Next / Later** to describe product direction without committing to calendar dates.
-
----
 
 ## Product Direction
 
 AccessAtlas is being developed for two primary audiences:
 
-1. **Data engineering teams looking for a starter architecture for access governance**
-2. **Small and mid-sized organizations that need a practical access-governance application they can adapt**
+1. data engineering teams looking for a starter architecture for access governance; and
+2. small and mid-sized organizations that need a practical access-governance application they can adapt.
 
-The project is not intended to become a full identity and access management platform.
+AccessAtlas is not intended to become a full identity and access management platform.
 
 Its focus is the governance layer around access:
 
-- cataloging users, systems, resources, and permissions
-- tracking system administrator responsibility
-- monitoring compliance requirements
-- reconciling source-system access records
-- reviewing access history and governance activity
-- supporting periodic access audits
-- providing clear extension points for notifications, authentication, provisioning, and other organization-specific workflows
+- catalog users, systems, resources, and permissions
+- track system administrator responsibility
+- monitor governance requirements
+- reconcile source-system access records
+- preserve governance action history
+- support periodic audits and access-review inputs
+- provide extension points for identity, notifications, provisioning, and organization-specific workflows
 
-Access approval remains outside the core application for now.
-
----
+Formal access approval remains outside the core application for now.
 
 # Now
 
-## Goal: Complete the 1.0.0 Deployable Starter Foundation
+## Goal: Complete the 1.0.0 Public Reference Baseline
 
-The current application already demonstrates the core AccessAtlas governance model and principal workflows.
+The core starter architecture is materially complete.
 
-The 1.0.0 engineering backlog is focused on making the repository easy to adopt for small and mid-sized organizations while giving data engineering teams clean extension points for broader implementation.
+### Engineering foundation — Completed
 
-### 1. Dual-distribution modular architecture — Completed
+- Dual-distribution modular architecture
+- Separate public demo and clean starter runtimes
+- Structured application logging
+- Governance audit-event model
+- Scoped CSV data exports
+- Broader automated test coverage
+- Ruff linting and formatting baseline
+- Repository data-access boundary
+- PostgreSQL and Snowflake migration contracts
 
-AccessAtlas now maintains one canonical modular source under `modular/` and publishes a generated single-file starter at root `app.py`.
+### Release-readiness work — In progress
 
-The root application remains the low-friction adoption path.
+Current work is focused on:
 
-The modular implementation separates:
+- documentation alignment
+- documentation information architecture
+- application architecture diagrams
+- governance and workflow diagrams
+- application screenshots
+- deployment guidance
+- repository readiness files and templates
+- final synthetic demo-data presentation review
+- v1.0.0 release review
 
-- application core
-- configuration
-- data loading
-- role and scope logic
-- compliance calculations
-- reconciliation logic
-- temporary state
-- reusable presentation behavior
-- runtime identity and guidance behavior
+### 1. Align permanent documentation — Completed
 
-`tools/build_single_file.py` publishes the root starter from modular source.
+Current-state documentation now uses the Generation 3 architecture and task-based application vocabulary.
 
-CI and automated tests verify that the generated file remains synchronized.
+The permanent documentation set distinguishes:
 
-### 2. Separate the public demo from the starter application — Completed
+- product overview
+- application architecture
+- repository data-access contracts
+- deployment guidance
+- platform-specific repository implementation guidance
+- governance patterns
+- role-specific user guides
 
-The shared application core now supports distinct runtime factories.
+Historical terminology remains only where appropriate in `CHANGELOG.md`.
 
-The clean starter:
+### 2. Add architecture and workflow diagrams — Next implementation step
 
-- does not render the synthetic persona selector
-- does not render demo-specific sidebar content
-- does not display Demo Mode warnings
-- resolves a current application identity through a replaceable starter runtime
+Create version-controlled diagrams for:
 
-The hosted demo retains:
+- application architecture
+- conceptual governance data model
+- system access reconciliation
+- starter/demo distribution
+- repository replacement pattern
 
-- synthetic role/persona selection
-- current demo-user details
-- visible demo-scope summaries
-- contextual demo sidebar guidance
-- disposable session-backed changes
+Prefer Mermaid source where GitHub rendering is appropriate.
 
-The hosted preview should run from:
+Add exported SVG or PNG assets only where presentation or reuse requires them.
 
-```text
-modular/demo_app.py
-```
+### 3. Capture application screenshots
 
-The root `app.py` and `modular/app.py` remain clean starter paths.
+Capture a restrained synthetic-data screenshot set covering:
 
-### 3. Add structured application logging — Completed
+- Dashboard
+- My Access
+- Managed Users
+- Managed Systems
+- access reconciliation queue
+- training reconciliation
+- Governance Audit History
+- Demo Mode role preview
+- direct access management
 
-AccessAtlas now includes structured operational logging through the Python standard `logging` package.
+Feature only a representative subset in the README.
 
-The implementation provides:
+### 4. Complete repository readiness
 
-- JSON Lines output by default
-- optional human-readable text output
-- configurable log level
-- idempotent handler configuration for Streamlit reruns
-- runtime and application-role context
-- structured event names and fields
-- exception logging with tracebacks
-- tests for logging configuration and output contracts
+Add or review:
 
-Current operational events cover:
+- `CONTRIBUTING.md`
+- `SECURITY.md`
+- pull request template
+- bug report issue template
+- feature request issue template
+- repository description and topics
+- live demo link
+- CI and license badges
+- social preview asset
+- branch protection and CI requirements
 
-- application run start
-- reference-data loading
-- runtime and visible-scope resolution
-- application-section rendering
-- upload schema validation
-- reconciliation comparison completion
-- reconciliation action processing
-- key-resolution failures
-- data-load failures
+### 5. Perform v1.0.0 release review
 
-Application logs remain explicitly separate from governance audit events.
+Review the repository as a first-time adopter.
 
-### 4. Add audit logging and an audit-event model — Completed
+Confirm:
 
-AccessAtlas now includes a modular governance audit-event model and replaceable audit-store contract.
+- clean installation
+- stable entry points
+- live demo behavior
+- documentation links
+- screenshots and diagrams
+- CI status
+- test suite
+- generated root application synchronization
+- current CHANGELOG
+- current roadmap
+- release notes
 
-The current reference implementation records meaningful governance actions for:
+Then establish the public reference baseline for v1.0.0.
 
-- user record creation
-- self-service compliance date updates
-- access assignment creation and update
-- access inactivation
-- access reconciliation actions
-- training and agreement reconciliation actions
-- compliance-driven user inactivation
+# Next
 
-The default `SessionAuditStore` keeps events append-oriented and session-backed so public demo activity remains disposable.
+## Notification module
 
-Super Administrators can review current-session governance history in AccessAtlas App Admin.
+Notifications are the first functional priority after the 1.0.0 foundation.
 
-The event schema and storage contract are designed for migration to controlled persistent audit storage.
+The notification capability should be a modular starter component rather than a hard-coded email system.
 
-Administrator assignment changes and system catalog changes should emit events when those write workflows are introduced.
-
-### 5. Add data exports — Completed
-
-AccessAtlas now provides scoped CSV downloads directly in the workflows where governance datasets are reviewed.
-
-Current exports include:
-
-- filtered users
-- filtered systems
-- scoped access assignments
-- system administrator assignments
-- filtered compliance detail
-- compliance follow-up records
-- system access reconciliation results
-- training and agreement reconciliation results
-- filtered governance audit history
-
-The reusable export-preparation module provides stable CSV output, optional column selection and sorting, UTF-8 spreadsheet compatibility, and formula-style text sanitization.
-
-Exports inherit the current application role and record scope.
-
-Successful downloads generate an operational application event and a governance audit event without copying exported record contents into either event stream.
-
-### 6. Expand automated tests — Completed
-
-The automated test suite now protects the principal deterministic business rules and distribution contracts.
-
-Coverage includes:
-
-- compliance calculations, expiration rules, follow-up records, and date normalization
-- role-based user, system, access, and administrator assignment scope
-- navigation helpers and role visibility behavior
-- starter identity configuration and fallback resolution
-- session-backed user and access state helpers
-- synthetic identifier generation and access-key matching
-- reconciliation comparison and action edge cases
-- training and agreement reconciliation outcomes
-- audit-event creation, storage contracts, and audited write outcomes
-- CSV export preparation and spreadsheet safeguards
-- structured logging configuration
-- starter/demo runtime separation
-- generated single-file synchronization and compilation
-
-The suite remains intentionally centered on reusable business logic rather than reproducing Streamlit rendering behavior.
-
-### 7. Add linting and formatting — Completed
-
-AccessAtlas now uses Ruff as the lightweight linting and formatting baseline for canonical source, tests, and build tooling.
-
-Repository configuration is defined in `pyproject.toml`, with development dependencies in `requirements-dev.txt`.
-
-The CI quality job runs:
-
-- `ruff format --check modular tests tools`
-- `ruff check modular tests tools`
-- `python tools/build_single_file.py --check`
-- `pytest -q`
-
-The generated root `app.py` is excluded from direct Ruff checks because it is a build artifact. Code quality is enforced against the canonical modular source, and the existing synchronization check verifies that the generated starter matches that source.
-
-### 8. Define migration support — Next implementation step
-
-Document and establish clear data-layer extension points for moving from synthetic CSV files to persistent storage.
-
-The 1.0.0 application does **not** require a hosted persistent backend.
-
-Migration support should instead provide:
-
-- repository or data-access interfaces
-- mapping guidance for the current entities
-- migration considerations for identifiers and history
-- implementation notes for PostgreSQL and Snowflake
-- clear boundaries between UI, business logic, and persistence
-
-### Stretch goal: deployment guidance
-
-Provide practical deployment guidance for organizations adapting the starter application.
-
-The first guidance should focus on architecture and configuration rather than prescribing one hosting provider.
-
-Topics may include:
-
-- environment configuration
-- secrets handling
-- authentication boundaries
-- persistence selection
-- logging
-- backup considerations
-- reverse proxy or hosted Streamlit patterns
-- production authorization requirements
-
----
-
-## First feature after 1.0.0: Notification module
-
-Notifications are the next functional priority.
-
-The notification capability should be implemented as a modular starter component rather than as a hard-coded email system.
-
-The application should be able to identify notification-worthy events such as:
+The application should identify notification-worthy events such as:
 
 - training expiring soon
 - expired compliance
@@ -247,9 +158,15 @@ The application should be able to identify notification-worthy events such as:
 
 The preferred design is:
 
-1. AccessAtlas determines that a notification event is needed.
-2. A notification record or event is generated.
-3. A pluggable delivery provider handles transmission.
+```text
+AccessAtlas identifies notification event
+        |
+        v
+notification record or event
+        |
+        v
+pluggable delivery provider
+```
 
 Reference delivery patterns may include:
 
@@ -258,163 +175,59 @@ Reference delivery patterns may include:
 - webhook-based delivery
 - other organization-specific services
 
-The core governance application should not depend on one notification vendor.
+## Lightweight system configuration
 
----
+Allow authorized administrators to create and maintain governed systems through the application while preserving repository and audit boundaries.
 
-# Next
+## Access history and periodic review support
 
-## Lightweight system catalog creation
+Build on inactive-record retention and audit events to support:
 
-Add a basic system-creation workflow to the application.
+- access-history views
+- semiannual or organization-defined review periods
+- reviewer assignments
+- review evidence
+- retained-access decisions
 
-The initial version should support creation of a governed system with core fields such as:
+Access review should remain conceptually distinct from reconciliation.
 
-- system name
-- system type
-- system category
-- resource scope
-- access model
-- tracking method
-- system owner
-- administrative group
-- record status
+## Authentication extension pattern
 
-This is a near-term step toward configurable governance without attempting to build the complete governance-model designer at once.
+Provide a pluggable identity integration pattern for deployments replacing `ACCESSATLAS_USER_ID`.
 
----
-
-## Pluggable authentication model
-
-Introduce an authentication abstraction that removes authentication assumptions from page and workflow logic.
-
-The reference implementation should define:
-
-- an authenticated user identity
-- application role or governance role mapping
-- user-to-governance-record mapping
-- scope resolution
-- authorization checks
-
-The first implementation may use a simple development or local provider.
-
-Documentation should include production patterns and implementation considerations for:
-
-- OpenID Connect
-- Microsoft Entra ID
-- Single Sign-On
-- Active Directory-backed environments
-- other compatible identity providers
-
-Entra ID, SSO, and Active Directory integration are lower-priority reference implementations. The immediate objective is a clean authentication extension point.
-
----
-
-## Access history and periodic audit support
-
-Build on the audit-event model to support formal access-history review.
-
-The application should be able to show:
-
-- current access
-- prior access
-- grant and inactivation history
-- relevant reconciliation actions
-- administrator changes
-- governance events affecting a user or system
-
-Add starter workflows for periodic access audits, including semiannual reviews.
-
-A review should distinguish between:
-
-- **reconciliation** — do governance records match the source system?
-- **access review** — should the user still retain the access?
-
-Future audit-review structures may include:
-
-- review scope
-- review period
-- reviewer
-- access records in scope
-- retain, remove, or update decision
-- review completion status
-- sign-off history
-
----
-
-## Modular access enable/disable workflows
-
-Provide starter modules and implementation patterns for integrating governance decisions with actual access-control actions.
-
-The initial objective is not universal automated provisioning.
-
-Reference patterns should demonstrate how an organization could:
-
-- request access enablement
-- request access disablement
-- send an action to an external provisioning service
-- record the result
-- reconcile the resulting source-system state
-
-AccessAtlas should keep governance state and provisioning execution conceptually separate.
-
----
-
-## Expand source-system cataloging patterns
-
-Continue supporting cataloging and reconciliation patterns for:
-
-- CSV and file-based exports
-- Snowflake roles and grants
-- PostgreSQL permissions
-- dashboard and report platforms
-- collaboration platforms
-
-Near-term work should focus on representing and reconciling access from those environments.
-
-Direct provisioning and source-system control may be added later.
-
----
+Reference guidance should cover OpenID Connect and enterprise identity concepts without making one provider a mandatory public dependency.
 
 # Later
 
 ## Configurable governance model
 
-Allow authorized administrators to configure more of the governance model through the application.
+Allow authorized administrators to configure:
 
-Potential capabilities include:
-
-- create and edit systems
-- manage system categories and types
-- define resource types
-- define available permissions
-- configure access models
-- define reconciliation mappings
-- configure administrator roles
-
-This work should build on the lightweight system-creation workflow introduced earlier.
-
----
+- system categories and types
+- resource types
+- available permissions
+- access models
+- reconciliation mappings
+- administrator roles
 
 ## Configurable compliance requirements
 
 Replace fixed compliance fields with a configurable requirements model.
 
-A future requirement entity may include:
+A future requirement may include:
 
 ```text
-Requirement
-- requirement_id
-- name
-- requirement_type
-- validity_period
-- warning_period
-- applicable system or category
-- applicable user type
-- record status
+requirement_id
+name
+requirement_type
+validity_period
+warning_period
+applicable system or category
+applicable user type
+record_status
 ```
 
-This would allow organizations to define their own:
+This would support organization-defined:
 
 - training
 - certifications
@@ -422,13 +235,7 @@ This would allow organizations to define their own:
 - acknowledgements
 - recurring governance requirements
 
-The current annual training, biennial training, and access agreement fields remain useful reference examples but should not define the long-term architecture.
-
----
-
 ## Optional access approval module
-
-Keep approval workflows outside the core AccessAtlas application for the near term.
 
 A future optional module may demonstrate:
 
@@ -439,104 +246,33 @@ A future optional module may demonstrate:
 - handoff to provisioning workflows
 - separation of requester, approver, and administrator responsibilities
 
-The approval module should remain optional so organizations with established request and approval systems can continue using those processes.
+The module should remain optional so organizations with established approval systems can keep those processes.
 
----
+## Provisioning integration patterns
 
-## Deeper identity integrations
+Demonstrate how governance decisions can be handed to external provisioning services.
 
-Potential future reference integrations include:
+The initial objective is not universal automated provisioning.
 
-- Microsoft Entra ID
-- enterprise Single Sign-On
-- Active Directory
-- other OpenID Connect-compatible providers
+Reference patterns should show how an organization could:
 
-These integrations should build on the pluggable authentication model rather than introducing identity-provider-specific logic throughout the application.
+- request access enablement
+- request access disablement
+- send an action to an external service
+- record the result
+- reconcile the resulting source-system state
 
----
+Governance state and provisioning execution should remain conceptually separate.
 
-## Expanded integration and provisioning patterns
+## Expanded source-system cataloging patterns
 
-Future reference integrations may demonstrate:
+Continue supporting cataloging and reconciliation patterns for:
 
-- Snowflake grant metadata ingestion
-- PostgreSQL permission metadata ingestion
-- dashboard and report platform APIs
-- collaboration platform membership APIs
-- API-based synchronization
-- scheduled ingestion
-- access provisioning and deprovisioning adapters
+- CSV and file-based exports
+- Snowflake roles and grants
+- PostgreSQL permissions
+- dashboard and report platforms
+- collaboration platforms
+- organization-specific source adapters
 
-The roadmap does not assume that AccessAtlas should directly control every connected system.
-
-Integrations should be added where they clarify reusable governance patterns.
-
----
-
-# 1.0.0 Readiness Definition
-
-AccessAtlas 1.0.0 will represent the first clean deployable starter foundation.
-
-The release does **not** require a hosted database or persistent public demo backend.
-
-The public demo should continue to reset tester changes and remain inexpensive to operate.
-
-## Completed foundation
-
-- canonical modular application source
-- generated single-file quick-start distribution
-- automated starter/source synchronization checks
-- shared application core
-- separate clean starter and hosted demo runtimes
-- starter runtime identity extension point
-- role and scope logic shared across starter and demo
-- modular architecture documentation
-
-## Remaining release requirements
-
-- linting and formatting checks
-- documented migration extension points
-- current README, changelog, roadmap, architecture, and UI documentation
-
-Deployment guidance remains a stretch goal for 1.0.0.
-
-Authentication integration, persistent production storage, notifications, provisioning, configurable compliance requirements, and complete governance-model configuration are not required for 1.0.0 unless explicitly moved into release scope later.
-
----
-
-# Guiding Constraints
-
-The roadmap follows several deliberate constraints.
-
-### Keep the hosted demo disposable
-
-Tester changes should not persist across sessions or require an always-on paid data service.
-
-### Prefer modules over mandates
-
-Notifications, authentication, audit workflows, and provisioning should be designed as replaceable extension points.
-
-### Keep governance separate from identity infrastructure
-
-AccessAtlas may integrate with identity and provisioning platforms, but it should not attempt to replace a full IAM system.
-
-### Preserve historical context
-
-Inactive access and governance history should remain reviewable.
-
-### Keep the starter application understandable
-
-The project should demonstrate good engineering structure without becoming an abstraction exercise.
-
-### Add integrations to teach a pattern
-
-A small number of well-designed reference integrations are more useful than a long list of shallow connectors.
-
----
-
-## Roadmap Status
-
-This roadmap describes current product direction and may change as the reference implementation evolves.
-
-Completed work is documented in `CHANGELOG.md`.
+Direct provisioning and source-system control remain later concerns.
